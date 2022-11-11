@@ -91,34 +91,19 @@ def extract_pdos_perorbital(data, atoms, orbitals):
     elif orbitals == 'all-p':
         pass
     elif orbitals == 'all-d':
-        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2y2+', 'dx2y2-']
+        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-']
     elif orbitals == 't2g':
         orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
     elif orbitals == 'eg':
-        orbitals = ['dz2+', 'dz2-', 'dx2y2+', 'dx2y2-']
+        orbitals = ['dz2+', 'dz2-', 'dx2+', 'dx2-']
     
-    dicstates = {
-            's_states':{'s+': 1, 's-': 2},
-            'p_states':{'py+': 3, 'py-': 4,
-            'pz+': 5, 'pz-': 6,
-            'px+': 7, 'px-': 8},
-            'd_states':{
-            'dxy+': 9, 'dxy-': 10,
-            'dyz+': 11, 'dyz-': 12,
-            'dz2+': 13, 'dz2-': 14,
-            'dxz+': 15, 'dxz-': 16,
-            'dx2+': 17, 'dx2-': 18
-            }
-        }
     sum_plus = np.zeros(len(data['at-0']['py+']))
     sum_minus = np.zeros(len(data['at-0']['py+']))
     e = data['at-0']['energy']
     for at in atoms:
-        for sss in orbitals:
-            
-            for key in dicstates[sss]:     ## Loop through py+, py-, pz+, pz-, etc 
-                if key[-1] == '+':
-                    sum_plus += data['at-'+str(at)][key]
-                elif key[-1] == '-':
-                    sum_minus -= data['at-'+str(at)][key]
+        for sss in orbitals: 
+            if sss[-1] == '+':
+                sum_plus += data['at-'+str(at)][sss]
+            elif sss[-1] == '-':
+                sum_minus -= data['at-'+str(at)][sss]
     return e, sum_plus, sum_minus
