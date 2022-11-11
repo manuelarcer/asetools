@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-def extract_total_dos(doscarfile):
+def extract_dos(doscarfile):
     # doscarfile: Is the path to the DOSCAR file
     
     doscar = open(doscarfile, 'r')
@@ -31,7 +31,7 @@ def extract_total_dos(doscarfile):
         if goDOS:
             data['energy'].append( float(line.split()[0]) - fermie)
             data['DOSup'].append( float(line.split()[1]) )
-            data['DOSdown'].append( float(line.split()[2]) )
+            data['DOSdown'].append( -float(line.split()[2]) )
         if gopDOS and line != repline:
             for k, key in enumerate( data['at-'+str(count)] ):
                 if k == 0:
@@ -42,14 +42,83 @@ def extract_total_dos(doscarfile):
             repline = line  # Line with 5 values
             fermie = float( line.split()[3] )
             goDOS = True
-        if i > 5 and line == repline:
+        if i > 5 and line == repline and partialdos:
             goDOS = False
             gopDOS = True
             count += 1
 
-    dfdos = pd.DataFrame()
-    dfdos['energy'] = data['energy']
-    dfdos['DOSup'] = data['DOSup']
-    dfdos['DOSdown'] = data['DOSdown']
+    return data
 
-    return dfdos
+
+def extract_pdos_perstate(data, atoms, states):
+    # data:
+    # atoms: list atoms of interest, e.g., [0, 10]
+    # states: list of states of interest, e.g., ['s_states', 'p_states', 'd_states']
+
+    dicstates = {
+            's_states':{'s+': 1, 's-': 2},
+            'p_states':{'py+': 3, 'py-': 4,
+            'pz+': 5, 'pz-': 6,
+            'px+': 7, 'px-': 8},
+            'd_states':{
+            'dxy+': 9, 'dxy-': 10,
+            'dyz+': 11, 'dyz-': 12,
+            'dz2+': 13, 'dz2-': 14,
+            'dxz+': 15, 'dxz-': 16,
+            'dx2+': 17, 'dx2-': 18
+            }
+        }
+    sum_plus = np.zeros(len(data['at-0']['py+']))
+    sum_minus = np.zeros(len(data['at-0']['py+']))
+    e = data['at-0']['energy']
+    for at in atoms:
+        for sss in states:
+            for key in dicstates[sss]:     ## Loop through py+, py-, pz+, pz-, etc 
+                if key[-1] == '+':
+                    sum_plus += data['at-'+str(at)][key]
+                elif key[-1] == '-':
+                    sum_minus -= data['at-'+str(at)][key]
+    return e, sum_plus, sum_minus
+
+def extract_pdos_perorbital(data, atoms, orbitals):
+    # data:
+    # atoms: list atoms of interest, e.g., [0, 10]
+    # orbitals: list of orbitals of interest, e.g., ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+'] 
+    #         or 'all-d' to consider all d-states
+
+    if orbitals == 'all-s':
+        pass
+    elif orbitals == 'all-p':
+        pass
+    elif orbitals == 'all-d':
+        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2y2+', 'dx2y2-']
+    elif orbitals == 't2g':
+        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
+    elif orbitals == 'eg':
+        orbitals = ['dz2+', 'dz2-', 'dx2y2+', 'dx2y2-']
+    
+    dicstates = {
+            's_states':{'s+': 1, 's-': 2},
+            'p_states':{'py+': 3, 'py-': 4,
+            'pz+': 5, 'pz-': 6,
+            'px+': 7, 'px-': 8},
+            'd_states':{
+            'dxy+': 9, 'dxy-': 10,
+            'dyz+': 11, 'dyz-': 12,
+            'dz2+': 13, 'dz2-': 14,
+            'dxz+': 15, 'dxz-': 16,
+            'dx2+': 17, 'dx2-': 18
+            }
+        }
+    sum_plus = np.zeros(len(data['at-0']['py+']))
+    sum_minus = np.zeros(len(data['at-0']['py+']))
+    e = data['at-0']['energy']
+    for at in atoms:
+        for sss in orbitals:
+            
+            for key in dicstates[sss]:     ## Loop through py+, py-, pz+, pz-, etc 
+                if key[-1] == '+':
+                    sum_plus += data['at-'+str(at)][key]
+                elif key[-1] == '-':
+                    sum_minus -= data['at-'+str(at)][key]
+    return e, sum_plus, sum_minus
