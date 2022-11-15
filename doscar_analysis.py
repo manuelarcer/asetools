@@ -87,9 +87,9 @@ def extract_pdos_perorbital(data, atoms, orbitals):
     #         or 'all-d' to consider all d-states
 
     if orbitals == 'all-s':
-        pass
+        orbitals = ['s+', 's-']
     elif orbitals == 'all-p':
-        pass
+        orbitals = ['py+', 'py-', 'pz+', 'pz-', 'px+', 'px-']
     elif orbitals == 'all-d':
         orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-']
     elif orbitals == 't2g':
