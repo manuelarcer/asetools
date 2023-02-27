@@ -85,6 +85,8 @@ def extract_pdos_perorbital(data, atoms, orbitals):
     # atoms: list atoms of interest, e.g., [0, 10]
     # orbitals: list of orbitals of interest, e.g., ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+'] 
     #         or 'all-d' to consider all d-states
+    #         or 't2g' for ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
+    #         or 'eg' for ['dz2+', 'dz2-', 'dx2+', 'dx2-']
 
     if orbitals == 'all-s':
         orbitals = ['s+', 's-']
@@ -92,6 +94,11 @@ def extract_pdos_perorbital(data, atoms, orbitals):
         orbitals = ['py+', 'py-', 'pz+', 'pz-', 'px+', 'px-']
     elif orbitals == 'all-d':
         orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-']
+    elif orbitals == 'all':
+        orbitals = [
+            's+', 's-', 'py+', 'py-', 'pz+', 'pz-', 'px+', 'px-',
+            'dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-'
+            ]
     elif orbitals == 't2g':
         orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
     elif orbitals == 'eg':
