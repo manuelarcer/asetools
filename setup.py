@@ -1,13 +1,6 @@
-from setuptools import setup , find_packages
+from setuptools import setup
 
 setup(
-    name = 'asetools',
-    version = '0.1',
-    url = '',
-    description = '',
-    packages = find_packages(),
-    install_requires = [
-    #    # Github Private Repository
-    #    'ExampleRepo @ git+ssh://git@github.com/example_org/ExampleRepo.git'
-    ]
+    name='package_name',
+    py_modules=['analysis', 'doscar_analysis'],
 )
