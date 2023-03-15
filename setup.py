@@ -1,6 +1,6 @@
 from setuptools import setup
 
 setup(
-    name='package_name',
+    name='asetools',
     py_modules=['analysis', 'doscar_analysis'],
 )
