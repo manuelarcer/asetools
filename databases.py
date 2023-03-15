@@ -1,4 +1,5 @@
 from ase.io import read
+import pandas as pd
 
 def check_outcar_convergence(outcar):
     out = open(outcar, 'r')
@@ -64,3 +65,17 @@ def add_config_to_db(db, outcar, idname=None, update=False):
             return db.update(index, atoms=atoms, name=idname)
         else:
             return print('Config ALREADY in DB, skipped....')
+        
+def db_to_pandas(db, columns=['name', 'id', 'energy', 'free_energy', 'magmom']):
+    # db: must be a loaded ASE-DB
+    # columns; columns to extract from the DB to the DataFrame
+    
+    dic = {}
+    for c in columns:
+        dic[c] = []
+
+    for i, row in enumerate(db.select(columns='all')):
+        for c in columns:
+            dic[c].append(row[c])        
+    df = pd.DataFrame.from_dict(dic)
+    return df
