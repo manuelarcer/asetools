@@ -37,4 +37,3 @@ def check_outcar_convergence(outcar, verbose=True):
             print('Optimization Job --> *NOT* converged')
             
     return convergence
-
