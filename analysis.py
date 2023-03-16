@@ -37,3 +37,15 @@ def check_outcar_convergence(outcar, verbose=True):
             print('Optimization Job --> *NOT* converged')
             
     return convergence
+
+def check_status_calc(outcar):
+    
+    check_outcar_convergence(outcar, verbose=True)
+    try:
+        atoms = read(outcar, format='vasp-out', index=-1)
+    except:
+        print('Missing or damaged OUTCAR file')
+        pass
+    
+    return max( atoms.get_forces() )
+    
