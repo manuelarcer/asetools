@@ -1,0 +1,6 @@
+I tried to create a python package that could be installed. 
+
+Therefore, src folder was created and the modules placed there.
+
+It did not work, now I resorted to bring back the modules to the root directory
+where they last worked
