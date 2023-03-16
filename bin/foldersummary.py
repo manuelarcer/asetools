@@ -12,7 +12,7 @@ folders = glob.glob('*/')
 dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[]}
 for f in folders:
     if os.path.exists(f+'OUTCAR'):
-        converged = check_outcar_convergence(f+'OUTCAR')
+        converged = check_outcar_convergence(f+'OUTCAR', verbose=False)
         energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
         dic['Config'].append(f)
         dic['Converged'].append(converged)
