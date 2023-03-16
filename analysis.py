@@ -39,7 +39,7 @@ def check_outcar_convergence(outcar, verbose=True):
             
     return convergence
 
-def check_status_calc(outcar):
+def check_energy_and_maxforce(outcar):
     
     check_outcar_convergence(outcar, verbose=True)
     try:
