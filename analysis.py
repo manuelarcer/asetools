@@ -3,6 +3,7 @@
 
 from ase.io import read
 import pandas as pd
+import numpy as np
     
 def check_outcar_convergence(outcar, verbose=True):
     out = open(outcar, 'r')
@@ -46,7 +47,7 @@ def check_status_calc(outcar):
     except:
         print('Missing or damaged OUTCAR file')
         pass
-    vecforces = atoms.get_forces() 
-    forces = sum(vecforces ** 2)**(1/2)
+    vecforces = atoms.get_forces()
+    forces = [np.linalg.norm(f) for f in vecforces]
     return max( forces )
     
