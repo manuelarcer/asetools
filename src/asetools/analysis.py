@@ -45,13 +45,14 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
     check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
+        energy = atoms.get_potential_energy()
+        vecforces = atoms.get_forces()
+        forces = [np.linalg.norm(f) for f in vecforces]
+        maxforce = max( forces )
+        return energy, maxforce
+
     except:
         print('Missing or damaged OUTCAR file')
         pass
 
-    energy = atoms.get_potential_energy()
-    vecforces = atoms.get_forces()
-    forces = [np.linalg.norm(f) for f in vecforces]
-    maxforce = max( forces )
-    return energy, maxforce
     
