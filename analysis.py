@@ -39,9 +39,9 @@ def check_outcar_convergence(outcar, verbose=True):
             
     return convergence
 
-def check_energy_and_maxforce(outcar):
+def check_energy_and_maxforce(outcar, verbose=True):
     
-    check_outcar_convergence(outcar, verbose=True)
+    check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
     except:
