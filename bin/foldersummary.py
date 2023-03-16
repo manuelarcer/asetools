@@ -15,7 +15,7 @@ for f in folders:
         converged = check_outcar_convergence(f+'OUTCAR')
         energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
         dic['Config'].append(f)
-        dic['Maxforce'].append(maxforce)
+        dic['MaxForce'].append(maxforce)
         dic['Energy'].append(energy)
 
     else:
