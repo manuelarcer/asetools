@@ -39,7 +39,7 @@ def check_outcar_convergence(outcar, verbose=True):
             
     return convergence
 
-def check_energy_and_maxforce(outcar, verbose=True):
+def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
     
     check_outcar_convergence(outcar, verbose=verbose)
     try:
