@@ -32,7 +32,7 @@ def check_outcar_convergence(outcar, verbose=True):
         print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
     
     if ibrion == 1 or ibrion == 2:
-        if nsw > 0 and convergence:
+        if nsw > 0 and convergence and verbose:
             print('Optimization Job --> CONVERGED')
         elif nsw > 0 and not convergence and verbose:
             print('Optimization Job --> *NOT* converged')
@@ -41,7 +41,7 @@ def check_outcar_convergence(outcar, verbose=True):
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
     ## TODO need to add Total MagMom functionally for output
-    
+
     check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
