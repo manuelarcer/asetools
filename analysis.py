@@ -47,7 +47,10 @@ def check_status_calc(outcar):
     except:
         print('Missing or damaged OUTCAR file')
         pass
+
+    energy = atoms.get_potential_energy()
     vecforces = atoms.get_forces()
     forces = [np.linalg.norm(f) for f in vecforces]
-    return print(f'Max Force --> {max( forces ):0.3f}')
+    maxforce = max( forces )
+    return energy, maxforce
     
