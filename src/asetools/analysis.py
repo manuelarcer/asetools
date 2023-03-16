@@ -6,7 +6,11 @@ import pandas as pd
 import numpy as np
     
 def check_outcar_convergence(outcar, verbose=True):
-    out = open(outcar, 'r')
+    try:
+        out = open(outcar, 'r')
+    except:
+        print('check_outcar_convergence --> OUTCAR file is damaged')
+        return False
     lines = out.readlines()
     ibrion = None
     nsw = None
