@@ -40,6 +40,7 @@ def check_outcar_convergence(outcar, verbose=True):
     return convergence
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
+    ## TODO need to add Total MagMom functionally for output
     
     check_outcar_convergence(outcar, verbose=verbose)
     try:
