@@ -5,5 +5,5 @@ setup(
     version='1.0',
     zip_safe=True,
     py_modules=['analysis', 'doscar_analysis', 'databases'],
-    scripts=['bin/foldersummary']
+    scripts=['bin/foldersummary.py']
 )
