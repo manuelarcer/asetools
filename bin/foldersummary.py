@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from ase.io import read
 import pandas as pd
 import numpy as np
