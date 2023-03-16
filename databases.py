@@ -40,9 +40,10 @@ def check_if_exists_in_db(db, atoms):
     if len(db) > 0:
         for row in db.select():
             db_forces = row.forces
-            if ( db_forces == forces ).all():
-                indb = True
-                index = row.id
+            if len(atoms) == row.natoms:
+                if ( db_forces == forces ).all():
+                    indb = True
+                    index = row.id
     return indb, index
 
 def add_config_to_db(db, outcar, idname=None, update=False):
