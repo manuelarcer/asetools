@@ -46,6 +46,7 @@ def check_status_calc(outcar):
     except:
         print('Missing or damaged OUTCAR file')
         pass
-    
-    return max( atoms.get_forces() )
+    vecforces = atoms.get_forces() 
+    forces = sum(vecforces ** 2)**(1/2)
+    return max( forces )
     
