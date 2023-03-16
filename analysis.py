@@ -49,5 +49,5 @@ def check_status_calc(outcar):
         pass
     vecforces = atoms.get_forces()
     forces = [np.linalg.norm(f) for f in vecforces]
-    return print('Max Force --> {max( forces ):0.3f}')
+    return print(f'Max Force --> {max( forces ):0.3f}')
     
