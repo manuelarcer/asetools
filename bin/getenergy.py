@@ -4,9 +4,9 @@ from asetools.analysis import check_energy_and_maxforce, check_outcar_convergenc
 import sys
 
 if len( sys.argv ) > 1:
-    outcar = 'OUTCAR'
-else:
     outcar = sys.argv[1]
+else:
+    outcar = 'OUTCAR'
 
 converged = check_outcar_convergence(outcar, verbose=True)
 energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
