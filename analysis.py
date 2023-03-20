@@ -57,6 +57,6 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
 
     except:
         print('Missing or damaged OUTCAR file')
-        pass
+        return 9999.99, 9.99
 
     
