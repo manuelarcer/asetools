@@ -3,7 +3,7 @@
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 import sys
 
-if sys.argv[1] is None:
+if len( sys.argv ) > 1:
     outcar = 'OUTCAR'
 else:
     outcar = sys.argv[1]
