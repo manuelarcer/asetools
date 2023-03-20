@@ -11,6 +11,6 @@ else:
 converged = check_outcar_convergence(outcar, verbose=True)
 energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
 
-print('{} {} {}'.format('Converged', 'MaxForce', 'Energy'))
-print(f'{str(converged):10s} {maxforce:10.3f} {energy:10.4f}')
+print('{}   {}   {}'.format('Converged', 'MaxForce', 'Energy'))
+print(f'{str(converged):6s} {maxforce:10.3f} {energy:10.4f}')
 
