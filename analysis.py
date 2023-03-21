@@ -32,6 +32,8 @@ def check_outcar_convergence(outcar, verbose=True):
                 opt = True
         elif 'reached required accuracy - stopping' in line and opt:
             convergence = True
+        elif not opt and 'total amount of memory' in line:
+            convergence = True
     if verbose:
         print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
     
