@@ -1,4 +1,4 @@
-from analysis import check_outcar_convergence
+from asetools.analysis import check_outcar_convergence
 from ase.io import read
 import pandas as pd
 
