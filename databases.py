@@ -1,37 +1,38 @@
+from analysis import check_outcar_convergence
 from ase.io import read
 import pandas as pd
 
-def check_outcar_convergence(outcar):
-    out = open(outcar, 'r')
-    lines = out.readlines()
-    ibrion = None
-    nsw = None
-    opt = False
-    convergence = False
-    for line in lines:
-        if 'IBRION' in line:
-            ibrion = int( line.split()[2] )
-            if ibrion == 1 or ibrion == 2:
-                opt = True
-            else:
-                print(f'IBRION --> {ibrion}, not an OPTIMIZATION job')
-                opt = False
-        elif 'NSW' in line:
-            nsw = int( line.split()[2] )
-            if nsw > 0:
-                opt = True
-        elif 'reached required accuracy - stopping' in line and opt:
-            convergence = True
+#def check_outcar_convergence(outcar):
+#    out = open(outcar, 'r')
+#    lines = out.readlines()
+#    ibrion = None
+#    nsw = None
+#    opt = False
+#    convergence = False
+#    for line in lines:
+#        if 'IBRION' in line:
+#            ibrion = int( line.split()[2] )
+#            if ibrion == 1 or ibrion == 2:
+#                opt = True
+#            else:
+#                print(f'IBRION --> {ibrion}, not an OPTIMIZATION job')
+#                opt = False
+#        elif 'NSW' in line:
+#            nsw = int( line.split()[2] )
+#            if nsw > 0:
+#                opt = True
+#        elif 'reached required accuracy - stopping' in line and opt:
+#            convergence = True
 
-    print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
+#    print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
     
-    if ibrion == 1 or ibrion == 2:
-        if nsw > 0 and convergence:
-            print('Optimization Job --> CONVERGED')
-        elif nsw > 0 and not convergence:
-            print('Optimization Job --> *NOT* converged')
+#    if ibrion == 1 or ibrion == 2:
+#        if nsw > 0 and convergence:
+#            print('Optimization Job --> CONVERGED')
+#        elif nsw > 0 and not convergence:
+#            print('Optimization Job --> *NOT* converged')
             
-    return convergence
+#    return convergence
     
 def check_if_exists_in_db(db, atoms):
     
