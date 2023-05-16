@@ -18,8 +18,9 @@ def check_outcar_convergence(outcar, verbose=True):
     convergence = False
     for line in lines:
         if 'IBRION' in line:
+            print(line)
             ibrion = int( line.split()[2] )
-            if ibrion == 1 or ibrion == 2:
+            if ibrion == 1 or ibrion == 2 or ibrion == 3:
                 opt = True
             elif verbose:
                 print(f'IBRION --> {ibrion}, not an OPTIMIZATION job')
@@ -30,14 +31,14 @@ def check_outcar_convergence(outcar, verbose=True):
             nsw = int( line.split()[2] )
             if nsw > 0:
                 opt = True
-        elif 'reached required accuracy - stopping' in line and opt:
+        elif 'reached required accuracy' in line and opt:
             convergence = True
         elif not opt and 'total amount of memory' in line:
             convergence = True
     if verbose:
         print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
     
-    if ibrion == 1 or ibrion == 2:
+    if ibrion == 1 or ibrion == 2 or ibrion == 3:
         if nsw > 0 and convergence and verbose:
             print('Optimization Job --> CONVERGED')
         elif nsw > 0 and not convergence and verbose:
