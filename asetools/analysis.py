@@ -5,7 +5,7 @@ from ase.io import read
 import pandas as pd
 import numpy as np
     
-def check_outcar_convergence(outcar, verbose=True):
+def check_outcar_convergence(outcar, verbose=False):
     try:
         out = open(outcar, 'r')
     except:
@@ -46,7 +46,7 @@ def check_outcar_convergence(outcar, verbose=True):
             
     return convergence
 
-def check_energy_and_maxforce(outcar, magmom=False, verbose=True):
+def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
     ## TODO need to add Total MagMom functionally for output
     ## TODO needs to add VASP 6 functionality. Currently, VASP 6 format returns error
 

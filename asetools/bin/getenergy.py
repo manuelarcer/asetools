@@ -9,7 +9,7 @@ def main():
     else:
         outcar = 'OUTCAR'
 
-    converged = check_outcar_convergence(outcar, verbose=True)
+    converged = check_outcar_convergence(outcar, verbose=False)
     energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
 
     print('{}   {}   {}'.format('Converged', 'MaxForce', 'Energy'))
