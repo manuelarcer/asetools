@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 from ase.io import read
 import pandas as pd
 import numpy as np
@@ -7,21 +8,40 @@ import glob, os
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 
 def main():
-    folders = glob.glob('*/')
 
+    ## Block from chatgpt
+    parser = argparse.ArgumentParser(description='Process folders.')
+    parser.add_argument('-m', '--magmom', action='store_true',
+                        help='extract and present magnetic moments')
+    args = parser.parse_args()
+    ##
+
+    folders = glob.glob('*/')
     dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     for f in sorted(folders):
         if os.path.exists(f+'OUTCAR'):
             converged = check_outcar_convergence(f+'OUTCAR', verbose=False)
-            energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=True, verbose=False)
+            if args.magmom:
+                energy, maxforce, magmom = check_energy_and_maxforce(f+'OUTCAR', magmom=args.magmom, verbose=False)
+            else:
+                energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
+                magmom = 'NA'
             dic['Config'].append(f)
             dic['Converged'].append(converged)
-            dic['MaxForce'].append(maxforce)
-            dic['Energy'].append(energy)
+            dic['MaxForce'].append(round(maxforce,3))
+            dic['Energy'].append(round(energy,3))
+            if type(magmom) == str:
+                dic['MagMom'].append(magmom)
+            else:
+                dic['MagMom'].append(round(magmom,3))
 
         else:
             print('No OUTCAR in ', f)
     
+    dic['Rel.E'] = []
+    for e in dic['Energy']:
+        dic['Rel.E'].append(e - min(dic['Energy']))
+
     df = pd.DataFrame.from_dict(dic) 
     print(df)
 
