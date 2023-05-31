@@ -56,7 +56,11 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
         vecforces = atoms.get_forces()
         forces = [np.linalg.norm(f) for f in vecforces]
         maxforce = max( forces )
-        return energy, maxforce
+        if magmom:
+            mm = atoms.get_magnetic_moment() 
+            return energy, maxforce, mm
+        else:
+            return energy, maxforce
 
     except:
         print('Missing or damaged OUTCAR file')
