@@ -25,16 +25,23 @@ def main():
                 energy, maxforce, magmom = check_energy_and_maxforce(f+'OUTCAR', magmom=args.magmom, verbose=False)
             else:
                 energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
-                magmom = 'na'
+                magmom = 'NA'
             dic['Config'].append(f)
             dic['Converged'].append(converged)
-            dic['MaxForce'].append(maxforce)
-            dic['Energy'].append(energy)
-            dic['MagMom'].append(magmom)
+            dic['MaxForce'].append(round(maxforce,3))
+            dic['Energy'].append(round(energy,3))
+            if type(magmom) == str:
+                dic['MagMom'].append(magmom)
+            else:
+                dic['MagMom'].append(round(magmom,3))
 
         else:
             print('No OUTCAR in ', f)
     
+    dic['Rel.E'] = []
+    for e in dic['Energy']:
+        dic['Rel.E'].append(e - min(dic['Energy']))
+
     df = pd.DataFrame.from_dict(dic) 
     print(df)
 
