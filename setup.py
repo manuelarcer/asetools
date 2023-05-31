@@ -1,7 +1,5 @@
-# as suggested in the following
-# https://towardsdatascience.com/setuptools-python-571e7d5500f2#:~:text=be%20more%20appropriate.-,The%20setup.,as%20the%20command%20line%20interface.
+from setuptools import setup, find_packages
 
-from setuptools import setup
 if __name__ == '__main__':
     setup(
         name='asetools',
@@ -15,8 +13,8 @@ if __name__ == '__main__':
         # List of packages your project depends on
         entry_points={
             'console_scripts': [
-                'executable_script1=asetools.bin.executable_script1:main',
-                'executable_script2=asetools.bin.executable_script2:main',
+                'executable_script1=asetools.bin.getenergy:main',
+                'executable_script2=asetools.bin.summaryfolders:main',
                 # etc.
             ],
         }
