@@ -1,6 +1,9 @@
-I tried to create a python package that could be installed. 
+# ASETOOLS 
 
-Therefore, src folder was created and the modules placed there.
+## Description:
+This package ...
 
-It did not work, now I resorted to bring back the modules to the root directory
-where they last worked
+## Installation
+
+### Requirements
+
