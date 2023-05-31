@@ -18,7 +18,6 @@ def check_outcar_convergence(outcar, verbose=False):
     convergence = False
     for line in lines:
         if 'IBRION' in line:
-            print(line)
             ibrion = int( line.split()[2] )
             if ibrion == 1 or ibrion == 2 or ibrion == 3:
                 opt = True
