@@ -9,11 +9,11 @@ from asetools.analysis import check_energy_and_maxforce, check_outcar_convergenc
 def main():
     folders = glob.glob('*/')
 
-    dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[]}
+    dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     for f in sorted(folders):
         if os.path.exists(f+'OUTCAR'):
             converged = check_outcar_convergence(f+'OUTCAR', verbose=False)
-            energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
+            energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=True, verbose=False)
             dic['Config'].append(f)
             dic['Converged'].append(converged)
             dic['MaxForce'].append(maxforce)
