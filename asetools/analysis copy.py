@@ -56,16 +56,23 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
 
     convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
-
-        atoms = read(outcar, format='vasp-out', index=-1)
-        energy = atoms.get_potential_energy()
-        vecforces = atoms.get_forces()
-        forces = [np.linalg.norm(f) for f in vecforces]
-        maxforce = max( forces )
-        if magmom:
-            mm = atoms.get_magnetic_moment() 
-            return energy, maxforce, mm
-        else:
+        if vasp == 'vasp5':
+            atoms = read(outcar, format='vasp-out', index=-1)
+            energy = atoms.get_potential_energy()
+            vecforces = atoms.get_forces()
+            forces = [np.linalg.norm(f) for f in vecforces]
+            maxforce = max( forces )
+            if magmom:
+                mm = atoms.get_magnetic_moment() 
+                return energy, maxforce, mm
+            else:
+                return energy, maxforce
+        elif vasp == 'vasp6':
+            out = open(outcar, 'r')
+            lines = out.readlines()[-500:]
+            for line in lines:
+                if 'energy  without entropy=' in line:
+                    energy = line.split()[-1]
             return energy, maxforce
 
     except:
