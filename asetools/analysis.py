@@ -16,7 +16,12 @@ def check_outcar_convergence(outcar, verbose=False):
     nsw = None
     opt = False
     convergence = False
+    vasp = ''
     for line in lines:
+        if 'vasp.6' in line:
+            vasp = 'vasp6'
+        if 'vasp.5' in line:
+            vasp = 'vasp5'
         if 'IBRION' in line:
             ibrion = int( line.split()[2] )
             if ibrion == 1 or ibrion == 2 or ibrion == 3:
@@ -43,24 +48,27 @@ def check_outcar_convergence(outcar, verbose=False):
         elif nsw > 0 and not convergence and verbose:
             print('Optimization Job --> *NOT* converged')
             
-    return convergence
+    return convergence, vasp
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
     ## TODO need to add Total MagMom functionally for output
     ## TODO needs to add VASP 6 functionality. Currently, VASP 6 format returns error
 
-    check_outcar_convergence(outcar, verbose=verbose)
+    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
-        atoms = read(outcar, format='vasp-out', index=-1)
-        energy = atoms.get_potential_energy()
-        vecforces = atoms.get_forces()
-        forces = [np.linalg.norm(f) for f in vecforces]
-        maxforce = max( forces )
-        if magmom:
-            mm = atoms.get_magnetic_moment() 
-            return energy, maxforce, mm
-        else:
-            return energy, maxforce
+        if vasp == 'vasp5':
+            atoms = read(outcar, format='vasp-out', index=-1)
+            energy = atoms.get_potential_energy()
+            vecforces = atoms.get_forces()
+            forces = [np.linalg.norm(f) for f in vecforces]
+            maxforce = max( forces )
+            if magmom:
+                mm = atoms.get_magnetic_moment() 
+                return energy, maxforce, mm
+            else:
+                return energy, maxforce
+        elif vasp == 'vasp6':
+            
 
     except:
         print('Missing or damaged OUTCAR file')
