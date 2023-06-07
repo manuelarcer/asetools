@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
+from asetools.analysis_copy2 import check_energy_and_maxforce, check_outcar_convergence
 import sys
 
 def main():
