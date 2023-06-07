@@ -8,8 +8,8 @@ def test_analysis_vasp6():
     assert conv
     assert vasp
 
-    energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
-    print(vasp, energy, maxforce)
+    energy, maxforce, mm = check_energy_and_maxforce(outcar, magmom=True, verbose=False)
+    print(vasp, energy, maxforce, mm)
     assert energy
     assert maxforce
 
@@ -22,7 +22,7 @@ def test_analysis_vasp5():
     assert conv
     assert vasp
 
-    energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
-    print(vasp, energy, maxforce)
+    energy, maxforce, mm = check_energy_and_maxforce(outcar, magmom=True, verbose=False)
+    print(vasp, energy, maxforce, mm)
     assert energy
     assert maxforce
