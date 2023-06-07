@@ -5,7 +5,7 @@ from ase.io import read
 import pandas as pd
 import numpy as np
 import glob, os
-from asetools.analysis_copy2 import check_energy_and_maxforce, check_outcar_convergence
+from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 
 def main():
 
