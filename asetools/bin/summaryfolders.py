@@ -19,19 +19,19 @@ def main():
     folders = glob.glob('*/')
     dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     for f in sorted(folders):
-        foundoutcar = False
+        #foundoutcar = False
+        #if os.path.exists(f+'OUTCAR'):
+        #    outcar = f+'OUTCAR'
+        #    foundoutcar = True
+        #elif os.path.exists(f+'OUTCAR.gz'):
+        #    outcar = f+'OUTCAR.gz'
+        #    foundoutcar = True
         if os.path.exists(f+'OUTCAR'):
-            outcar = f+'OUTCAR'
-            foundoutcar = True
-        elif os.path.exists(f+'OUTCAR.gz'):
-            outcar = f+'OUTCAR.gz'
-            foundoutcar = True
-        if foundoutcar:
-            converged = check_outcar_convergence(outcar, verbose=False)
+            converged = check_outcar_convergence(f+'OUTCAR.gz', verbose=False)
             if args.magmom:
-                energy, maxforce, magmom = check_energy_and_maxforce(outcar, magmom=args.magmom, verbose=False)
+                energy, maxforce, magmom = check_energy_and_maxforce(f+'OUTCAR.gz', magmom=args.magmom, verbose=False)
             else:
-                energy, maxforce = check_energy_and_maxforce(outcar, magmom=False, verbose=False)
+                energy, maxforce = check_energy_and_maxforce(f+'OUTCAR.gz', magmom=False, verbose=False)
                 magmom = 'NA'
             dic['Config'].append(f)
             dic['Converged'].append(converged)
