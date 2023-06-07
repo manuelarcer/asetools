@@ -51,8 +51,6 @@ def check_outcar_convergence(outcar, verbose=False):
     return convergence, vasp
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
-    ## TODO need to add Total MagMom functionally for output
-    ## TODO needs to add VASP 6 functionality. Currently, VASP 6 format returns error
 
     convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
