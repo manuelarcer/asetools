@@ -20,7 +20,7 @@ or
 - ase
 - matplotlib
 
-## Package's modules and examples
+## Package's modules
 
 ### Module `analysis`
 
@@ -150,7 +150,29 @@ In this example, we load a molecule structure using the ASE build module. We the
 
 Please replace "my_module" with the actual name of your module. This example assumes that the SurfaceAnalyzer class is imported from a module called "my_module".
 
+## Package's executables
 
+### `getenergy.py`
+
+The `getenergy.py` script is a tool that enables users to analyze the convergence, energy, and maximum force of an OUTCAR file (a common output file in DFT calculations, especially with VASP software). This is particularly useful for users conducting materials simulations and those who require a simplified method of checking their OUTCAR files' status.
+
+The script uses `asetools.analysis` library functions, specifically `check_energy_and_maxforce` and `check_outcar_convergence`. It takes an OUTCAR file as an argument and determines whether the calculation has converged by analyzing the OUTCAR file. If the convergence is successful, the energy and maximum force of the system are returned.
+
+If no argument is provided, the script defaults to analyzing a file named "OUTCAR" in the current directory.
+
+### `summaryfolders.py`
+
+This script is used for analysis and summarization of results from multiple OUTCAR files (output files from DFT calculations, commonly generated with the VASP software), specifically across different configuration folders. It determines convergence status, calculates the energy, maximum force, and optionally, the magnetic moments, then outputs the data as a dataframe.
+
+The script utilizes `glob`, `pandas`, `numpy`, and `asetools.analysis` libraries to process and analyze multiple OUTCAR files. It performs a directory-wide search for directories containing OUTCAR files and then carries out the following analyses:
+
+1. Check if the calculations in the OUTCAR files have converged.
+2. Extracts the energy, maximum force, and magnetic moments (optional) from the OUTCAR files.
+3. Calculates the relative energy with respect to the minimum energy across all the configurations.
+4. Prints out a `DataFrame` that includes all the extracted and calculated information.
+5. If the `-m` or `--magmom` flag is included, the script will also calculate the magnetic moments.
+
+The script assumes that each directory contains one OUTCAR file.
 
 ## Extra content
 
