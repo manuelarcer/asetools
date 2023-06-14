@@ -17,7 +17,10 @@ def main():
     ##
 
     folders = glob.glob('*/')
-    dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+    if args.magmom:
+        dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+    else:
+        dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[]}
     for f in sorted(folders):
         #foundoutcar = False
         #if os.path.exists(f+'OUTCAR'):
@@ -30,18 +33,13 @@ def main():
             converged = check_outcar_convergence(f+'OUTCAR', verbose=False)
             if args.magmom:
                 energy, maxforce, magmom = check_energy_and_maxforce(f+'OUTCAR', magmom=args.magmom, verbose=False)
+                dic['MagMom'].append(round(magmom,3))
             else:
                 energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
-                magmom = 'NA'
             dic['Config'].append(f)
             dic['Converged'].append(converged)
             dic['MaxForce'].append(round(maxforce,3))
             dic['Energy'].append(round(energy,3))
-            if type(magmom) == str:
-                dic['MagMom'].append(magmom)
-            else:
-                dic['MagMom'].append(round(magmom,3))
-
         else:
             print('No OUTCAR in ', f)
     
