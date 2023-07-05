@@ -97,15 +97,8 @@ energies = []
 for key in vib.keys():
       energies.append( vib[key]['e'] )
 harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
-#harm_lim.get_entropy(T, verbose=True)
-#print()
+# The following line already gives the details of the S, CpT and G energy calculations
 harm_lim.get_helmholtz_energy(T, verbose=True)
-#print()
-#harm_lim.get_internal_energy(T, verbose=True)
-#print( 'S = ', harm_lim.get_entropy(T, verbose=True) )
-#print( 'G = ', harm_lim.get_helmholtz_energy(T, verbose=True) )
-#print( 'U = ', harm_lim.get_internal_energy(T, verbose=True) )
-#print()
 
 ### WRITE VIB section
 
