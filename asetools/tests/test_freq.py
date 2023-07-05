@@ -1,2 +1,3 @@
 def test_freq_gibbsFE():
-    outcar = 'asetools/data/OUTCAR_vasp6'
+    outcar = 'asetools/data/OUTCAR_ibrion5'
+    
