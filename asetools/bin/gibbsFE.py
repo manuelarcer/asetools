@@ -33,6 +33,9 @@ else:
 
 kB = 0.0000861733   # eV/K
 
+## Extracting the total energy
+e_dft = read(outcar, format='vasp-out', index=0).get_potential_energy()
+
 output = open(outcar, 'r')
 lines = output.readlines()
 vib = {}
@@ -80,7 +83,7 @@ for i in vib:
     print ('{:>3} {:12.1f} {:6.3f}'.format(i, vib[i]['freq'], vib[i]['e']))
 print ('-----------------------')
 #print('\n')
-print('E, eV = {:.3f}'.format( read(outcar, format='vasp-out', index=0).get_potential_energy() ))
+print('E, eV = {:.3f}'.format( e_dft ))
 print('ZPE, eV = {:.3f}'.format( zpe / 2. ))
 print('S, eV/K = {:.6f}'.format( S ))
 print('Temperature is = {:.1f}'.format( T ) )
