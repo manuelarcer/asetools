@@ -8,6 +8,7 @@
 import math, sys
 from ase.io import read, write
 import numpy as np
+from ase.thermochemistry import HarmonicThermo
 
 def determineshift(shiftarray, k=1 ):
         newshift = []
@@ -86,6 +87,17 @@ print('Entropy correction (S*T), eV = {:.3f}'.format( S * T ) )
 print('\n')
 print('Three together {:.3f} {:.3f} {:.3f}'.format(zpe / 2., cpT, S * T))
 print('\n')
+
+print()
+print('----- Harmonic Limit ------')
+energies = []
+for key in vib.keys():
+      energies.append( key['e'] )
+harm_lim = HarmonicThermo(energies, potentialenergy=0.0, ignore_imag_modes=False)
+print( 'S = ', harm_lim.get_entropy() )
+print( 'G = ', harm_lim.get_helmholtz_energy() )
+print( 'U = ', harm_lim.get_internal_energy() )
+print()
 
 ### WRITE VIB section
 
