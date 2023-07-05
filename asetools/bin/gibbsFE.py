@@ -5,6 +5,9 @@
 # Harmonic limit approximation. Just like it is implemented in ASE
 # https://wiki.fysik.dtu.dk/ase/ase/thermochemistry/thermochemistry.html
 
+# Also, I calculated each thermochemistry parameter manually for an example. Look at the excel:
+# Onedrive/work/ACDP/Histidine_electrocatall_freq_calc_and_gfe.xlsx  
+
 import math, sys
 from ase.io import read, write
 import numpy as np
