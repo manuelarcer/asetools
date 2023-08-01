@@ -81,7 +81,7 @@ def extract_pdos_perstate(data, atoms, states):
     return e, sum_plus, sum_minus
 
 def extract_pdos_perorbital(data, atoms, orbitals):
-    # data:
+    # data: First, extract 'data' with extract_dos()
     # atoms: list atoms of interest, e.g., [0, 10]
     # orbitals: list of orbitals of interest, e.g., ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+'] 
     #         or 'all-d' to consider all d-states
