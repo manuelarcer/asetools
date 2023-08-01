@@ -51,7 +51,7 @@ def extract_dos(doscarfile):
 
 
 def extract_pdos_perstate(data, atoms, states):
-    # data:
+    # data: First, extract 'data' with extract_dos()
     # atoms: list atoms of interest, e.g., [0, 10]
     # states: list of states of interest, e.g., ['s_states', 'p_states', 'd_states']
 
