@@ -40,7 +40,9 @@ numelec = get_sum_electrons(poscar)
 nelec_min = numelec + lower
 nelec_max = numelec + higher
 
-for i, ne in enumerate( np.arange(numelec - lower, numelec + higher + 0.001, step) ):
+print(f'Num_elec (Neutral) = {numelec} ; lower = {nelec_min} ; higher = {nelec_max}')
+
+for i, ne in enumerate( np.arange(nelec_min, nelec_max + 0.001, step) ):
     
     name = f'{i:02d}_nelec_{ne:.2f}'
     os.mkdir(name)
