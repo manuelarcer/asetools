@@ -24,10 +24,16 @@ pythonfile = sys.argv[2]
 
 if len(sys.argv) == 3:
     lower = sys.argv[3]
+else:
+    lower = -1
 if len(sys.argv)  == 4:
     higher = sys.argv[4]
+else:
+    higher = 1
 if len(sys.argv) == 5:
     step =   sys.argv[5]    # only 2 decimals allowed, or change the round() function bellow
+else:
+    step = 0.2
 ######################
 
 numelec = get_sum_electrons(poscar)
