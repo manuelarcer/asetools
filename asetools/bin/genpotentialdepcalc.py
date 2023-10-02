@@ -37,7 +37,7 @@ else:
 ######################
 
 numelec = get_sum_electrons(poscar)
-nelec_min = numelec - lower
+nelec_min = numelec + lower
 nelec_max = numelec + higher
 
 for i, ne in enumerate( np.arange(numelec - lower, numelec + higher + 0.001, step) ):
