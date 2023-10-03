@@ -49,6 +49,22 @@ def extract_dos(doscarfile):
 
     return data
 
+def extract_fermi_e(doscarfile):
+    try:
+        with open(doscarfile, 'r') as file:
+            lines = file.readlines()
+            fermie = float( lines[5].split()[3] )
+        return fermie
+    except FileNotFoundError:
+        print(f"'{doscarfile}' not found.")
+    except IndexError:
+        print("Unexpected file format. Couldn't extract Fermi energy.")
+    except ValueError:
+        print("Error converting Fermi energy to float.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    return None
+
 
 def extract_pdos_perstate(data, atoms, states):
     # data: First, extract 'data' with extract_dos()
