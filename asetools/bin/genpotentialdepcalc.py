@@ -53,6 +53,7 @@ for i, ne in enumerate( np.arange(nelec_min, nelec_max + 0.001, step) ):
     name = f'{i:02d}_nelec_{ne:.2f}'
     os.mkdir(name)
     shutil.copyfile(pythonfile, name+'/'+pythonfile)
+    shutil.copyfile(poscar, name+'/'+poscar)
 
     os.chdir(name)
     with open(pythonfile, 'r') as file:
