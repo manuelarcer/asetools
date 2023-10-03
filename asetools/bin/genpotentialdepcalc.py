@@ -27,17 +27,17 @@ if len(sys.argv) == 3:
     higher = 1
     step = 0.2
 elif len(sys.argv) == 4:
-    lower = sys.argv[4]
+    lower = sys.argv[3]
     higher = -lower
     step = 0.2
 elif len(sys.argv) == 5:
-    lower = sys.argv[4]
-    higher = sys.argv[5]
+    lower = sys.argv[3]
+    higher = sys.argv[4]
     step = 0.2
 elif len(sys.argv) == 6:
-    lower = sys.argv[4]
-    higher = sys.argv[5]
-    step = sys.argv[6]
+    lower = sys.argv[3]
+    higher = sys.argv[4]
+    step = sys.argv[5]
 else:
     print('Please verify the input parameters')
 ######################
