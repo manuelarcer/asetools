@@ -23,17 +23,23 @@ poscar = sys.argv[1]
 pythonfile = sys.argv[2]
 
 if len(sys.argv) == 3:
-    lower = sys.argv[3]
-else:
     lower = -1
-if len(sys.argv)  == 4:
-    higher = sys.argv[4]
-else:
     higher = 1
-if len(sys.argv) == 5:
-    step =   sys.argv[5]    # only 2 decimals allowed, or change the round() function bellow
-else:
     step = 0.2
+elif len(sys.argv) == 4:
+    lower = sys.argv[4]
+    higher = -lower
+    step = 0.2
+elif len(sys.argv) == 5:
+    lower = sys.argv[4]
+    higher = sys.argv[5]
+    step = 0.2
+elif len(sys.argv) == 6:
+    lower = sys.argv[4]
+    higher = sys.argv[5]
+    step = sys.argv[6]
+else:
+    print('Please verify the input parameters')
 ######################
 
 numelec = get_sum_electrons(poscar)
