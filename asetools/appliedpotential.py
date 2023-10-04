@@ -76,5 +76,9 @@ def fit_polynomial(results, order=3, fixed_constant=0, plot=False):
         plt.ylabel(r'E, eV')
         plt.tight_layout()
         plt.show()
-    
     return output
+
+def print_results(results):
+    # Input is the dictionary from "extract_corrected_energy_fermie"
+    for i, nelec in enumerate(results['nelect']):
+        print(nelec, results['e'], results['fe'], results['U'])
