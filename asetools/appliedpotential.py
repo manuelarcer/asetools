@@ -59,24 +59,56 @@ def custom_polynomial(beta, x, fixed_constant=0):
         y += beta[i-1] * (x ** i)
     return y
 
-def fit_polynomial(results, order=3, fixed_constant=0, plot=False):
-    poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, fixed_constant))
+def fit_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=False):
+    poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, energy_ref))
     data = odr.Data(results['nelect'], results['e'])
     odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
     output = odr_obj.run()
-    
-    if plot:
-        parameters = np.append(output.beta[::-1], fixed_constant)
-        poly = np.poly1d(parameters)
-        x = np.linspace(min(results['nelect']), max(results['nelect']), 100)
-        plt.plot(results['nelect'], results['e'], 'ok', label="original data")
-        plt.plot(x, poly(x), '-k', label="fit")
-        plt.legend()
-        plt.xlabel(r'$\Delta$N$_{elec}$')
-        plt.ylabel(r'E, eV')
+    if sum([plot, ploterrors]) == 2:
+        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        plot_fit(results, output, energy_ref, ax1)
+        plot_errors(results, output, energy_ref, ax2)
+        plt.tight_layout()
+        plt.show()
+    elif sum([plot, ploterrors]) == 1:
+        fig, ax = plt.subplots(figsize=(5,5))
+        if plot:
+            plot_fit(results, output, energy_ref, ax)
+        elif ploterrors:
+            plot_errors(results, output, energy_ref, ax)
         plt.tight_layout()
         plt.show()
     return output
+
+def plot_errors(results, polyfit, energy_ref, ax):
+    # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
+    # energy_ref is the energy of the neutral system
+    # ax is the axis pyplot object
+     
+    parameters = np.append(polyfit.beta[::-1], energy_ref)
+    poly = np.poly1d( parameters )
+    poly_y = poly( results['nelect'] )
+    errors = poly_y - results['e']
+    ax.bar( results['nelect'], errors )
+    lower = min(results['nelect'])
+    higher = max(results['nelect'])
+    shift = (higher - lower) / 10
+    ax.plot( [lower - shift, higher + shift], [0, 0], '-k', linewidth=1.5 )
+    ax.set_xlabel(r'$\Delta$N$_{elec}$')
+    ax.set_ylabel(r'E$_{fit}$ - E$_{DFT}$, eV')
+    return ax
+
+def plot_fit(results, polyfit, energy_ref, ax):
+    
+    parameters = np.append(polyfit.beta[::-1], energy_ref)
+    poly = np.poly1d(parameters)
+    x = np.linspace(min(results['nelect']), max(results['nelect']), 100)
+    ax.plot(results['nelect'], results['e'], 'ok', label="original data")
+    ax.plot(x, poly(x), '-k', label="fit")
+    ax.legend()
+    ax.set_xlabel(r'$\Delta$N$_{elec}$')
+    ax.set_ylabel(r'E, eV')
+    return ax
 
 def print_results(results):
     # Input is the dictionary from "extract_corrected_energy_fermie"
