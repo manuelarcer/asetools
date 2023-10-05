@@ -87,7 +87,7 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
         data = odr.Data(X, Y)
         
         if ref_value != None:
-            poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, ref_value))
+            poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, fixed_constant=ref_value))
             odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
             output = odr_obj.run()
             Y_fit = custom_polynomial(output.beta, X, ref_value)
