@@ -110,26 +110,29 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
-        ax1.plot(X, Y, 'o', label='Original')
-        ax1.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
-        ax1.legend()
-        
-        ax2.plot(X, Y - Y_fit, 'o', label='Errors')
-        ax2.axhline(0, color='gray', linestyle='--')
-        ax2.legend()
-        
+        plot_fit(fit_result, output, ref_value, ax1)
+        plot_errors(fit_result, output, ref_value, ax2)
         plt.tight_layout()
         plt.show()
+        #ax1.plot(X, Y, 'o', label='Original')
+        #ax1.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
+        #ax1.legend()
+        
+        #ax2.plot(X, Y - Y_fit, 'o', label='Errors')
+        #ax2.axhline(0, color='gray', linestyle='--')
+        #ax2.legend()
     elif sum([plot, ploterrors]) == 1:
         fig, ax = plt.subplots(figsize=(5,5))
         if plot:
-            ax.plot(X, Y, 'o', label='Data')
-            ax.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
-            ax.legend()
+            plot_fit(fit_result, output, ref_value, ax)
+            #ax.plot(X, Y, 'o', label='Data')
+            #ax.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
+            #ax.legend()
         elif ploterrors:
-            ax.plot(X, Y - Y_fit, 'o', label='Residuals')
-            ax.axhline(0, color='gray', linestyle='--')
-            ax.legend()
+            plot_errors(fit_result, output, ref_value, ax)
+            #ax.plot(X, Y - Y_fit, 'o', label='Residuals')
+            #ax.axhline(0, color='gray', linestyle='--')
+            #ax.legend()
         
         plt.tight_layout()
         plt.show()
