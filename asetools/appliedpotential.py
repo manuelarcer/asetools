@@ -2,6 +2,7 @@
 
 from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
 from asetools.doscar_analysis import extract_fermi_e
+from scipy.interpolate import UnivariateSpline
 from scipy import odr
 from ase.io import read
 import numpy as np
@@ -80,48 +81,72 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
         plt.show()
     return output
 
-def fit_to_polynomial(X, Y, ref_value=None, order=2, plot=False, ploterrors=False):
+def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, ploterrors=False):
     
-    data = odr.Data(X, Y)
-    
-    if ref_value != None:
-        ### POLY fit 
-        poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, ref_value))
-        odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
-        output = odr_obj.run()
-    elif ref_value == None:
-        poly_model = odr.polynomial(order)
-        odr_obj = odr.ODR(data, poly_model)
-        output = odr_obj.run()
+    if fit_type == 'polynomial':
+        data = odr.Data(X, Y)
+        
+        if ref_value != None:
+            poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, ref_value))
+            odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
+            output = odr_obj.run()
+            Y_fit = custom_polynomial(output.beta, X, ref_value)
+        elif ref_value == None:
+            poly_model = odr.polynomial(order)
+            odr_obj = odr.ODR(data, poly_model)
+            output = odr_obj.run()
+            Y_fit = np.polyval(output.beta, X)
+        
+        fit_result = output
 
+    elif fit_type == 'spline':
+        spline = UnivariateSpline(X, Y, k=order)
+        Y_fit = spline(X)
+        fit_result = spline
+
+    else:
+        raise ValueError("Invalid fit_type. Choose either 'polynomial' or 'spline'.")
+    
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
-        plot_fit(X, Y, output, ref_value, ax1)
-        plot_errors(X, Y, output, ref_value, ax2)
+        ax1.plot(X, Y, 'o', label='Data')
+        ax1.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
+        ax1.legend()
+        
+        ax2.plot(X, Y - Y_fit, 'o', label='Residuals')
+        ax2.axhline(0, color='gray', linestyle='--')
+        ax2.legend()
+        
         plt.tight_layout()
         plt.show()
     elif sum([plot, ploterrors]) == 1:
         fig, ax = plt.subplots(figsize=(5,5))
         if plot:
-            plot_fit(X, Y, output, ref_value, ax)
+            ax.plot(X, Y, 'o', label='Data')
+            ax.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
+            ax.legend()
         elif ploterrors:
-            plot_errors(X, Y, output, ref_value, ax)
+            ax.plot(X, Y - Y_fit, 'o', label='Residuals')
+            ax.axhline(0, color='gray', linestyle='--')
+            ax.legend()
+        
         plt.tight_layout()
         plt.show()
-    return output
+    
+    return fit_result
 
-def get_energy_at_givenpotential(results, e_ref=None, order=2, desiredU=0.):
+def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, order=2, desiredU=0.):
     # e_ref, is the energy of the neutral system (reference)
 
     # Fit Nelec to U
-    potential_fit = fit_to_polynomial(results['U'], results['nelect'], ref_value=None, order=order )
+    potential_fit = fit_data(results['U'], results['nelect'], fit_type=fit_type, ref_value=None, order=order )
     parameters = potential_fit.beta[::-1]    # reversing the order of items
     poly = np.poly1d( parameters )
     nelec = poly( desiredU )
 
     # Fit E to Nelec
-    potential_fit = fit_to_polynomial(results['nelect'], results['e'], ref_value=e_ref, order=order)
+    potential_fit = fit_data(results['nelect'], results['e'], fit_type=fit_type, ref_value=e_ref, order=order)
     parameters = np.append(potential_fit.beta[::-1], e_ref)
     poly = np.poly1d( parameters )
     e_pred = poly( nelec )
