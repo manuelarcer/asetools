@@ -57,7 +57,7 @@ def extract_corrected_energy_fermie(listfolders, calc_zero):
 def custom_polynomial(beta, x, fixed_constant=0):
     y = fixed_constant
     for i in range(1, len(beta) + 1):
-        y += beta[i-1] * (x ** i)
+        y += beta[i-1] * np.power(x, i)
     return y
 
 def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=False):
@@ -110,11 +110,11 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
-        ax1.plot(X, Y, 'o', label='Data')
+        ax1.plot(X, Y, 'o', label='Original')
         ax1.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
         ax1.legend()
         
-        ax2.plot(X, Y - Y_fit, 'o', label='Residuals')
+        ax2.plot(X, Y - Y_fit, 'o', label='Errors')
         ax2.axhline(0, color='gray', linestyle='--')
         ax2.legend()
         
