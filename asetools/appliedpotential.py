@@ -110,8 +110,8 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
-        plot_fit(fit_result, output, ref_value, ax1)
-        plot_errors(fit_result, output, ref_value, ax2)
+        plot_fit(X, Y, fit_result, ref_value, ax1)
+        plot_errors(X, Y, fit_result, ref_value, ax2)
         plt.tight_layout()
         plt.show()
         #ax1.plot(X, Y, 'o', label='Original')
@@ -124,12 +124,12 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
     elif sum([plot, ploterrors]) == 1:
         fig, ax = plt.subplots(figsize=(5,5))
         if plot:
-            plot_fit(fit_result, output, ref_value, ax)
+            plot_fit(X, Y, fit_result, ref_value, ax)
             #ax.plot(X, Y, 'o', label='Data')
             #ax.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
             #ax.legend()
         elif ploterrors:
-            plot_errors(fit_result, output, ref_value, ax)
+            plot_errors(X, Y, fit_result, ref_value, ax)
             #ax.plot(X, Y - Y_fit, 'o', label='Residuals')
             #ax.axhline(0, color='gray', linestyle='--')
             #ax.legend()
@@ -158,12 +158,12 @@ def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, ord
 
 
 
-def plot_errors(X, Y, polyfit, energy_ref, ax):
+def plot_errors(X, Y, fit_result, energy_ref, ax):
     # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
     # energy_ref is the energy of the neutral system
     # ax is the axis pyplot object
      
-    parameters = np.append(polyfit.beta[::-1], energy_ref)
+    parameters = np.append(fit_result.beta[::-1], energy_ref)
     poly = np.poly1d( parameters )
     poly_y = poly( X )
     errors = poly_y - Y
@@ -176,13 +176,16 @@ def plot_errors(X, Y, polyfit, energy_ref, ax):
     ax.set_ylabel(r'Y$_{fit}$ - Y$_{DFT}$, eV')
     return ax
 
-def plot_fit(X, Y, polyfit, energy_ref, ax):
-    
-    parameters = np.append(polyfit.beta[::-1], energy_ref)
-    poly = np.poly1d(parameters)
+def plot_fit(X, Y, fit_result, energy_ref, ax):
     x = np.linspace(min(X), max(X), 100)
+    if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
+        parameters = np.append(fit_result.beta[::-1], energy_ref)
+        poly = np.poly1d(parameters)
+        ax.plot(x, poly(x), '-k', label="fit")
+    elif isinstance(fit_result, UnivariateSpline):  # Check if it's a spline
+        ax.plot(x, fit_result(x), '-k', label="spline fit")
+    
     ax.plot(X, Y, 'ok', label="original data")
-    ax.plot(x, poly(x), '-k', label="fit")
     ax.legend()
     ax.set_xlabel(r'X')
     ax.set_ylabel(r'Y')
