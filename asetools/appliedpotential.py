@@ -179,8 +179,6 @@ def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, ord
     #print(f'at U = {desiredU:0.3f}; Nelect = {nelec:0.2f}; Energy = {e_pred:.3f}')
     return e_pred
 
-
-
 def plot_errors(X, Y, fit_result, energy_ref, ax):
     # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
     # energy_ref is the energy of the neutral system
