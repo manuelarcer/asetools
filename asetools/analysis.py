@@ -69,7 +69,7 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
 
 def extract_magnetic_moments(outcar, listatoms, verbose=False):
     # listatoms: is a list with the indexes of atoms of interest
-    #convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
+    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
         #energy = atoms.get_potential_energy()
