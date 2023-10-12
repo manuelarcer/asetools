@@ -74,7 +74,7 @@ def extract_magnetic_moments(outcar, listatoms, verbose=False):
         atoms = read(outcar, format='vasp-out', index=-1)
         #energy = atoms.get_potential_energy()
         mm = atoms.get_magnetic_moment()
-        return [atoms.get_magnetic_moments()[i] for i in listatoms]
+        return [round(atoms.get_magnetic_moments()[i],2) for i in listatoms]
     except:
         print('Missing or damaged OUTCAR file')
         return []
