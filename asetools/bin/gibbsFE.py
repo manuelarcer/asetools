@@ -38,7 +38,7 @@ kB = 0.0000861733   # eV/K
 
 ## Extracting the total energy
 e_dft = read(outcar, format='vasp-out', index=0).get_potential_energy()
-
+atoms = read(outcar, 'vasp-out', index=-1)
 output = open(outcar, 'r')
 lines = output.readlines()
 vib = {}
@@ -111,10 +111,9 @@ harm_lim.get_helmholtz_energy(T, verbose=True)
 
 ### Ideal gas Thermo
 if gas == True:
-    thermo = IdealGasThermo(vib_energies=vib_energies,
-                        potentialenergy=potentialenergy,
+    thermo = IdealGasThermo(vib_energies=energies,
                         atoms=atoms,
-                        geometry='linear',
+                        geometry='nonlinear',      # monoatomic, linear, nonlinear
                         symmetrynumber=2, spin=0)
     G = thermo.get_gibbs_energy(temperature=298.15, pressure=101325.)
 
