@@ -55,14 +55,15 @@ if finished:
     for line in lines:
         if ' f  = ' in line:
             index = line.split()[0]
-            vib[index] = {}
             vibenergy = float( line.split()[-2] ) / 1000  # this is now in eV
             freq = float( line.split()[-4] )
-            vib[index]['e'] = vibenergy
-            vib[index]['freq'] = freq
-            zpe += vibenergy        # For ZPE energy, we need to divide by 2 at the end
-            cpT += vibenergy / ( math.exp( vibenergy / kB / T ) - 1)
-            S += kB * ( vibenergy / ( kB*T * ( math.exp(vibenergy/kB/T)-1 )  ) - math.log( 1 - math.exp(-vibenergy/kB/T
+            if freq >= 50: 
+                vib[index] = {}
+                vib[index]['e'] = vibenergy
+                vib[index]['freq'] = freq
+                zpe += vibenergy        # For ZPE energy, we need to divide by 2 at the end
+                cpT += vibenergy / ( math.exp( vibenergy / kB / T ) - 1)
+                S += kB * ( vibenergy / ( kB*T * ( math.exp(vibenergy/kB/T)-1 )  ) - math.log( 1 - math.exp(-vibenergy/kB/T
 ) ) )
         elif 'f/i=' in line:
             print('there is an imaginary frequency')
@@ -108,8 +109,18 @@ harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
 # The following line already gives the details of the S, CpT and G energy calculations
 harm_lim.get_helmholtz_energy(T, verbose=True)
 
-### WRITE VIB section
+### Ideal gas Thermo
+if gas == True:
+    thermo = IdealGasThermo(vib_energies=vib_energies,
+                        potentialenergy=potentialenergy,
+                        atoms=atoms,
+                        geometry='linear',
+                        symmetrynumber=2, spin=0)
+    G = thermo.get_gibbs_energy(temperature=298.15, pressure=101325.)
 
+
+
+### WRITE VIB section
 if writevib == 'y' or writevib == 'Y' or writevib == 'yes':
 	print('Writing vibrational frequencies to traj files...')
 	if vasp6:
