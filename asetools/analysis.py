@@ -67,4 +67,17 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
         print('Missing or damaged OUTCAR file')
         return 9999.99, 9.99
 
+def extract_magnetic_moments(outcar, listatoms, verbose=False):
+    # listatoms: is a list with the indexes of atoms of interest
+    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
+    try:
+        atoms = read(outcar, format='vasp-out', index=-1)
+        #energy = atoms.get_potential_energy()
+        mm = atoms.get_magnetic_moment()
+        return [round(atoms.get_magnetic_moments()[i],2) for i in listatoms]
+    except:
+        print('Missing or damaged OUTCAR file')
+        return []
+
+
     
