@@ -128,7 +128,7 @@ def main():
     print('---------------  Harmonic Limit  ----------------')
     print('*************************************************')
     print()
-    energies = [value['e'] for value in vib.values()]
+    energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
     harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
     # The following line already gives the details of the S, CpT and G energy calculations
     harm_lim.get_helmholtz_energy(args.temp, verbose=True)
