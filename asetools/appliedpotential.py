@@ -36,7 +36,7 @@ def extract_fermi_shift(folder):
     
 def correct_energy_fermishift(folder):
     fshift = extract_fermi_shift(folder)
-    e, maxf = check_energy_and_maxforce(folder+'OUTCART', magmom=False, verbose=False)
+    e, maxf = check_energy_and_maxforce(folder+'OUTCAR', magmom=False, verbose=False)
     numelec_neutral = get_sum_electrons(folder+'POSCAR')
     numelec = get_num_elect(folder+'OUTCAR')
     charge = numelec - numelec_neutral
