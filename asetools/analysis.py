@@ -51,7 +51,7 @@ def check_outcar_convergence(outcar, verbose=False):
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
 
-    #convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
+    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
         energy = atoms.get_potential_energy()
