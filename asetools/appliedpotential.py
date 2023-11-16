@@ -10,6 +10,13 @@ import matplotlib.pyplot as plt
 import os
 
 U_SHE = 4.43  # U(SHE) constant
+VALANCES = {'Cu': 11, 'Zn': 12, 'C': 4, 'O': 6, 'H': 1}
+
+def get_sum_electrons(poscar):
+    atoms = read(poscar)
+    symbols = atoms.get_chemical_symbols()
+    elecpersymb = [VALANCES[symb] for symb in symbols]
+    return sum(elecpersymb)
 
 def get_num_elect(outcar):
     with open(outcar, 'r') as file:
