@@ -100,7 +100,7 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
         plt.show()
     return output
 
-def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, ploterrors=False):
+def fit_data(X, Y, fit_type='polynomial', order=2, ref_value=None, plot=False, ploterrors=False):
     
     if fit_type == 'polynomial':
         data = odr.Data(X, Y)
@@ -114,7 +114,7 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
             poly_model = odr.polynomial(order)
             odr_obj = odr.ODR(data, poly_model)
             output = odr_obj.run()
-            Y_fit = np.polyval(output.beta, X)
+            Y_fit = np.polyval(output.beta, X)    
         
         fit_result = output
 
@@ -126,6 +126,20 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
     else:
         raise ValueError("Invalid fit_type. Choose either 'polynomial' or 'spline'.")
     
+    if ref_value is not None:
+        parameters = np.append(fit_result.beta[::-1], ref_value)
+    else:
+        parameters = fit_result.beta[::-1]
+    poly = np.poly1d(parameters)
+    # Total Sum of Squares
+    SST = np.sum((Y - np.mean(Y))**2)
+    # Residual Sum of Squares
+    SSR = np.sum((Y - poly(X))**2)
+    # R-squared
+    R_squared = 1 - (SSR / SST)
+    print(f'Sum of squared-residuals : {SSR:.5f}')
+    print(f'R-squared : {R_squared:.5f}')
+
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
@@ -133,30 +147,31 @@ def fit_data(X, Y, fit_type='polynomial', order=3, ref_value=None, plot=False, p
         plot_errors(X, Y, fit_result, ref_value, ax2)
         plt.tight_layout()
         plt.show()
-        #ax1.plot(X, Y, 'o', label='Original')
-        #ax1.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
-        #ax1.legend()
-        
-        #ax2.plot(X, Y - Y_fit, 'o', label='Errors')
-        #ax2.axhline(0, color='gray', linestyle='--')
-        #ax2.legend()
     elif sum([plot, ploterrors]) == 1:
         fig, ax = plt.subplots(figsize=(5,5))
         if plot:
             plot_fit(X, Y, fit_result, ref_value, ax)
-            #ax.plot(X, Y, 'o', label='Data')
-            #ax.plot(X, Y_fit, '-', label=f'{fit_type.capitalize()} Fit')
-            #ax.legend()
         elif ploterrors:
             plot_errors(X, Y, fit_result, ref_value, ax)
-            #ax.plot(X, Y - Y_fit, 'o', label='Residuals')
-            #ax.axhline(0, color='gray', linestyle='--')
-            #ax.legend()
         
         plt.tight_layout()
         plt.show()
     
     return fit_result
+
+def interpolate_new_x(fit_result, new_X, fit_type, ref_value=None):
+    if fit_type == 'polynomial':
+        if ref_value is not None:
+            # Using custom polynomial if a reference value was provided
+            return custom_polynomial(fit_result.beta, new_X, ref_value)
+        else:
+            # Using np.polyval for standard polynomial evaluation
+            return np.polyval(fit_result.beta, new_X)
+    elif fit_type == 'spline':
+        # Using the spline object directly for interpolation
+        return fit_result(new_X)
+    else:
+        raise ValueError("Invalid fit_type. Choose either 'polynomial' or 'spline'.")
 
 def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, order=2, desiredU=0.):
     # e_ref, is the energy of the neutral system (reference)
