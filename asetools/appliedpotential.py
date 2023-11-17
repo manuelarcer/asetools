@@ -230,7 +230,6 @@ def plot_fit(X, Y, fit_result, energy_ref, ax):
             parameters = np.append(fit_result.beta[::-1], energy_ref)
         else:
             parameters = fit_result.beta[::-1]
-        print(parameters)
         poly = np.poly1d(parameters)
         ax.plot(x, poly(x), '-k', label="fit")
     elif isinstance(fit_result, UnivariateSpline):  # Check if it's a spline
