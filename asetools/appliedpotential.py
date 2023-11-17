@@ -199,7 +199,11 @@ def plot_errors(X, Y, fit_result, energy_ref, ax):
     # energy_ref is the energy of the neutral system
     # ax is the axis pyplot object
     if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
-        parameters = np.append(fit_result.beta[::-1], energy_ref)
+        if energy_ref is not None:
+            parameters = np.append(fit_result.beta[::-1], energy_ref)
+        else:
+            parameters = fit_result.beta[::-1]
+        #parameters = np.append(fit_result.beta[::-1], energy_ref)
         poly = np.poly1d( parameters )
         poly_y = poly( X )
         errors = poly_y - Y
@@ -219,9 +223,14 @@ def plot_errors(X, Y, fit_result, energy_ref, ax):
     return ax
 
 def plot_fit(X, Y, fit_result, energy_ref, ax):
-    x = np.linspace(min(X), max(X), 100)
+    x = np.linspace(min(X), -min(X), 100)
     if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
-        parameters = np.append(fit_result.beta[::-1], energy_ref)
+        #parameters = np.append(fit_result.beta[::-1], energy_ref)
+        if energy_ref is not None:
+            parameters = np.append(fit_result.beta[::-1], energy_ref)
+        else:
+            parameters = fit_result.beta[::-1]
+        print(parameters)
         poly = np.poly1d(parameters)
         ax.plot(x, poly(x), '-k', label="fit")
     elif isinstance(fit_result, UnivariateSpline):  # Check if it's a spline
