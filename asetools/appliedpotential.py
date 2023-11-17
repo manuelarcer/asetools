@@ -223,7 +223,7 @@ def plot_errors(X, Y, fit_result, energy_ref, ax):
     return ax
 
 def plot_fit(X, Y, fit_result, energy_ref, ax):
-    x = np.linspace(min(X), -min(X), 100)
+    x = np.linspace(min(X), max(X), 100)
     if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
         #parameters = np.append(fit_result.beta[::-1], energy_ref)
         if energy_ref is not None:
