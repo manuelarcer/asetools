@@ -22,32 +22,29 @@ def main():
     else:
         dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[]}
     for f in sorted(folders):
-        #foundoutcar = False
-        #if os.path.exists(f+'OUTCAR'):
-        #    outcar = f+'OUTCAR'
-        #    foundoutcar = True
-        #elif os.path.exists(f+'OUTCAR.gz'):
-        #    outcar = f+'OUTCAR.gz'
-        #    foundoutcar = True
-        if os.path.exists(f+'OUTCAR'):
-            converged = check_outcar_convergence(f+'OUTCAR', verbose=False)
-            if args.magmom:
-                energy, maxforce, magmom = check_energy_and_maxforce(f+'OUTCAR', magmom=args.magmom, verbose=False)
-                dic['MagMom'].append(round(magmom,3))
-            else:
-                energy, maxforce = check_energy_and_maxforce(f+'OUTCAR', magmom=False, verbose=False)
-            dic['Config'].append(f)
-            dic['Converged'].append(converged)
-            dic['MaxForce'].append(round(maxforce,3))
-            dic['Energy'].append(round(energy,3))
+        if os.path.exists(f + 'OUTCAR'):
+            try:
+                converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
+                if args.magmom:
+                    energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
+                    dic['MagMom'].append(round(magmom, 3))
+                else:
+                    energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+
+                dic['Config'].append(f)
+                dic['Converged'].append(converged)
+                dic['MaxForce'].append(round(maxforce, 3))
+                dic['Energy'].append(round(energy, 3))
+            except ValueError as e:
+                print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
         else:
-            print('No OUTCAR in ', f)
-    
+            print('No OUTCAR in', f)
+
     dic['Rel.E'] = []
     for e in dic['Energy']:
-        dic['Rel.E'].append(e - min(dic['Energy']))
+        dic['Rel.E'].append(e - min(dic['Energy'], default=0))  # default=0 to handle empty Energy list
 
-    df = pd.DataFrame.from_dict(dic) 
+    df = pd.DataFrame.from_dict(dic)
     print(df)
 
 if __name__ == "__main__":
