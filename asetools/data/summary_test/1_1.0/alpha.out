@@ -1,0 +1,35 @@
+Working directory is /home/users/astar/ihpc/juar/scratch/Battery/NMC/NMC_Juan/NMC333/kspacing_test/1_1.0
+ModuleCmd_Switch.c(179):ERROR:152: Module 'PrgEnv-cray' is currently not loaded
+Currently Loaded Modulefiles:
+  1) intel/2022.0.2           8) libfabric/1.11.0.4.125
+  2) hdf5/1.10.5              9) craype-network-ofi
+  3) craype-x86-rome         10) cray-mpich/8.1.15
+  4) cray-libsci/21.08.1.2   11) cray-pals/1.1.6
+  5) perftools-base/22.04.0  12) PrgEnv-gnu/8.3.3
+  6) craype/2.7.15           13) gcc/12.1.0-nscc
+  7) cray-dsmml/0.2.2        14) python/3.10.9
+Running on host x1000c4s1b1n1
+Time is Mon Mar 18 14:50:21 +08 2024
+Directory is /home/users/astar/ihpc/juar/scratch/Battery/NMC/NMC_Juan/NMC333/kspacing_test/1_1.0
+Using 1 processors across 1 nodes
+mpitasks is 128
+aprun -n 128 -N 128 -d 1 /home/project/13001717/software/vasp.6.3.2-intel-libxc6/bin/vasp_std | tee vasp.out >/dev/null
+ 
+Setting up system parameters...
+System: NMC
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2024-03-18 14:51:44.014196:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 6409974.pbs101
+	Project: 13003830
+	Exit Status: 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(128), Used(128)
+	CPU Time Used: 02:48:53
+	Memory: Requested(480gb), Used(44022472kb)
+	Vmem Used: 184560292kb
+	Walltime: Requested(02:00:00), Used(00:01:24)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (x1000c4s1b1n1:ncpus=128:mem=503316480kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	No GPU-related information available for this job.
