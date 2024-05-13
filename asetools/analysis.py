@@ -8,7 +8,8 @@ def check_outcar_convergence(outcar, verbose=False):
     try:
         out = open(outcar, 'r')
     except:
-        print('check_outcar_convergence --> OUTCAR file is damaged')
+        if verbose:
+            print('check_outcar_convergence --> OUTCAR file not found or damaged')
         return False
     lines = out.readlines()
     ibrion = None
