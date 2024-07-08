@@ -5,6 +5,7 @@
 import os
 import shutil
 import argparse
+import glob
 
 def main():
     parser = argparse.ArgumentParser(description='Backup VASP files.')
@@ -19,9 +20,16 @@ def main():
         os.makedirs(args.backupname)
         print(f'Created backup folder: {args.backupname}')
 
-        for filename in ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS', '*.vasp', '*.traj']:
+        file_list = ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS']
+
+        # Add all files matching wildcard patterns
+        file_list.extend(glob.glob('*.vasp'))
+        file_list.extend(glob.glob('*.traj'))
+
+        for filename in file_list:
             shutil.copy(filename, args.backupname)
             print(f'Copied {filename} to {args.backupname}')
+
 
         print('Backup completed successfully.')
     except FileNotFoundError as e:
