@@ -30,8 +30,8 @@ def main():
         file_list = ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS']
 
         # Add all files matching wildcard patterns
-        file_list.extend(glob.glob('*.vasp'))
-        file_list.extend(glob.glob('*.traj'))
+        for pattern in ['*.vasp', '*.traj', '*.cif', '*.xyz', '*.json', '*.py', '*.sh', '*.txt', '*.log']:
+            file_list.extend(glob.glob(f'*{pattern}'))
 
         for filename in file_list:
             shutil.copy(filename, args.backupname)
