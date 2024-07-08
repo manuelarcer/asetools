@@ -6,6 +6,13 @@ import os
 import shutil
 import argparse
 import glob
+import gzip
+
+def compress_file(original_file):
+    with open(original_file, 'rb') as f_in:
+        with gzip.open(original_file + '.gz', 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove(original_file)  # Remove the original file after compression
 
 def main():
     parser = argparse.ArgumentParser(description='Backup VASP files.')
@@ -30,8 +37,12 @@ def main():
             shutil.copy(filename, args.backupname)
             print(f'Copied {filename} to {args.backupname}')
 
+        # Compress specific files within the backup directory
+        compress_file(os.path.join(args.backupname, 'OUTCAR'))
+        compress_file(os.path.join(args.backupname, 'vasprun.xml'))
 
-        print('Backup completed successfully.')
+
+        print('Backup and compression completed successfully.')
     except FileNotFoundError as e:
         print(f'Error: {e}')
     except Exception as e:
