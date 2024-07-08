@@ -10,7 +10,7 @@ def check_outcar_convergence(outcar, verbose=False):
     except:
         if verbose:
             print('check_outcar_convergence --> OUTCAR file not found or damaged')
-        return False
+        return False, ''
     lines = out.readlines()
     ibrion = None
     nsw = None

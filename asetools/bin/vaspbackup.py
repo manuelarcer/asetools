@@ -19,7 +19,7 @@ def main():
         os.makedirs(args.backupname)
         print(f'Created backup folder: {args.backupname}')
 
-        for filename in ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS']:
+        for filename in ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS', '*.vasp', '*.traj']:
             shutil.copy(filename, args.backupname)
             print(f'Copied {filename} to {args.backupname}')
 
