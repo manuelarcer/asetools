@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 def read_outcar(filename):
     """Reads an OUTCAR file and extracts parameters into a dictionary."""
     parameters = {}
