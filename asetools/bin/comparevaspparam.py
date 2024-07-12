@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 def read_outcar(filename):
     """Reads an OUTCAR file and extracts parameters into a dictionary."""
     parameters = {}
-    keywords = ["POTCAR", "A1", "A2", "A3", "NKPTS", "NKDIM", "NBANDS", "NEDOS", "NIONS", "LDIM", "LMDIM", "NPLWV",
+    keywords = ["POTCAR:", "A1", "A2", "A3", "NKPTS", "NKDIM", "NBANDS", "NEDOS", "NIONS", "LDIM", "LMDIM", "NPLWV",
                 "IRMAX", "IRDMAX", "NGX", "NGY", "NGZ", "NGXF", "NGYF", "NGZF", "NWRITE", "PREC", "ISTART", "ICHARG",
                 "ISPIN", "LNONCOLLINEAR", "LSORBIT", "INIWAV", "LASPH", "METAGGA", "ENCUT", "ENINI", "ENAUG", "NELM",
                 "NELMIN", "NELMDL", "EDIFF", "LREAL", "NLSPLINE", "LCOMPAT", "GGA_COMPAT", "LMAXPAW", "LMAXMIX",
@@ -18,7 +18,7 @@ def read_outcar(filename):
         for line in file:
             # Extract parameters based on known keywords
             for keyword in keywords:
-                if line.startswith(keyword):
+                if keyword in line:
                     parameters[keyword] = line.strip()
     return parameters
 
