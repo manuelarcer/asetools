@@ -27,7 +27,7 @@ def check_outcar_convergence(outcar, verbose=False):
             if ibrion == 1 or ibrion == 2 or ibrion == 3:
                 opt = True
             elif verbose:
-                print(f'IBRION --> {ibrion}, not an OPTIMIZATION job')
+                print(f'Not an OPTIMIZATION job')
                 opt = False
             else:    
                 opt = False
@@ -37,7 +37,7 @@ def check_outcar_convergence(outcar, verbose=False):
                 opt = True
         elif 'reached required accuracy' in line and opt:
             convergence = True
-        elif not opt and 'total amount of memory' in line:
+        elif not opt and 'General timing and accounting informations for this job:' in line:
             convergence = True
     if verbose:
         print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
