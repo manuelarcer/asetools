@@ -12,7 +12,7 @@ def main():
     args = parser.parse_args()
     
     listatoms = []
-    for f in os.listdir('.'):
+    for f in sorted( os.listdir('.') ):
         outcar_path = os.path.join(f, 'OUTCAR')
         if os.path.isfile(outcar_path):
             converged, _ = check_outcar_convergence(outcar_path, verbose=False)
