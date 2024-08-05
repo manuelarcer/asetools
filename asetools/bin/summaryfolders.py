@@ -63,7 +63,7 @@ def main():
                         converged = False
         #########################################
 
-        else os.path.exists(f + 'OUTCAR'):
+        elif os.path.exists(f + 'OUTCAR'):
             try:
                 converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
                 if args.magmom:
