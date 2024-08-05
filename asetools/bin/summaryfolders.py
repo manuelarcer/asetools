@@ -92,7 +92,10 @@ def main():
 
     dic['Rel.E'] = []
     for e in dic['Energy']:
-        dic['Rel.E'].append(e - min(dic['Energy'], default=0))  # default=0 to handle empty Energy list
+        if e == 'N/A':
+            dic['Rel.E'].append('N/A')
+        else:
+            dic['Rel.E'].append(e - min(dic['Energy'], default=0))  # default=0 to handle empty Energy list
 
     df = pd.DataFrame.from_dict(dic)
     print(df)
