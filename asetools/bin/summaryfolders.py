@@ -61,6 +61,14 @@ def main():
                         break
                     else:
                         converged = False
+            if converged:
+                dic['Config'].append(f)
+                dic['Converged'].append(converged)
+                dic['MaxForce'].append('N/A')
+                dic['Energy'].append('N/A')
+            else:
+                print(f, 'not converged')
+            continue
         #########################################
 
         else:
