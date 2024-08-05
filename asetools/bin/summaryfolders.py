@@ -8,7 +8,6 @@ import glob, os
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 
 def main():
-
     ## Block from chatgpt
     parser = argparse.ArgumentParser(description='Process folders.')
     parser.add_argument('-m', '--magmom', action='store_true',
@@ -31,36 +30,7 @@ def main():
         
         ########## Block for fast mode ########
         if args.fast:
-            for alt in alternative_filenames:
-                if os.path.exists(f + alt):
-                    vaspout = open(f + alt, 'r')
-                    break
-            if not vaspout:
-                print('No OUT file in', f)
-                continue
-            
-            incar = open(f + 'INCAR', 'r')
-            incarlines = incar.readlines()
-            ibrion = None
-            for line in incarlines:
-                if 'IBRION' in line:
-                    ibrion = int(line.split()[2])
-                    break
-            lines = vaspout.readlines()
-            if ibrion == 1 or ibrion == 2 or ibrion == 3:
-                for line in lines:
-                    if 'reached required accuracy' in line:
-                        converged = True
-                        break
-                    else:
-                        converged = False
-            else:
-                for line in lines:
-                    if 'E0=' in line:
-                        converged = True
-                        break
-                    else:
-                        converged = False
+            converged = fast_mode_check(f, alternative_filenames)
             if converged:
                 dic['Config'].append(f)
                 dic['Converged'].append(converged)
@@ -99,6 +69,39 @@ def main():
 
     df = pd.DataFrame.from_dict(dic)
     print(df)
+
+def fast_mode_check(f, alternative_filenames):
+    for alt in alternative_filenames:
+        if os.path.exists(f + alt):
+            vaspout = open(f + alt, 'r')
+            break
+    if not vaspout:
+        print('No OUT file in', f)
+        return False
+    incar = open(f + 'INCAR', 'r')
+    incarlines = incar.readlines()
+    ibrion = None
+    for line in incarlines:
+        if 'IBRION' in line:
+            ibrion = int(line.split()[2])
+            break
+    lines = vaspout.readlines()[-5:]
+    if ibrion == 1 or ibrion == 2 or ibrion == 3:
+        for line in lines:
+            if 'reached required accuracy' in line:
+                converged = True
+                break
+            else:
+                converged = False
+    else:
+        for line in lines:
+            if 'E0=' in line:
+                converged = True
+                break
+            else:
+                converged = False
+    return converged
+
 
 if __name__ == "__main__":
     main()
