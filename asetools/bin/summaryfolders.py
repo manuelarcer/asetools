@@ -72,11 +72,13 @@ def main():
 
 def fast_mode_check(f, alternative_filenames):
     for alt in alternative_filenames:
+        foundout = False
         if os.path.exists(f + alt):
             vaspout = open(f + alt, 'r')
+            foundout = True
             break
-    if not vaspout:
-        print('No OUT file in', f)
+    if not foundout:
+        print(f'No OUT file ({alternative_filenames}) in', f)
         return False
     incar = open(f + 'INCAR', 'r')
     incarlines = incar.readlines()
