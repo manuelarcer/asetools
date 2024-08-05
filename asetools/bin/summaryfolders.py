@@ -63,23 +63,24 @@ def main():
                         converged = False
         #########################################
 
-        elif os.path.exists(f + 'OUTCAR'):
-            try:
-                converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
-                if args.magmom:
-                    energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
-                    dic['MagMom'].append(round(magmom, 3))
-                else:
-                    energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
-
-                dic['Config'].append(f)
-                dic['Converged'].append(converged)
-                dic['MaxForce'].append(round(maxforce, 3))
-                dic['Energy'].append(round(energy, 3))
-            except ValueError as e:
-                print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
         else:
-            print('No OUTCAR in', f)
+            if os.path.exists(f + 'OUTCAR'):
+                try:
+                    converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
+                    if args.magmom:
+                        energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
+                        dic['MagMom'].append(round(magmom, 3))
+                    else:
+                        energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+
+                    dic['Config'].append(f)
+                    dic['Converged'].append(converged)
+                    dic['MaxForce'].append(round(maxforce, 3))
+                    dic['Energy'].append(round(energy, 3))
+                except ValueError as e:
+                    print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
+            else:
+                print('No OUTCAR in', f)
 
     dic['Rel.E'] = []
     for e in dic['Energy']:
