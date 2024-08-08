@@ -3,16 +3,6 @@
 ## Description:
 This package ...
 
-## Installation
-
-As simple as 
-
-`pip install git+https://github.com/manuelarcer/asetools.git`
-
-or
-
-`pip install git+git@github.com:manuelarcer/asetools.git`
-
 ### Requirements
 
 - pandas
