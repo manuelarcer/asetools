@@ -17,16 +17,16 @@ list_param = {'StartParam': ['PREC', 'ISTART', 'ICHARG', 'ISPIN'],
             }
 
 def extract_parameters(outcar_text, param_dict):
-    found_params = {key: [] for key in param_dict.keys()}
+    found_params = {key: {} for key in param_dict.keys()}
     
     # Loop through each category in param_dict
     for category, params in param_dict.items():
         for param in params:
-            # Find parameter in the OUTCAR text
-            regex_pattern = rf"^\s*({param})\s*="
+            # Find all instances of the parameter and its value in the OUTCAR text
+            regex_pattern = rf"^\s*({param})\s*=\s*([^\s;]+)"  # Match parameter and value until space or semicolon
             matches = re.findall(regex_pattern, outcar_text, re.MULTILINE)
-            if matches:
-                found_params[category].extend(matches)
+            for param_name, param_value in matches:
+                found_params[category][param_name] = param_value.strip()
     
     return found_params
 
@@ -47,7 +47,10 @@ def main():
 
     # Print extracted parameters
     for category, params in extracted_params.items():
-        print(f"{category}: {params}")
+        print(f"{category}:")
+        for param, value in params.items():
+            print(f"  {param} = {value}")
+        print()
 
 if __name__ == '__main__':
     main()
