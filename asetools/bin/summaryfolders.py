@@ -68,6 +68,11 @@ def main():
             dic['Rel.E'].append(e - min(dic['Energy'], default=0))  # default=0 to handle empty Energy list
 
     df = pd.DataFrame.from_dict(dic)
+
+    # Add these lines to display the entire DataFrame
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    
     print(df)
 
 def fast_mode_check(f, alternative_filenames):
