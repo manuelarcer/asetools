@@ -45,11 +45,16 @@ def main():
             if os.path.exists(f + 'OUTCAR'):
                 try:
                     converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
-                    if args.magmom:
-                        energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
-                        dic['MagMom'].append(round(magmom, 3))
+                    if not converged:
+                        print(f, 'not converged')
+                        energy, maxforce = 'N/A', 'N/A'
+                        continue
                     else:
-                        energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+                        if args.magmom:
+                            energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
+                            dic['MagMom'].append(round(magmom, 3))
+                        else:
+                            energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
 
                     dic['Config'].append(f)
                     dic['Converged'].append(converged)
@@ -72,7 +77,7 @@ def main():
     # Add these lines to display the entire DataFrame
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
-    
+
     print(df)
 
 def fast_mode_check(f, alternative_filenames):
