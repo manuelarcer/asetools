@@ -25,11 +25,35 @@ def main():
 
     # Define alternative filenames to look for when fast mode is enabled
     alternative_filenames = ['vasp.out', 'out.txt']
-
     for f in sorted(folders):
-        
+        ispyatoms = False
+        if f+'log.info' in glob.glob(f+'log.info'):
+            ispyatoms = True
+            finishedpyatoms = False
+            # Read log.info to check if the global processes have finished
+            logfile = open(f+'log.info', 'r')
+            lines = logfile.readlines()
+            optsteps = []; e = []; fmax = []
+            for line in lines:
+                if 'pyatoms.jobs.job] Procedure' in line:
+                    optsteps.append(int(line.split()[-5]))
+                if 'Closing global processes' in line:
+                    finishedpyatoms = True
+                if 'energy' in line:
+                    e.append( float(line.split()[-3].split(',')[0]) )   # example: energy -481.276399, force 0.013.
+                    fmax.append( float(line.split()[-1][:-1]) )
+            if not finishedpyatoms:
+                print(f, 'Pyatoms Job Not Finished')
+                continue
+            else:
+                print(f, 'Pyatoms Job Finished')
+                dic['Config'].append(f)
+                dic['Converged'].append(True)
+                dic['MaxForce'].append( round(fmax[-1], 3) )
+                dic['Energy'].append( round(e[-1], 3) )
+
         ########## Block for fast mode ########
-        if args.fast:
+        elif args.fast:
             converged = fast_mode_check(f, alternative_filenames)
             if converged:
                 dic['Config'].append(f)
@@ -41,7 +65,7 @@ def main():
             continue
         #########################################
 
-        else:
+        elif not ispyatoms:
             if os.path.exists(f + 'OUTCAR'):
                 try:
                     converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
