@@ -37,7 +37,7 @@ def main():
             for line in lines:
                 if 'pyatoms.jobs.job] Procedure' in line:
                     optsteps.append(int(line.split()[-5]))
-                if 'Closing global processes' in line:
+                if 'success: energy' in line:               # Check if the job has finished, this may not be the best
                     finishedpyatoms = True
                 if 'energy' in line:
                     e.append( float(line.split()[-3].split(',')[0]) )   # example: energy -481.276399, force 0.013.
