@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description='Visualize the last configuration in OUTCAR files.')
     parser.add_argument('--converged', action='store_true', help='Only consider converged calculations')
     parser.add_argument('--folders', '-f', nargs='+', help='List specific folders to process. If not provided, all folders in the current directory will be processed.')
-    parser.add_argument('--pyatoms', action='store_false', help='Assume that Pyatoms was not used for this run')
+    parser.add_argument('--pyatoms', action='store_true', help='Assume that Pyatoms was not used for this run')
     args = parser.parse_args()
     
     if args.folders:
