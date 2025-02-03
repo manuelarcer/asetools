@@ -30,7 +30,7 @@ def main():
         file_list = ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS']
 
         # Add all files matching wildcard patterns
-        for pattern in ['*.vasp', '*.traj', '*.cif', '*.xyz', '*.json', '*.py', '*.sh', '*.txt', '*.log']:
+        for pattern in ['*.vasp', '*.traj', '*.cif', '*.xyz', '*.json', '*.py', '*.sh', '*.txt', '*.log', 'OUTCAR_*']:
             file_list.extend(glob.glob(f'*{pattern}'))
 
         for filename in file_list:
