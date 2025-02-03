@@ -19,6 +19,8 @@ def main():
     parser.add_argument('backupname', type=str, help='name of backup folder')
     args = parser.parse_args()
 
+    wildcard_patterns = ['*.vasp', '*.traj', '*.cif', '*.xyz', '*.json', '*.py', '*.sh', '*.txt', '*.log', 'OUTCAR_*']
+
     if os.path.exists(args.backupname):
         print('Backup folder already exists')
         return
@@ -30,8 +32,8 @@ def main():
         file_list = ['POSCAR', 'CONTCAR', 'OUTCAR', 'vasprun.xml', 'vasp.out', 'INCAR', 'KPOINTS']
 
         # Add all files matching wildcard patterns
-        for pattern in ['*.vasp', '*.traj', '*.cif', '*.xyz', '*.json', '*.py', '*.sh', '*.txt', '*.log', 'OUTCAR_*']:
-            file_list.extend(glob.glob(f'*{pattern}'))
+        for pattern in wildcard_patterns:
+            file_list.extend(glob.glob(pattern))
 
         for filename in file_list:
             shutil.copy(filename, args.backupname)
