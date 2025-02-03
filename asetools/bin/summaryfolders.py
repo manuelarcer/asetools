@@ -30,15 +30,28 @@ def main():
         if f+'log.info' in glob.glob(f+'log.info'):
             ispyatoms = True
             finishedpyatoms = False
+            finishedprocess = False
             # Read log.info to check if the global processes have finished
             logfile = open(f+'log.info', 'r')
             lines = logfile.readlines()
             optsteps = []; e = []; fmax = []
             for line in lines:
-                if 'pyatoms.jobs.job] Procedure' in line:
-                    optsteps.append(int(line.split()[-5]))
+                if 'pyatoms.jobs.job]' in line:
+                    if 'Procedure' in line:
+                        optsteps.append(int(line.split()[-5]))
+                    else:
+                        optsteps = 1
+                # I think if multistep Opt there will be multiple 'VaspGeomOptProcedure' and 'VaspGeomOptJob' in log.info
+                # for a single step procedure, there will be only one 'VaspGeomOptJob'
                 if 'VaspGeomOptProcedure' in line and 'completed successfully' in line:      # this work for GeomOpt only
-                    finishedpyatoms = True
+                    finishedprocess = True
+                elif 'VaspGeomOptJob' in line and 'completed successfully' in line:           # this work for GeomOpt only
+                    finishedprocess = True
+
+                if finishedprocess:
+                    if 'Closing global processes' in line:
+                        finishedpyatoms = True
+                
                 if 'energy' in line:
                     e.append( float(line.split()[-3].split(',')[0]) )   # example: energy -481.276399, force 0.013.
                     fmax.append( float(line.split()[-1][:-1]) )
@@ -48,7 +61,7 @@ def main():
             else:
                 print(f, 'Pyatoms Job Finished')
                 dic['Config'].append(f)
-                dic['Converged'].append(True)
+                dic['Converged'].append((True, 'pyatoms'))
                 dic['MaxForce'].append( round(fmax[-1], 3) )
                 dic['Energy'].append( round(e[-1], 3) )
 
