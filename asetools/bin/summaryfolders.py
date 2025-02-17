@@ -86,20 +86,19 @@ def main():
                     converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
                     if not converged[0]:
                         print(f, 'not converged')
-                        energy, maxforce = 'N/A', 'N/A'
                         not_converged.append(f)
-                        continue
+                    
+                    if args.magmom:
+                        energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
+                        dic['MagMom'].append(round(magmom, 3))
                     else:
-                        if args.magmom:
-                            energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
-                            dic['MagMom'].append(round(magmom, 3))
-                        else:
-                            energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
-
+                        energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
                     dic['Config'].append(f)
-                    dic['Converged'].append(converged)
+                    dic['Converged'].append(converged[0])
                     dic['MaxForce'].append(round(maxforce, 3))
                     dic['Energy'].append(round(energy, 3))
+                    
+
                 except ValueError as e:
                     print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
                     not_converged.append(f)
