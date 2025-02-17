@@ -25,6 +25,7 @@ def main():
 
     # Define alternative filenames to look for when fast mode is enabled
     alternative_filenames = ['vasp.out', 'out.txt']
+    not_converged = []
     for f in sorted(folders):
         ispyatoms = False
         if f+'log.info' in glob.glob(f+'log.info'):
@@ -75,6 +76,7 @@ def main():
                 dic['Energy'].append('N/A')
             else:
                 print(f, 'not converged')
+                not_converged.append(f)
             continue
         #########################################
 
@@ -85,6 +87,7 @@ def main():
                     if not converged:
                         print(f, 'not converged')
                         energy, maxforce = 'N/A', 'N/A'
+                        not_converged.append(f)
                         continue
                     else:
                         if args.magmom:
@@ -99,8 +102,10 @@ def main():
                     dic['Energy'].append(round(energy, 3))
                 except ValueError as e:
                     print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
+                    not_converged.append(f)
             else:
                 print('No OUTCAR in', f)
+                not_converged.append(f)
 
     dic['Rel.E'] = []
     for e in dic['Energy']:
