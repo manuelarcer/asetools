@@ -121,6 +121,9 @@ def main():
     pd.set_option('display.max_columns', None)
 
     print(df)
+    print()
+    print('Not converged:')
+    print(' '.join(not_converged))
 
 def fast_mode_check(f, alternative_filenames):
     for alt in alternative_filenames:
