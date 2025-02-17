@@ -57,7 +57,8 @@ def main():
             print(f'Copied {filename} to {args.backupname}')
 
         # Compress specific files within the backup directory
-        compress_file(os.path.join(args.backupname, 'OUTCAR'))
+        for file in glob.glob(os.path.join(args.backupname, 'OUTCAR*')):
+            compress_file(file)
         compress_file(os.path.join(args.backupname, 'vasprun.xml'))
 
 
