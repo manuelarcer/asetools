@@ -84,7 +84,7 @@ def main():
             if os.path.exists(f + 'OUTCAR'):
                 try:
                     converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
-                    if not converged:
+                    if not converged[0]:
                         print(f, 'not converged')
                         energy, maxforce = 'N/A', 'N/A'
                         not_converged.append(f)
