@@ -121,6 +121,7 @@ def main():
 
     print(df)
     print()
+    not_converged = [f.split('/')[0] for f in not_converged]
     print('Not converged:')
     print(' '.join(not_converged))
 
