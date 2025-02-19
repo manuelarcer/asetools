@@ -53,8 +53,8 @@ def main():
             file_list.extend(glob.glob(pattern))
 
         for filename in file_list:
-            shutil.copy(filename, args.backupname)
-            print(f'Copied {filename} to {args.backupname}')
+            shutil.move(filename, args.backupname)
+            print(f'Moved {filename} to {args.backupname}')
 
         # Compress specific files within the backup directory
         for file in glob.glob(os.path.join(args.backupname, 'OUTCAR*')):
