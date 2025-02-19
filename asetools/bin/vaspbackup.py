@@ -46,7 +46,11 @@ def main():
         os.makedirs(args.backupname)
         print(f'Created backup folder: {args.backupname}')
 
-        file_list = ['vasprun.xml']
+        file_list = []
+        if not os.path.exists('vasprun.xml'):
+            print('vasprun.xml not found in the current directory')
+        else:
+            file_list.append('vasprun.xml')
 
         # Add all files matching wildcard patterns
         for pattern in wildcard_patterns:
