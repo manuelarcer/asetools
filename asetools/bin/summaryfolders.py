@@ -37,11 +37,10 @@ def main():
             lines = logfile.readlines()
             optsteps = []; e = []; fmax = []
             for line in lines:
-                if 'pyatoms.jobs.job]' in line:
-                    if 'Procedure' in line:
-                        optsteps.append(int(line.split()[-5]))
-                    else:
-                        optsteps = 1
+                if 'pyatoms.jobs.job]' in line and 'Procedure step' in line:
+                    optsteps.append(int(line.split()[-5]))
+                #else:
+                #    optsteps = 1
                 # I think if multistep Opt there will be multiple 'VaspGeomOptProcedure' and 'VaspGeomOptJob' in log.info
                 # for a single step procedure, there will be only one 'VaspGeomOptJob'
                 if 'VaspGeomOptProcedure' in line and 'completed successfully' in line:      # this work for GeomOpt only
