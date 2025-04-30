@@ -47,6 +47,14 @@ def extract_dos(doscarfile):
             gopDOS = True
             count += 1
 
+    # --- conversion to NumPy arrays ---
+    for key, val in data.items():
+        if isinstance(val, list):
+            data[key] = np.array(val)
+        elif isinstance(val, dict):
+            for subkey, subval in val.items():
+                data[key][subkey] = np.array(subval)
+
     return data
 
 def extract_fermi_e(doscarfile):
