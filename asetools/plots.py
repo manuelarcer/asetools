@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
 import numpy as np
 
-def add_line_to_pes(ax, data, c='k', label=None, indexes=None):
+def add_line_to_pes(ax, data, col='E', c='k', label=None, indexes=None):
     # ax is the plt axis object
     # data is the pandas df in the format established
     # c is the color of the line
@@ -22,27 +22,27 @@ def add_line_to_pes(ax, data, c='k', label=None, indexes=None):
             else:
                 x = indexes[count]*2 + 1
             if count == 0:
-                plt.plot([x,x+1], [data.E[i], data.E[i]], color=c, linewidth=3.5, label=label)
+                plt.plot([x,x+1], [data[col][i], data[col][i]], color=c, linewidth=3.5, label=label)
             else:
-                plt.plot([x,x+1], [data.E[i], data.E[i]], color=c, linewidth=3.5)
+                plt.plot([x,x+1], [data[col][i], data[col][i]], color=c, linewidth=3.5)
             count += 1      # Count increases with each plotted M point
             if i < ( len(data) - 1) and data['Type-Conf'][i+1] == 'M':
                 if gap:
-                    plt.plot([x+1, x+2], [data.E[i], data.E[i+1]], '-', color=c, linewidth=0.75)
+                    plt.plot([x+1, x+2], [data[col][i], data[col][i+1]], '-', color=c, linewidth=0.75)
                     gap = False
                 else:
                     #print(x+1, x+2)
-                    plt.plot([x+1, x+2], [data.E[i], data.E[i+1]], '-', color=c, linewidth=0.75)
+                    plt.plot([x+1, x+2], [data[col][i], data[col][i+1]], '-', color=c, linewidth=0.75)
         if t == 'T':
             if indexes is None:
                 x = count*2 + 0.5       # Count should be +1 from previous M point
-                X_Y_Spline = make_interp_spline([x-0.5, x, x+0.5], [data.E[i-1], data.E[i], data.E[i+1]], k=2)
+                X_Y_Spline = make_interp_spline([x-0.5, x, x+0.5], [data[col][i-1], data[col][i], data[col][i+1]], k=2)
                 X_ = np.linspace(x-0.5, x+0.5, 50)
             else:       # Both X_Y_Spline and X_ variables should change if using "indexes" as parameter
                 diff_x = indexes[count]*2 - indexes[count-1]*2 - 1      # Diff between point before and after
                 x = indexes[count]*2 + 1 - diff_x / 2.
                 print(diff_x, x)
-                X_Y_Spline = make_interp_spline([x - diff_x/2., x, x + diff_x/2.], [data.E[i-1], data.E[i], data.E[i+1]], k=2)
+                X_Y_Spline = make_interp_spline([x - diff_x/2., x, x + diff_x/2.], [data[col][i-1], data[col][i], data[col][i+1]], k=2)
                 X_ = np.linspace(x - diff_x/2., x + diff_x/2., 50)
             
             Y_ = X_Y_Spline(X_)
