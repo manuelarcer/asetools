@@ -5,7 +5,7 @@ from ase.io import read
 import pandas as pd
 import numpy as np
 import glob, os
-from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
+from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence, get_parameter_from_run
 
 def main():
     ## Block from chatgpt
@@ -19,9 +19,9 @@ def main():
 
     folders = glob.glob('*/')
     if args.magmom:
-        dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     else:
-        dic = {'Config': [], 'Converged':[], 'MaxForce': [], 'Energy':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'MaxForce': [], 'Energy':[]}
 
     # Define alternative filenames to look for when fast mode is enabled
     alternative_filenames = ['vasp.out', 'out.txt']
@@ -92,7 +92,11 @@ def main():
                         dic['MagMom'].append(round(magmom, 3))
                     else:
                         energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+                    
+                    isif, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ISIF')
+
                     dic['Config'].append(f)
+                    dic['ISIF'].append(isif)
                     dic['Converged'].append(converged[0])
                     dic['MaxForce'].append(round(maxforce, 3))
                     dic['Energy'].append(round(energy, 3))
