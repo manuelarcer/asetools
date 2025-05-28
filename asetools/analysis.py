@@ -3,6 +3,7 @@
 from ase.io import read
 import pandas as pd
 import numpy as np
+import re
     
 def check_outcar_convergence(outcar, verbose=False):
     try:
@@ -79,6 +80,33 @@ def extract_magnetic_moments(outcar, listatoms, verbose=False):
     except:
         print('Missing or damaged OUTCAR file')
         return []
+
+def get_parameter_from_run(outcar, check_converg=True, parameter='ISIF'):
+    # First check convergence
+    convergence = 'Convergence-not-Checked'
+    if check_converg:
+        convergence, vasp = check_outcar_convergence(outcar, verbose=False)
+
+    pattern = rf'^\s*{re.escape(parameter)}\s*=\s*(\S+)'
+    with open(outcar, 'r') as f:
+        for line in f:
+            m = re.match(pattern, line)
+            if m:
+                val = m.group(1)
+                # try int → float → fallback to string
+                for caster in (int, float):
+                    try:
+                        return caster(val), convergence
+                    except ValueError:
+                        continue
+                return val, convergence  # non-numeric string
+    if check_converg:
+        raise ValueError(f"Parameter '{parameter}' not found in {outcar!r}")
+    return None, convergence
+
+
+
+
 
 
     
