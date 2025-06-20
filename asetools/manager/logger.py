@@ -3,18 +3,23 @@
 import logging
 import datetime
 
-def configure_logger(logger_name: str = 'logger'):
-    """
-    Configure the logger to log to both a file and stdout.
-    The log file will be named with the current date and time.
-    """
-    log_filename = f"{logger_name}_{datetime.datetime.now():%Y%m%d_%H%M}.log"
+def configure_logging(
+    *,
+    project_logger: str = "asetools",
+    file_prefix:    str = "run",
+    level:          int = logging.INFO,
+):
+    logfile = f"{file_prefix}_{datetime.datetime.now():%Y%m%d_%H%M}.log"
+
     logging.basicConfig(
-        level    = logging.INFO,
-        format   = "%(asctime)s [%(levelname)s] %(message)s",
+        level    = level,
+        format   = "%(asctime)s [%(name)s %(levelname)s] %(message)s",
         handlers = [
-            logging.FileHandler(log_filename),
-            logging.StreamHandler()      # also print to stdout
+            logging.FileHandler(logfile),
+            logging.StreamHandler()
         ]
     )
-    return logging.getLogger(logger_name)
+
+    # Optionally enforce a minimum level on your project’s root logger
+    proj = logging.getLogger(project_logger)
+    proj.setLevel(level)
