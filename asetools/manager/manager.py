@@ -55,7 +55,7 @@ def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = 'default'
             logger.info(f"Stage {stage_name} is DONE, skipping.")
             continue
         else:
-            logger.info(f"STAGE {stage_name} is NOT DONE, adding to run list.")
+            logger.info(f"Stage {stage_name} is NOT DONE, adding to run list.")
             to_run.append(stage_name)
     return to_run
         
