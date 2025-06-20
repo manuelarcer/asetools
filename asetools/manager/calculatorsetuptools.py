@@ -10,6 +10,11 @@ class VASPConfigurationFromYAML:
         self.workflows = self.config['workflows']
         self.globals = self.config['globals']
 
+        # Remove the magmom shorthand so it won't sneak into system_config
+        systems = self.config.get('systems', {})
+        if system in systems:
+            systems[system].pop('magmom', None)
+
     @property
     def system_config(self) -> dict:
         try:
@@ -26,7 +31,6 @@ class VASPConfigurationFromYAML:
             return self.system_config['initial_magmom']
         else:
             return {}
-        self.system_config.pop('magmom', None)  # Remove 'magmom' if it exists to avoid problems
 
 def load_yaml_config(config_file: str) -> dict:
     """
