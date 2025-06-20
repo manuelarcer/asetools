@@ -26,6 +26,7 @@ class VASPConfigurationFromYAML:
             return self.system_config['initial_magmom']
         else:
             return {}
+        self.system_config.pop('magmom', None)  # Remove 'magmom' if it exists to avoid problems
 
 def load_yaml_config(config_file: str) -> dict:
     """
