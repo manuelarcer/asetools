@@ -20,10 +20,10 @@ class VASPConfigurationFromYAML:
 
     @property
     def initial_magmom(self) -> dict:
-        if 'magmom' in self.system_cfg:
-            return self.system_cfg['magmom']
-        elif 'initial_magmom' in self.system_cfg:
-            return self.system_cfg['initial_magmom']
+        if 'magmom' in self.system_config:
+            return self.system_config['magmom']
+        elif 'initial_magmom' in self.system_config:
+            return self.system_config['initial_magmom']
         else:
             return {}
 
