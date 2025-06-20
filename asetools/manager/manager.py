@@ -37,7 +37,7 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
         logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
         return
 
-    for stage in stages_todo:
+    for stage in cfg.workflows[workflow_name]['stages']:
         if stage['name'] not in stages_todo:
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
