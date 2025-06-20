@@ -47,6 +47,7 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
             atoms.calc = calc
             atoms.calc.set(**step_overrides)
+            atoms.get_potential_energy()  # This will trigger the VASP calculation
             logger.info(f"    STEP {step['name']} completed.")
 
             done_file = f"STAGE_{stage['name']}_DONE"
