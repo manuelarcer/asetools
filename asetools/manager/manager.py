@@ -90,3 +90,4 @@ def backup_output_files(name='backup'):
             shutil.copy(fname, dst)
         except FileNotFoundError:
             logger.warning(f"File {fname} not found, skipping backup.")
+    logger.info(f"Backup of output files completed with prefix '{name}'.")
