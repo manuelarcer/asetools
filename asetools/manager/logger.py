@@ -5,7 +5,7 @@ import datetime
 
 def configure_logging(
     *,
-    project_logger: str = "asetools",
+    project_logger: str = "asetools.manager",
     file_prefix:    str = "run",
     level:          int = logging.INFO,
 ):
