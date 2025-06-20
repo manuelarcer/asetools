@@ -6,18 +6,53 @@ import shutil
 import sys
 import glob
 from ase.io import read
-import yaml
-from .calculatorsetuptools import VASPConfigurationFromYAML
+from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update
+from ase.calculators.vasp import Vasp
+from ase import Atoms
 
 logger = logging.getLogger(__name__)    
 
-def backup_output_files(name='backup'):
-    for fname in ('POSCAR','INCAR','CONTCAR','OUTCAR','OSZICAR'):
-        dst = f"{fname}_{name}"
-        try:
-            shutil.copy(fname, dst)
-        except FileNotFoundError:
-            logger.warning(f"File {fname} not found, skipping backup.")
+def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) -> Vasp:
+    if run_overrides is None:
+        run_overrides = {}
+    else:
+        logger.info(f" ** Overriding run parameters with: {run_overrides}")
+    vasp_kwargs = deep_update(
+        deep_update(cfg.basic_config.copy(), cfg.system_config),
+        run_overrides
+        )
+    calc = Vasp(**vasp_kwargs)
+
+    if 'magmom' in cfg.system_config:
+        logger.warning(f' ** WARNING **  There is a "magmom" key in the system config, '
+                       f' make sure you run setup_initial_magmom() from asetools/manager/calculatorsetuptools.py ')
+
+    logger.info(" ** Calculator created")
+    return calc
+
+def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str):
+    stages_todo = stages_to_run(cfg, workflow_name)
+
+    if not stages_todo:
+        logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
+        return
+
+    for stage in stages_todo:
+        if stage['name'] not in stages_todo:
+            logger.info(f"Skipping STAGE: {stage['name']}, already done")
+            continue
+        logger.info(f"Running STAGE: {stage['name']}")
+        for step in stage['steps']:
+            step_overrides = step.get('overrides', {})
+            logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
+            atoms.calc = calc
+            atoms.calc.set(**step_overrides)
+            logger.info(f"    STEP {step['name']} completed.")
+
+            done_file = f"STAGE_{stage['name']}_DONE"
+            with open(done_file, 'w') as f:
+                f.write(f"Stage {stage['name']} completed successfully.\n")
+    logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
 
 def load_structure(pattern_initial_default: str = 'POSCAR'):
     """Load the structure from CONTCAR or initial configuration."""
@@ -33,18 +68,6 @@ def load_structure(pattern_initial_default: str = 'POSCAR'):
         logger.info(f"Loading structure from: {matches[0]}")
     return atoms
 
-# TODO: DO WE NEED THIS?
-def load_last_logger(logger_basename: str = 'logger'):
-    """Load the last logger configuration from the log file."""
-    log_files = glob.glob(f"{logger_basename}*")
-    if not log_files:
-        logger.warning(f"No log files found for logger: {logger_basename}")
-        return None
-    # Sort log files by modification time
-    log_files.sort(key=os.path.getmtime)
-    with open(log_files[-1], 'r') as file:
-        return file.read()
-
 def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = 'default') -> list:
     to_run = []
     for stage in cfg.workflows[workflow_name]['stages']:
@@ -59,3 +82,10 @@ def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = 'default'
             to_run.append(stage_name)
     return to_run
         
+def backup_output_files(name='backup'):
+    for fname in ('POSCAR','INCAR','CONTCAR','OUTCAR','OSZICAR'):
+        dst = f"{fname}_{name}"
+        try:
+            shutil.copy(fname, dst)
+        except FileNotFoundError:
+            logger.warning(f"File {fname} not found, skipping backup.")
