@@ -30,7 +30,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
     logger.info(" ** Calculator created")
     return calc
 
-def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str):
+def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, dry_run: bool = False):
     stages_todo = stages_to_run(cfg, workflow_name)
 
     if not stages_todo:
@@ -47,6 +47,10 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
             atoms.calc = calc
             atoms.calc.set(**step_overrides)
+            if dry_run:
+                logger.info("    DRY RUN: Skipping actual calculation.")
+                continue
+            
             atoms.get_potential_energy()  # This will trigger the VASP calculation
             logger.info(f"    STEP {step['name']} completed.")
 
