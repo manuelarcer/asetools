@@ -43,6 +43,8 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
         logger.info(f"Running STAGE: {stage['name']}")
+        atoms.calc = calculator
+        logger.info(f"  – Setting up with original parameters from config")
         for step in stage['steps']:
             step_overrides = step.get('overrides', {})
             logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
