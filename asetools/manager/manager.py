@@ -61,7 +61,8 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
 
         # After all stages are done, we can backup output files
         backup_output_files(name=stage['name'])
-        
+        logger.info(f" --> Stage {stage['name']} BACKUP completed <--")
+
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
 
 def load_structure(pattern_initial_default: str = 'POSCAR'):
