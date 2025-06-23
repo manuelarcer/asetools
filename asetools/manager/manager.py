@@ -32,7 +32,6 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
 
 def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, dry_run: bool = False):
     stages_todo = stages_to_run(cfg, workflow_name)
-    calculator = calc.copy()
     
     if not stages_todo:
         logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
@@ -43,12 +42,14 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
         logger.info(f"Running STAGE: {stage['name']}")
-        atoms.calc = calculator
+        
+        # Set up the calculator with the original parameters from the config before each stage and overrides
+        atoms.calc = calc
         logger.info(f"  – Setting up with original parameters from config")
         for step in stage['steps']:
             step_overrides = step.get('overrides', {})
             logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
-            atoms.calc = calculator
+            ##atoms.calc = calc
             atoms.calc.set(**step_overrides)
             if dry_run:
                 logger.info("    DRY RUN: Skipping actual calculation.")
