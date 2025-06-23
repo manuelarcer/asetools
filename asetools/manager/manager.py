@@ -32,7 +32,8 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
 
 def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, dry_run: bool = False):
     stages_todo = stages_to_run(cfg, workflow_name)
-
+    calculator = calc.copy()
+    
     if not stages_todo:
         logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
         return
@@ -45,7 +46,7 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
         for step in stage['steps']:
             step_overrides = step.get('overrides', {})
             logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
-            atoms.calc = calc
+            atoms.calc = calculator
             atoms.calc.set(**step_overrides)
             if dry_run:
                 logger.info("    DRY RUN: Skipping actual calculation.")
@@ -57,6 +58,10 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             done_file = f"STAGE_{stage['name']}_DONE"
             with open(done_file, 'w') as f:
                 f.write(f"Stage {stage['name']} completed successfully.\n")
+
+        # After all stages are done, we can backup output files
+        backup_output_files(name=stage['name'])
+        
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
 
 def load_structure(pattern_initial_default: str = 'POSCAR'):
