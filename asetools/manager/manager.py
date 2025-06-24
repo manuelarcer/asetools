@@ -51,11 +51,10 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
     
 
 def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom: dict):
+    # run_overrides is different from the overrides in each step
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
-    atoms.calc = calc
-    logger.info(f"  – Setting up with original parameters from config")
     for step in steps:
         # Make calculator for each step
         logger.info('  * Setting up calculator from config')
