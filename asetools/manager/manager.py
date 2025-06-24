@@ -30,7 +30,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
     logger.info(" ** Calculator created")
     return calc
 
-def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
+def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
     
     # get the initial magmom from the config to be used at each stage
     initial_magmom = cfg.initial_magmom     # {} if not defined
