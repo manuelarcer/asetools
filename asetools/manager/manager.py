@@ -30,7 +30,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
     logger.info(" ** Calculator created")
     return calc
 
-def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, dry_run: bool = False):
+def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
     
     # get the initial magmom from the config to be used at each stage
     initial_magmom = cfg.initial_magmom     # {} if not defined
@@ -46,7 +46,9 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
         if stage['name'] not in to_run:
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
-        
+        # Make calculator for each stage
+        logger.info('  * Setting up calculator from config')
+        calc = make_calculator(cfg, run_overrides=run_overrides)
         _run_stage(atoms, calc, stage, dry_run, initial_magmom=initial_magmom)
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
@@ -63,6 +65,7 @@ def _run_stage(atoms: Atoms, calc: Vasp, stage: dict, dry_run: bool, initial_mag
     
     backup_output_files(name=name)
     logger.info(f" -- ✅ Stage '{name}' completed and backed up")
+    _mark_done(name)
 
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     name      = step['name']
@@ -76,7 +79,7 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     # trigger VASP run
     atoms.get_potential_energy()
     logger.info(f"    ✔ Step '{name}' done")
-    _mark_done(name)
+    
 
 def _mark_done(step_name: str):
     path = f"STAGE_{step_name}_DONE"
