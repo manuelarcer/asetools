@@ -9,7 +9,8 @@ class VASPConfigurationFromYAML:
         self.basic_config = self.config['basic']
         self.workflows = self.config['workflows']
         self.globals = self.config['globals']
-
+        self.initial_magmom = self.initial_magmom()
+        
         # Remove the magmom shorthand so it won't sneak into system_config
         systems = self.config.get('systems', {})
         if system in systems:
@@ -23,7 +24,6 @@ class VASPConfigurationFromYAML:
             raise KeyError(f"System '{self.system}' not found in configuration file.")
         return system_dict
 
-    @property
     def initial_magmom(self) -> dict:
         if 'magmom' in self.system_config:
             return self.system_config['magmom']
