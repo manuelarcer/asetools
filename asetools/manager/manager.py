@@ -46,20 +46,21 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         if stage['name'] not in to_run:
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
-        # Make calculator for each stage
-        logger.info('  * Setting up calculator from config')
-        calc = make_calculator(cfg, run_overrides=run_overrides)
-        _run_stage(atoms, calc, stage, dry_run, initial_magmom=initial_magmom)
+        _run_stage(atoms, cfg, stage, run_overrides, dry_run, initial_magmom=initial_magmom)
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
 
-def _run_stage(atoms: Atoms, calc: Vasp, stage: dict, dry_run: bool, initial_magmom: dict):
+def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom: dict):
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
     atoms.calc = calc
     logger.info(f"  – Setting up with original parameters from config")
     for step in steps:
+        # Make calculator for each step
+        logger.info('  * Setting up calculator from config')
+        calc = make_calculator(cfg, run_overrides=run_overrides)
+        atoms.calc = calc
         atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
         _run_step(atoms, step, dry_run)
     
