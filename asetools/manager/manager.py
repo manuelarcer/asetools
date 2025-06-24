@@ -6,7 +6,7 @@ import shutil
 import sys
 import glob
 from ase.io import read
-from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update
+from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
 from ase.calculators.vasp import Vasp
 from ase import Atoms
 
@@ -47,17 +47,18 @@ def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workf
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
         
-        _run_stage(atoms, calc, stage, dry_run)
+        _run_stage(atoms, calc, stage, dry_run, initial_magmom=initial_magmom)
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
-    
-def _run_stage(atoms: Atoms, calc: Vasp, stage: dict, dry_run: bool):
+
+def _run_stage(atoms: Atoms, calc: Vasp, stage: dict, dry_run: bool, initial_magmom: dict):
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
     atoms.calc = calc
     logger.info(f"  – Setting up with original parameters from config")
     for step in steps:
+        atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
         _run_step(atoms, step, dry_run)
     
     backup_output_files(name=name)
