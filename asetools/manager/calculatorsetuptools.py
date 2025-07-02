@@ -9,7 +9,7 @@ class VASPConfigurationFromYAML:
         self.basic_config = self.config['basic']
         self.workflows = self.config['workflows']
         self.globals = self.config['globals']
-        self.initial_magmom = self.initial_magmom()
+        self.initial_magmom_data = self.initial_magmom()
         
         # Remove the magmom shorthand so it won't sneak into system_config
         systems = self.config.get('systems', {})
