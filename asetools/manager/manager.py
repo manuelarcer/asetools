@@ -6,7 +6,7 @@ import shutil
 import sys
 import glob
 from ase.io import read
-from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update
+from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
 from ase.calculators.vasp import Vasp
 from ase import Atoms
 
@@ -30,42 +30,62 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
     logger.info(" ** Calculator created")
     return calc
 
-def run_workflow(atoms: Atoms, calc: Vasp, cfg: VASPConfigurationFromYAML, workflow_name: str, dry_run: bool = False):
-    stages_todo = stages_to_run(cfg, workflow_name)
-    calculator = calc.copy()
+def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
     
-    if not stages_todo:
+    # get the initial magmom from the config to be used at each stage
+    initial_magmom = cfg.initial_magmom_data     # {} if not defined
+
+    to_run = stages_to_run(cfg, workflow_name)
+    stages = cfg.workflows[workflow_name]['stages']
+    
+    if not to_run:
         logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
         return
 
-    for stage in cfg.workflows[workflow_name]['stages']:
-        if stage['name'] not in stages_todo:
+    for stage in stages:
+        if stage['name'] not in to_run:
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
-        logger.info(f"Running STAGE: {stage['name']}")
-        atoms.calc = calculator
-        logger.info(f"  – Setting up with original parameters from config")
-        for step in stage['steps']:
-            step_overrides = step.get('overrides', {})
-            logger.info(f"  – Running STEP: * {step['name']} * with overrides: {step_overrides}")
-            atoms.calc = calculator
-            atoms.calc.set(**step_overrides)
-            if dry_run:
-                logger.info("    DRY RUN: Skipping actual calculation.")
-                continue
-            
-            atoms.get_potential_energy()  # This will trigger the VASP calculation
-            logger.info(f"    STEP {step['name']} completed.")
-
-            done_file = f"STAGE_{stage['name']}_DONE"
-            with open(done_file, 'w') as f:
-                f.write(f"Stage {stage['name']} completed successfully.\n")
-
-        # After all stages are done, we can backup output files
-        backup_output_files(name=stage['name'])
-        logger.info(f" --> Stage {stage['name']} BACKUP completed <--")
-
+        _run_stage(atoms, cfg, stage, run_overrides, dry_run, initial_magmom=initial_magmom)
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
+    
+
+def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom: dict):
+    # run_overrides is different from the overrides in each step
+    name  = stage['name']
+    steps = stage['steps']
+    logger.info(f"Running STAGE: {stage['name']}")
+    for step in steps:
+        # Make calculator for each step
+        logger.info('  * Setting up calculator from config')
+        calc = make_calculator(cfg, run_overrides=run_overrides)
+        atoms.calc = calc
+        atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
+        _run_step(atoms, step, dry_run)
+    
+    backup_output_files(name=name)
+    logger.info(f" -- ✅ Stage '{name}' completed and backed up")
+    _mark_done(name)
+
+def _run_step(atoms: Atoms, step: dict, dry_run: bool):
+    name      = step['name']
+    overrides = step.get('overrides', {})
+    logger.info(f"  • Step '{name}' overrides={overrides}")
+    atoms.calc.set(**overrides)
+    if dry_run:
+        logger.info("    (dry-run, skipping calculation)")
+        return
+    
+    # trigger VASP run
+    atoms.get_potential_energy()
+    logger.info(f"    ✔ Step '{name}' done")
+    
+
+def _mark_done(step_name: str):
+    path = f"STAGE_{step_name}_DONE"
+    with open(path, 'w') as f:
+        f.write(f"{step_name} completed\n")
+
 
 def load_structure(pattern_initial_default: str = 'POSCAR'):
     """Load the structure from CONTCAR or initial configuration."""

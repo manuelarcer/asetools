@@ -1,182 +1,237 @@
-# ASETOOLS 
+# ASEtools
 
-## Description:
-This package ...
+**A comprehensive Python toolkit for computational materials science with VASP and ASE**
+
+[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![ASE](https://img.shields.io/badge/ASE-compatible-green.svg)](https://wiki.fysik.dtu.dk/ase/)
+[![VASP](https://img.shields.io/badge/VASP-5%20%7C%206-red.svg)](https://www.vasp.at/)
+
+## Overview
+
+ASEtools is a specialized Python package designed for computational materials scientists working with density functional theory (DFT) calculations, particularly VASP (Vienna Ab initio Simulation Package). Built on top of the Atomic Simulation Environment (ASE), it provides a comprehensive suite of analysis tools, workflow management, and utilities for materials science research.
+
+## Key Features
+
+- **VASP Analysis Tools**: Convergence checking, energy/force extraction, magnetic moment analysis
+- **Electronic Structure Analysis**: Comprehensive DOS analysis with orbital projections
+- **Surface Science**: Automated adsorbate placement and surface analysis
+- **Electrochemistry**: Applied potential calculations with Fermi shift corrections
+- **Reaction Pathways**: NEB analysis and potential energy surface plotting
+- **Workflow Management**: YAML-based configuration system for multi-stage calculations
+- **Database Integration**: ASE database support with duplicate detection
+- **Command-Line Tools**: 12+ specialized scripts for various VASP tasks
+
+## Installation
 
 ### Requirements
 
-- pandas
-- numpy
-- ase
-- matplotlib
-
-## Package's modules
-
-### Module `analysis`
-
-The `analysis.py` module contains functions designed to analyze OUTCAR files produced by the VASP (Vienna Ab initio Simulation Package) software. These functions can be used to check the convergence of a calculation, as well as to extract information about the energy and forces calculated in the simulation. The module makes use of the Atomic Simulation Environment (ASE) to read information from OUTCAR files.
-
-Here's a brief summary of the two functions in the module:
-
-`check_outcar_convergence(outcar, verbose=False)`: This function checks if a calculation represented by the given OUTCAR file has converged. It returns a tuple containing a boolean value that indicates whether the calculation has converged and a string indicating the VASP version used for the calculation.
-
-`check_energy_and_maxforce(outcar, magmom=False, verbose=False)`: This function returns the final potential energy and maximum force from the calculation represented by the OUTCAR file. If the `magmom` parameter is set to True, it also returns the magnetic moment of the system.
-
-Here's an example of how you can use these functions:
-
-```python
-from my_package.analysis import check_outcar_convergence, check_energy_and_maxforce
-
-outcar_file = "/path/to/your/OUTCAR"
-
-# Check if the calculation has converged
-convergence, vasp_version = check_outcar_convergence(outcar_file)
-print(f"Convergence: {convergence}")
-print(f"VASP version: {vasp_version}")
-
-# Get the final potential energy and maximum force
-energy, max_force = check_energy_and_maxforce(outcar_file)
-print(f"Final potential energy: {energy} eV")
-print(f"Maximum force: {max_force} eV/A")
-
-# If you also want to get the magnetic moment
-energy, max_force, mag_moment = check_energy_and_maxforce(outcar_file, magmom=True)
-print(f"Magnetic moment: {mag_moment} Bohr magnetons")
+```bash
+pip install pandas numpy scipy matplotlib ase pyyaml
 ```
 
+### Install ASEtools
 
-This Python code reads an OUTCAR file, checks if the associated VASP calculation has converged, and extracts the final potential energy and maximum force. If you want to obtain the magnetic moment as well, you can set the `magmom` parameter to True when calling the `check_energy_and_maxforce` function. Replace "/path/to/your/OUTCAR" with the actual path to your OUTCAR file.
-
-### Module `doscar_analysis`
-
-The `doscar_analysis` module provides functionality to analyze the Density of States (DOS) from VASP calculations. It allows users to extract the DOS from DOSCAR files and also to extract projected DOS (pDOS) per state or per orbital. Here is a description of the functions contained in the module:
-
-`extract_dos(doscarfile)`: This function extracts the DOS from a given DOSCAR file. It returns a dictionary containing the energy, DOSup and DOSdown.
-
-`extract_pdos_perstate(data, atoms, states)`: This function extracts the pDOS per state for specific atoms. The user can specify a list of atoms and states (s, p, d) of interest.
-
-`extract_pdos_perorbital(data, atoms, orbitals)`: This function extracts the pDOS per orbital for specific atoms. The user can specify a list of atoms and orbitals of interest.
-
-Here is an example usage of the module for the README file:
-
-```python
-from doscar_analysis import extract_dos, extract_pdos_perstate, extract_pdos_perorbital
-
-# Specify the path to your DOSCAR file
-doscarfile = "path/to/your/DOSCAR"
-
-# Extract the DOS
-dos_data = extract_dos(doscarfile)
-
-# Print the extracted data
-print(dos_data)
-
-# Specify atoms and states of interest
-atoms = [0, 1, 2]  # Indices of atoms of interest
-states = ['s_states', 'p_states', 'd_states']  # States of interest
-
-# Extract the PDOS per state
-e, sum_plus, sum_minus = extract_pdos_perstate(dos_data, atoms, states)
-
-# Print the extracted data
-print(f"Energy: {e}")
-print(f"Sum Plus: {sum_plus}")
-print(f"Sum Minus: {sum_minus}")
-
-# Specify atoms and orbitals of interest
-atoms = [0, 1, 2]  # Indices of atoms of interest
-orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+']  # Orbitals of interest
-
-# Extract the PDOS per orbital
-e, sum_plus, sum_minus = extract_pdos_perorbital(dos_data, atoms, orbitals)
-
-# Print the extracted data
-print(f"Energy: {e}")
-print(f"Sum Plus: {sum_plus}")
-print(f"Sum Minus: {sum_minus}")
+```bash
+git clone https://github.com/manuelarcer/asetools.git
+cd asetools
+pip install -e .
 ```
 
-### Module `adsorbate`
+## Quick Start
 
-The SurfaceAnalyzer class provided in your script is a powerful tool designed to analyze the surface of a molecular structure. It takes an ASE Atoms object as input and provides several methods to analyze and manipulate the surface of the structure.
-
-Here's a brief summary of what each method does:
-
-`__init__(self, atoms)`: This is the constructor of the SurfaceAnalyzer class. It initializes the instance with a given set of atoms and calculates the surface atoms and their neighbors.
-
-`find_surface_atoms(self)`: This method finds and returns the indices of the atoms that are on the surface of the structure.
-
-`find_surface_neighbors(self, thr=3.0)`: This method identifies neighboring atoms on the surface. The neighbor threshold can be adjusted with the thr parameter.
-
-`midpoint_three_atoms(self, three)`: This method calculates the midpoint of a triangle formed by three atoms, given their indices.
-
-`add_adsorbate_to_mid(self, three, adsorbate='H', z_off=1., thr=4.4)`: This method adds an adsorbate atom at the midpoint of a triangle formed by three surface atoms. The type of atom added, its z offset, and the threshold for finding neighbors around the adsorbate can be adjusted.
-
-`get_cluster_around_adsorbate(self, thr=4.4)`: This method identifies a cluster of atoms around the adsorbate. The threshold for inclusion in the cluster can be adjusted.
-
-`adsorbate_to_cluster_neighbors(self, thr=4.4, prec=3)`: This method calculates the distances from the adsorbate atom to its neighbors in the cluster.
+### Basic VASP Analysis
 
 ```python
-from ase.build import molecule
-from adsorbate import SurfaceAnalyzer
+from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
 
-# Load a molecule structure using ASE
-atoms = molecule("CH3CH2OH")
+# Check convergence and extract properties
+converged, version = check_outcar_convergence('OUTCAR')
+energy, max_force = check_energy_and_maxforce('OUTCAR')
 
-# Initialize a SurfaceAnalyzer object
+print(f"Converged: {converged}, Energy: {energy:.4f} eV, Max Force: {max_force:.3f} eV/Å")
+```
+
+### DOS Analysis
+
+```python
+from asetools.doscar_analysis import extract_dos, extract_pdos_perstate
+
+# Extract density of states
+dos_data = extract_dos('DOSCAR')
+
+# Get projected DOS for specific atoms and orbitals
+atoms_of_interest = [0, 1, 2]
+states = ['s_states', 'p_states', 'd_states']
+energy, dos_up, dos_down = extract_pdos_perstate(dos_data, atoms_of_interest, states)
+```
+
+### Surface Analysis and Adsorbate Placement
+
+```python
+from asetools.adsorbate import SurfaceAnalyzer
+from ase.io import read
+
+# Load surface structure
+atoms = read('POSCAR')
+
+# Analyze surface and place adsorbate
 analyzer = SurfaceAnalyzer(atoms)
+surface_sites = analyzer.find_surface_neighbors()
+analyzer.add_adsorbate_to_mid(surface_sites[0], adsorbate='H', z_off=1.5)
 
-# Find the indices of surface atoms
-print(analyzer.surface_indices)
-
-# Add an adsorbate to the surface
-analyzer.add_adsorbate_to_mid(analyzer.surface_indices[:3])
-
-# Print distances from the adsorbate to its neighbors
-print(analyzer.adsneighdistances)
+print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 ```
 
-In this example, we load a molecule structure using the ASE build module. We then initialize a `SurfaceAnalyzer` object with the atoms of this molecule. We print the indices of the surface atoms. Finally, we add an adsorbate to the surface at the midpoint of the first three surface atoms and print the distances from the adsorbate to its neighbors.
+## Core Modules
 
-Please replace "my_module" with the actual name of your module. This example assumes that the SurfaceAnalyzer class is imported from a module called "my_module".
+### Analysis (`asetools.analysis`)
+- **`check_outcar_convergence(outcar)`**: Validates VASP calculation convergence
+- **`check_energy_and_maxforce(outcar, magmom=False)`**: Extracts energy, forces, and magnetic moments
+- **`extract_magnetic_moments(outcar, atoms_list)`**: Gets magnetic moments for specific atoms
+- **`get_parameter_from_run(outcar, parameter='ISIF')`**: Extracts VASP parameters
 
-## Package's executables
+### DOS Analysis (`asetools.doscar_analysis`)
+- **`extract_dos(doscarfile)`**: Complete DOSCAR parsing with spin support
+- **`extract_pdos_perstate(data, atoms, states)`**: Projects DOS onto s/p/d orbitals
+- **`extract_pdos_perorbital(data, atoms, orbitals)`**: Detailed orbital projections with crystalline field
+- **`extract_fermi_e(doscarfile)`**: Simple Fermi energy extraction
 
-### `getenergy.py`
+### Surface Science (`asetools.adsorbate`)
+- **`SurfaceAnalyzer`**: Comprehensive surface analysis toolkit
+  - Surface atom identification
+  - Triangular site detection
+  - Automated adsorbate placement
+  - Local environment analysis
 
-The `getenergy.py` script is a tool that enables users to analyze the convergence, energy, and maximum force of an OUTCAR file (a common output file in DFT calculations, especially with VASP software). This is particularly useful for users conducting materials simulations and those who require a simplified method of checking their OUTCAR files' status.
+### Applied Potential (`asetools.appliedpotential`)
+- **`extract_corrected_energy_fermie(folders, calc_zero)`**: Potential-dependent energy corrections
+- **`fit_data(X, Y, fit_type='polynomial')`**: Energy fitting with polynomial/spline methods
+- **`get_energy_at_givenpotential(results, desiredU=0.)`**: Energy interpolation at specific potentials
 
-The script uses `asetools.analysis` library functions, specifically `check_energy_and_maxforce` and `check_outcar_convergence`. It takes an OUTCAR file as an argument and determines whether the calculation has converged by analyzing the OUTCAR file. If the convergence is successful, the energy and maximum force of the system are returned.
+### Workflow Management (`asetools.manager`)
+- **`VASPConfigurationFromYAML`**: YAML-based configuration system
+- **`run_workflow(atoms, config, workflow_name)`**: Multi-stage calculation execution
+- **`make_calculator(config, overrides=None)`**: VASP calculator creation
 
-If no argument is provided, the script defaults to analyzing a file named "OUTCAR" in the current directory.
+### Database Tools (`asetools.databases`)
+- **`add_config_to_db(db, outcar, idname=None)`**: Adds structures to ASE database
+- **`check_if_exists_in_db(db, atoms)`**: Duplicate structure detection
+- **`db_to_pandas(db)`**: Database to DataFrame conversion
 
-### `summaryfolders.py`
+### Reaction Pathways (`asetools.nebanalysis`, `asetools.plots`)
+- **`extract_neb_data(folder_path, final)`**: NEB energy extraction
+- **`plot_nebs(list_dfs)`**: Multi-pathway NEB plotting
+- **`add_line_to_pes(ax, data)`**: Potential energy surface visualization
 
-This script is used for analysis and summarization of results from multiple OUTCAR files (output files from DFT calculations, commonly generated with the VASP software), specifically across different configuration folders. It determines convergence status, calculates the energy, maximum force, and optionally, the magnetic moments, then outputs the data as a dataframe.
+## Command-Line Tools
 
-The script utilizes `glob`, `pandas`, `numpy`, and `asetools.analysis` libraries to process and analyze multiple OUTCAR files. It performs a directory-wide search for directories containing OUTCAR files and then carries out the following analyses:
+ASEtools includes 12+ specialized command-line utilities:
 
-1. Check if the calculations in the OUTCAR files have converged.
-2. Extracts the energy, maximum force, and magnetic moments (optional) from the OUTCAR files.
-3. Calculates the relative energy with respect to the minimum energy across all the configurations.
-4. Prints out a `DataFrame` that includes all the extracted and calculated information.
-5. If the `-m` or `--magmom` flag is included, the script will also calculate the magnetic moments.
+### Core Analysis Tools
+- **`getenergy`**: Quick convergence and energy summary
+- **`summaryfolders`**: Batch analysis of multiple calculations with DataFrame output
+- **`comparevaspparam`**: Side-by-side VASP parameter comparison
 
-The script assumes that each directory contains one OUTCAR file.
+### Structure and Visualization
+- **`asegui`**: Enhanced ASE GUI with error recovery
+- **`view_outcars`**: Batch structure visualization
+- **`sortposcarbyelement`**: POSCAR sorting by element and coordinates
 
-## Extra content
+### Specialized Analysis
+- **`gibbsFE`**: Gibbs free energy corrections from vibrational analysis
+- **`genpotentialdepcalc`**: Generates potential-dependent calculation folders
 
-Extra content can be found in the folder 'extra', within package's folder.
+### File Management
+- **`vaspbackup`**: Intelligent VASP file backup system
+- **`vasp_2_arc`**: Format conversion utilities
+- **`remove_slashes`**: Corrupted file repair tool
 
-### 1. vasp_outcar_parser.py
+### Usage Examples
 
-This is a file to fix one of the bugs while reading an OUTCAR file generated by VASP 6. This has been apparent elsewhere (https://gitlab.com/ase/ase/-/issues/1119). I had the same issue. Copy this file into ase/io/vasp_parser/ to overwrite the existing one.
+```bash
+# Quick energy summary
+getenergy OUTCAR
 
-The fix was submitted here 
-https://gitlab.com/ase/ase/-/commit/9e9234a785c97ca3d49a0f3fca4fec2bdc52eb2b
+# Batch analysis with magnetic moments
+summaryfolders -m
 
-And the full file can be found in this other page
-https://gitlab.com/ase/ase/-/blob/9e9234a785c97ca3d49a0f3fca4fec2bdc52eb2b/ase/io/vasp_parsers/vasp_outcar_parsers.py
+# Sort POSCAR by elements
+sortposcarbyelement -f POSCAR -axis z
 
+# Backup VASP files
+vaspbackup -p "OUTCAR*" -c
+```
 
-  
+## Workflow Management
+
+ASEtools provides a powerful YAML-based workflow system for complex multi-stage calculations:
+
+```yaml
+# config.yaml example
+basic_config:
+  xc: PBE
+  encut: 400
+  kpts: [4, 4, 4]
+
+workflows:
+  optimization:
+    stages:
+      - name: "rough_opt"
+        ediff: 1e-4
+        nsw: 100
+      - name: "fine_opt"
+        ediff: 1e-6
+        nsw: 200
+```
+
+```python
+from asetools.manager import VASPConfigurationFromYAML, run_workflow
+from ase.io import read
+
+config = VASPConfigurationFromYAML('config.yaml')
+atoms = read('POSCAR')
+run_workflow(atoms, config, 'optimization')
+```
+
+## Advanced Features
+
+### Electrochemical Analysis
+```python
+from asetools.appliedpotential import extract_corrected_energy_fermie, fit_data
+
+# Analyze potential-dependent calculations
+folders = ['U_-0.5', 'U_0.0', 'U_0.5', 'U_1.0']
+results = extract_corrected_energy_fermie(folders, calc_zero='U_0.0')
+
+# Fit energy vs. potential
+potentials = [-0.5, 0.0, 0.5, 1.0]
+energies = [r['corrected_energy'] for r in results]
+fit_results = fit_data(potentials, energies, fit_type='polynomial', order=2)
+```
+
+### Database Integration
+```python
+from asetools.databases import add_config_to_db, db_to_pandas
+from ase.db import connect
+
+db = connect('calculations.db')
+add_config_to_db(db, 'OUTCAR', idname='surface_opt')
+df = db_to_pandas(db)
+print(df[['name', 'energy', 'magmom']])
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## License
+
+This project is open source. Please check the repository for license details.
+
+## Citation
+
+If you use ASEtools in your research, please consider citing this package and the underlying ASE framework.
+
+## Support
+
+For questions, issues, or feature requests, please visit the [GitHub repository](https://github.com/manuelarcer/asetools.git).
