@@ -308,7 +308,9 @@ class DOS:
             up_color = colors[0] if len(colors) > 0 else None
             down_color = colors[0] if same_color_spins else (colors[1] if len(colors) > 1 else None)
         else:
-            up_color = down_color = None
+            # Use default colors
+            up_color = self.DEFAULT_COLORS[0]
+            down_color = self.DEFAULT_COLORS[0] if same_color_spins else self.DEFAULT_COLORS[1]
         
         label = f"Atoms {atoms}, States {states}"
         
@@ -377,7 +379,9 @@ class DOS:
             up_color = colors[0] if len(colors) > 0 else None
             down_color = colors[0] if same_color_spins else (colors[1] if len(colors) > 1 else None)
         else:
-            up_color = down_color = None
+            # Use default colors
+            up_color = self.DEFAULT_COLORS[0]
+            down_color = self.DEFAULT_COLORS[0] if same_color_spins else self.DEFAULT_COLORS[1]
         
         label = f"Atoms {atoms}, Orbitals {orbitals}"
         
