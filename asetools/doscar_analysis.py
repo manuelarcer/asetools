@@ -10,6 +10,22 @@ class DOS:
     storing DOS data and providing methods for extraction and visualization.
     """
     
+    # Default color palette for multi-atom plotting
+    DEFAULT_COLORS = [
+        '#30CF72',  # Green
+        '#CF308D',  # Magenta
+        '#CFC230',  # Yellow
+        '#303DCF',  # Blue
+        '#3C93C3',  # Light Blue
+        '#C36C3C',  # Orange
+        '#50C33C',  # Light Green
+        '#AF3CC3',  # Purple
+        '#CF3030',  # Red
+        '#30CFC2',  # Cyan
+        '#8030CF',  # Violet
+        '#CF8030'   # Dark Orange
+    ]
+    
     def __init__(self, doscarfile: str):
         """Initialize DOS object from DOSCAR file.
         
@@ -63,7 +79,15 @@ class DOS:
         count = -1
         
         for i, line in enumerate(lines):
-            if goDOS:
+            if i == 5:
+                goDOS = True
+            
+            if i > 5 and line == repline and self.has_partial_dos:
+                goDOS = False
+                gopDOS = True
+                count += 1
+            
+            if goDOS and i > 5:  # Only collect DOS data after the header line
                 self.data['energy'].append(float(line.split()[0]) - self.fermi_energy)
                 self.data['DOSup'].append(float(line.split()[1]))
                 self.data['DOSdown'].append(-float(line.split()[2]))
@@ -77,14 +101,6 @@ class DOS:
                         )
                     else:
                         self.data[atom_key][key].append(float(line.split()[k]))
-            
-            if i == 5:
-                goDOS = True
-            
-            if i > 5 and line == repline and self.has_partial_dos:
-                goDOS = False
-                gopDOS = True
-                count += 1
     
     def _convert_to_arrays(self):
         """Convert lists to numpy arrays."""
@@ -138,9 +154,8 @@ class DOS:
             }
         }
         
-        energy = self.data['at-0']['energy']
-        sum_plus = np.zeros(len(energy))
-        sum_minus = np.zeros(len(energy))
+        sum_plus = np.zeros(len(self.energy))
+        sum_minus = np.zeros(len(self.energy))
         
         for at in atoms:
             for state in states:
@@ -150,7 +165,7 @@ class DOS:
                     elif orbital[-1] == '-':
                         sum_minus -= self.data[f'at-{at}'][orbital]
         
-        return energy, sum_plus, sum_minus
+        return self.energy, sum_plus, sum_minus
     
     def get_pdos_by_orbitals(self, atoms: List[int], orbitals: Union[List[str], str]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract projected DOS by specific orbitals.
@@ -182,9 +197,8 @@ class DOS:
         elif orbitals == 'eg':
             orbitals = ['dz2+', 'dz2-', 'dx2+', 'dx2-']
         
-        energy = self.data['at-0']['energy']
-        sum_plus = np.zeros(len(energy))
-        sum_minus = np.zeros(len(energy))
+        sum_plus = np.zeros(len(self.energy))
+        sum_minus = np.zeros(len(self.energy))
         
         for at in atoms:
             for orbital in orbitals:
@@ -193,7 +207,44 @@ class DOS:
                 elif orbital[-1] == '-':
                     sum_minus -= self.data[f'at-{at}'][orbital]
         
-        return energy, sum_plus, sum_minus
+        return self.energy, sum_plus, sum_minus
+    
+    def get_individual_atom_pdos(self, atoms: List[int], states: Optional[List[str]] = None, 
+                                orbitals: Optional[Union[List[str], str]] = None) -> Dict[int, Dict[str, np.ndarray]]:
+        """Get projected DOS data for individual atoms (not summed).
+        
+        Args:
+            atoms: List of atom indices
+            states: List of states ('s_states', 'p_states', 'd_states') - mutually exclusive with orbitals
+            orbitals: List of orbital names or shorthand - mutually exclusive with states
+            
+        Returns:
+            Dictionary with structure: {atom_idx: {'energy': array, 'dos_up': array, 'dos_down': array}}
+        """
+        if not self.has_partial_dos:
+            raise ValueError("No partial DOS data available")
+        
+        if states is not None and orbitals is not None:
+            raise ValueError("Cannot specify both states and orbitals")
+        
+        if states is None and orbitals is None:
+            raise ValueError("Must specify either states or orbitals")
+        
+        result = {}
+        
+        for atom in atoms:
+            if states is not None:
+                energy, dos_up, dos_down = self.get_pdos_by_states([atom], states)
+            else:
+                energy, dos_up, dos_down = self.get_pdos_by_orbitals([atom], orbitals)
+            
+            result[atom] = {
+                'energy': energy,
+                'dos_up': dos_up,
+                'dos_down': dos_down
+            }
+        
+        return result
     
     def plot_total_dos(self, ax: Optional[plt.Axes] = None, **kwargs) -> plt.Axes:
         """Plot total DOS.
@@ -222,28 +273,65 @@ class DOS:
         return ax
     
     def plot_pdos_by_states(self, atoms: List[int], states: List[str], 
-                           ax: Optional[plt.Axes] = None, **kwargs) -> plt.Axes:
+                           ax: Optional[plt.Axes] = None,
+                           colors: Optional[List[str]] = None,
+                           same_color_spins: bool = False,
+                           xlim: Optional[Tuple[float, float]] = None,
+                           ylim: Optional[Tuple[float, float]] = None,
+                           linewidth: float = 1.0,
+                           figsize: Tuple[float, float] = (8, 6),
+                           **kwargs) -> plt.Axes:
         """Plot projected DOS by orbital states.
         
         Args:
             atoms: List of atom indices
             states: List of states ('s_states', 'p_states', 'd_states')
             ax: Matplotlib axes object (optional)
+            colors: Colors for spin-up and spin-down [up_color, down_color]
+            same_color_spins: Use same color for both spins
+            xlim: X-axis limits as (min, max)
+            ylim: Y-axis limits as (min, max)
+            linewidth: Line width for plots
+            figsize: Figure size when creating new plot
             **kwargs: Additional arguments passed to plot
             
         Returns:
             Matplotlib axes object
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(8, 6))
+            _, ax = plt.subplots(figsize=figsize)
         
         energy, dos_up, dos_down = self.get_pdos_by_states(atoms, states)
         
+        # Handle colors
+        if colors is not None:
+            up_color = colors[0] if len(colors) > 0 else None
+            down_color = colors[0] if same_color_spins else (colors[1] if len(colors) > 1 else None)
+        else:
+            up_color = down_color = None
+        
         label = f"Atoms {atoms}, States {states}"
-        ax.plot(energy, dos_up, label=f'{label} (Up)', **kwargs)
-        ax.plot(energy, dos_down, label=f'{label} (Down)', **kwargs)
+        
+        # Plot with specified colors or defaults
+        plot_kwargs = dict(kwargs)
+        if up_color:
+            plot_kwargs['color'] = up_color
+        ax.plot(energy, dos_up, label=f'{label} (Up)', linewidth=linewidth, **plot_kwargs)
+        
+        plot_kwargs = dict(kwargs)
+        if down_color:
+            plot_kwargs['color'] = down_color
+        ax.plot(energy, dos_down, label=f'{label} (Down)', linewidth=linewidth, **plot_kwargs)
+        
+        # Reference lines
         ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
         ax.axvline(x=0, color='k', linestyle='--', alpha=0.5, label='Fermi Level')
+        
+        # Set limits if provided
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
         
         ax.set_xlabel('Energy (eV)')
         ax.set_ylabel('PDOS (states/eV)')
@@ -254,32 +342,153 @@ class DOS:
         return ax
     
     def plot_pdos_by_orbitals(self, atoms: List[int], orbitals: Union[List[str], str], 
-                             ax: Optional[plt.Axes] = None, **kwargs) -> plt.Axes:
+                             ax: Optional[plt.Axes] = None,
+                             colors: Optional[List[str]] = None,
+                             same_color_spins: bool = False,
+                             xlim: Optional[Tuple[float, float]] = None,
+                             ylim: Optional[Tuple[float, float]] = None,
+                             linewidth: float = 1.0,
+                             figsize: Tuple[float, float] = (8, 6),
+                             **kwargs) -> plt.Axes:
         """Plot projected DOS by specific orbitals.
         
         Args:
             atoms: List of atom indices
             orbitals: List of orbital names or shorthand
             ax: Matplotlib axes object (optional)
+            colors: Colors for spin-up and spin-down [up_color, down_color]
+            same_color_spins: Use same color for both spins
+            xlim: X-axis limits as (min, max)
+            ylim: Y-axis limits as (min, max)
+            linewidth: Line width for plots
+            figsize: Figure size when creating new plot
             **kwargs: Additional arguments passed to plot
             
         Returns:
             Matplotlib axes object
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(8, 6))
+            _, ax = plt.subplots(figsize=figsize)
         
         energy, dos_up, dos_down = self.get_pdos_by_orbitals(atoms, orbitals)
         
+        # Handle colors
+        if colors is not None:
+            up_color = colors[0] if len(colors) > 0 else None
+            down_color = colors[0] if same_color_spins else (colors[1] if len(colors) > 1 else None)
+        else:
+            up_color = down_color = None
+        
         label = f"Atoms {atoms}, Orbitals {orbitals}"
-        ax.plot(energy, dos_up, label=f'{label} (Up)', **kwargs)
-        ax.plot(energy, dos_down, label=f'{label} (Down)', **kwargs)
+        
+        # Plot with specified colors or defaults
+        plot_kwargs = dict(kwargs)
+        if up_color:
+            plot_kwargs['color'] = up_color
+        ax.plot(energy, dos_up, label=f'{label} (Up)', linewidth=linewidth, **plot_kwargs)
+        
+        plot_kwargs = dict(kwargs)
+        if down_color:
+            plot_kwargs['color'] = down_color
+        ax.plot(energy, dos_down, label=f'{label} (Down)', linewidth=linewidth, **plot_kwargs)
+        
+        # Reference lines
         ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
         ax.axvline(x=0, color='k', linestyle='--', alpha=0.5, label='Fermi Level')
+        
+        # Set limits if provided
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
         
         ax.set_xlabel('Energy (eV)')
         ax.set_ylabel('PDOS (states/eV)')
         ax.set_title('Projected Density of States')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        
+        return ax
+    
+    def plot_multi_atom_pdos(self, atoms: List[int], states: Optional[List[str]] = None,
+                            orbitals: Optional[Union[List[str], str]] = None,
+                            colors: Optional[List[str]] = None,
+                            same_color_spins: bool = True,
+                            ax: Optional[plt.Axes] = None,
+                            xlim: Optional[Tuple[float, float]] = None,
+                            ylim: Optional[Tuple[float, float]] = None,
+                            linewidth: float = 1.5,
+                            figsize: Tuple[float, float] = (6, 4),
+                            **kwargs) -> plt.Axes:
+        """Plot projected DOS for multiple atoms individually with automatic color assignment.
+        
+        Args:
+            atoms: List of atom indices to plot
+            states: List of states ('s_states', 'p_states', 'd_states') - mutually exclusive with orbitals
+            orbitals: List of orbital names or shorthand - mutually exclusive with states
+            colors: Custom colors for each atom (falls back to default if None)
+            same_color_spins: Use same color for up/down spins from same atom
+            ax: Matplotlib axes object (optional)
+            xlim: X-axis limits as (min, max)
+            ylim: Y-axis limits as (min, max)
+            linewidth: Line width for plots
+            figsize: Figure size when creating new plot
+            **kwargs: Additional arguments passed to plot
+            
+        Returns:
+            Matplotlib axes object
+        """
+        if ax is None:
+            _, ax = plt.subplots(figsize=figsize)
+        
+        # Get individual atom PDOS data
+        atom_dos_data = self.get_individual_atom_pdos(atoms, states=states, orbitals=orbitals)
+        
+        # Set up colors
+        if colors is None:
+            colors = self.DEFAULT_COLORS
+        
+        # Create color mapping for atoms
+        color_map = {}
+        for i, atom in enumerate(atoms):
+            color_map[atom] = colors[i % len(colors)]
+        
+        # Plot each atom
+        for atom in atoms:
+            dos_data = atom_dos_data[atom]
+            color = color_map[atom]
+            
+            # Plot spin-up
+            ax.plot(dos_data['energy'], dos_data['dos_up'], 
+                   label=f'Atom {atom}', linewidth=linewidth, color=color, **kwargs)
+            
+            # Plot spin-down with same or different color
+            if same_color_spins:
+                ax.plot(dos_data['energy'], dos_data['dos_down'], 
+                       linewidth=linewidth, color=color, **kwargs)
+            else:
+                # Use slightly different color for spin-down (add alpha or darken)
+                ax.plot(dos_data['energy'], dos_data['dos_down'], 
+                       linewidth=linewidth, color=color, alpha=0.7, linestyle='--', **kwargs)
+        
+        # Add reference lines
+        ax.axhline(0, linewidth=1.2, color='k', alpha=1)
+        ax.axvline(0, linewidth=1.2, linestyle='--', color='k')
+        
+        # Set limits if provided
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        
+        # Labels and styling
+        ax.set_xlabel('Energy (eV)')
+        if states is not None:
+            ylabel = f'PDOS - {", ".join(states)} (states/eV)'
+        else:
+            ylabel = f'PDOS - {orbitals} (states/eV)'
+        ax.set_ylabel(ylabel)
+        
         ax.legend()
         ax.grid(True, alpha=0.3)
         
