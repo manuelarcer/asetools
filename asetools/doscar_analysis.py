@@ -12,10 +12,10 @@ class DOS:
     
     # Default color palette for multi-atom plotting
     DEFAULT_COLORS = [
-        '#30CF72',  # Green
         '#CF308D',  # Magenta
-        '#CFC230',  # Yellow
+        '#30CF72',  # Green
         '#303DCF',  # Blue
+        '#CFC230',  # Yellow
         '#3C93C3',  # Light Blue
         '#C36C3C',  # Orange
         '#50C33C',  # Light Green
