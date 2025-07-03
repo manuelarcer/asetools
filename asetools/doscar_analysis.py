@@ -268,7 +268,7 @@ class DOS:
         ax.set_ylabel('DOS (states/eV)')
         ax.set_title('Total Density of States')
         ax.legend()
-        ax.grid(True, alpha=0.3)
+        #ax.grid(True, alpha=0.3)
         
         return ax
     
@@ -339,7 +339,7 @@ class DOS:
         ax.set_ylabel('PDOS (states/eV)')
         ax.set_title('Projected Density of States')
         ax.legend()
-        ax.grid(True, alpha=0.3)
+        #ax.grid(True, alpha=0.3)
         
         return ax
     
@@ -410,7 +410,7 @@ class DOS:
         ax.set_ylabel('PDOS (states/eV)')
         ax.set_title('Projected Density of States')
         ax.legend()
-        ax.grid(True, alpha=0.3)
+        #ax.grid(True, alpha=0.3)
         
         return ax
     
@@ -494,7 +494,7 @@ class DOS:
         ax.set_ylabel(ylabel)
         
         ax.legend()
-        ax.grid(True, alpha=0.3)
+        #ax.grid(True, alpha=0.3)
         
         return ax
     
