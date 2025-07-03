@@ -278,7 +278,7 @@ class DOS:
                            same_color_spins: bool = False,
                            xlim: Optional[Tuple[float, float]] = None,
                            ylim: Optional[Tuple[float, float]] = None,
-                           linewidth: float = 1.0,
+                           linewidth: float = 1.5,
                            figsize: Tuple[float, float] = (8, 6),
                            **kwargs) -> plt.Axes:
         """Plot projected DOS by orbital states.
@@ -347,7 +347,7 @@ class DOS:
                              same_color_spins: bool = False,
                              xlim: Optional[Tuple[float, float]] = None,
                              ylim: Optional[Tuple[float, float]] = None,
-                             linewidth: float = 1.0,
+                             linewidth: float = 1.5,
                              figsize: Tuple[float, float] = (8, 6),
                              **kwargs) -> plt.Axes:
         """Plot projected DOS by specific orbitals.
