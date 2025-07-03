@@ -96,3 +96,6 @@ Key scripts in `asetools/bin/`:
 
 ## Git Workflow
 - Stage and commit changes (ask first) after making changes to the code. The commit message should be concise but descriptive (Max 5 lines)
+
+## Memory for Code Interactions
+- When prompted to alter the code in a significant way, ask if I want to create a new branch for the project and provide a name for it
