@@ -498,6 +498,105 @@ class DOS:
         
         return ax
     
+    def calculate_band_center(self, atoms: List[int], 
+                             orbitals: Optional[Union[List[str], str]] = None,
+                             states: Optional[List[str]] = None,
+                             energy_range: Optional[Tuple[float, float]] = None,
+                             spin_treatment: str = 'combined') -> Union[float, Dict[str, float]]:
+        """Calculate the band center (e.g., d-band center) for specific atoms and orbitals.
+        
+        The band center is calculated as the first moment of the projected DOS:
+        ε_band = ∫ E × n(E) dE / ∫ n(E) dE
+        
+        Args:
+            atoms: List of atom indices
+            orbitals: List of orbital names or shorthand ('all-d', 't2g', 'eg', etc.)
+            states: List of states ('s_states', 'p_states', 'd_states') - mutually exclusive with orbitals
+            energy_range: Optional tuple (E_min, E_max) to limit integration range
+            spin_treatment: How to handle spin ('combined', 'separate', 'up', 'down')
+            
+        Returns:
+            Band center energy in eV relative to Fermi level.
+            For spin_treatment='separate': Dict with 'up' and 'down' keys
+            
+        Raises:
+            ValueError: If no partial DOS data, invalid parameters, or empty DOS
+        """
+        if not self.has_partial_dos:
+            raise ValueError("No partial DOS data available")
+        
+        if states is not None and orbitals is not None:
+            raise ValueError("Cannot specify both states and orbitals")
+        
+        if states is None and orbitals is None:
+            raise ValueError("Must specify either states or orbitals")
+            
+        if spin_treatment not in ['combined', 'separate', 'up', 'down']:
+            raise ValueError("spin_treatment must be 'combined', 'separate', 'up', or 'down'")
+        
+        # Get PDOS data
+        if states is not None:
+            energy, dos_up, dos_down = self.get_pdos_by_states(atoms, states)
+        else:
+            energy, dos_up, dos_down = self.get_pdos_by_orbitals(atoms, orbitals)
+        
+        # Apply energy range filter if specified
+        if energy_range is not None:
+            mask = (energy >= energy_range[0]) & (energy <= energy_range[1])
+            energy = energy[mask]
+            dos_up = dos_up[mask]
+            dos_down = dos_down[mask]
+        
+        # Calculate band center based on spin treatment
+        if spin_treatment == 'combined':
+            # Combine both spins (dos_down is already negative, so we add absolute value)
+            total_dos = dos_up + np.abs(dos_down)
+            return self._calculate_moment(energy, total_dos)
+            
+        elif spin_treatment == 'up':
+            return self._calculate_moment(energy, dos_up)
+            
+        elif spin_treatment == 'down':
+            return self._calculate_moment(energy, np.abs(dos_down))
+            
+        elif spin_treatment == 'separate':
+            return {
+                'up': self._calculate_moment(energy, dos_up),
+                'down': self._calculate_moment(energy, np.abs(dos_down))
+            }
+    
+    def _calculate_moment(self, energy: np.ndarray, dos: np.ndarray) -> float:
+        """Calculate the first moment (weighted average) of DOS.
+        
+        Args:
+            energy: Energy grid
+            dos: DOS values
+            
+        Returns:
+            First moment (band center) in eV
+            
+        Raises:
+            ValueError: If DOS is empty or all zeros
+        """
+        # Check for empty or all-zero DOS
+        if len(dos) == 0 or np.all(dos == 0):
+            raise ValueError("DOS is empty or all zeros - cannot calculate band center")
+        
+        # Ensure DOS is positive for integration
+        dos = np.abs(dos)
+        
+        # Calculate numerator: ∫ E × n(E) dE
+        numerator = np.trapz(energy * dos, energy)
+        
+        # Calculate denominator: ∫ n(E) dE
+        denominator = np.trapz(dos, energy)
+        
+        # Avoid division by zero
+        if denominator == 0:
+            raise ValueError("Total DOS integral is zero - cannot calculate band center")
+        
+        return numerator / denominator
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert DOS data to pandas DataFrame.
         
@@ -618,3 +717,31 @@ def extract_pdos_perorbital(data: Dict, atoms: List[int], orbitals: Union[List[s
                 sum_minus -= data['at-'+str(at)][sss]
     
     return e, sum_plus, sum_minus
+
+def calculate_band_center(doscarfile: str, atoms: List[int], 
+                         orbitals: Optional[Union[List[str], str]] = None,
+                         states: Optional[List[str]] = None,
+                         energy_range: Optional[Tuple[float, float]] = None,
+                         spin_treatment: str = 'combined') -> Union[float, Dict[str, float]]:
+    """Calculate the band center (e.g., d-band center) for specific atoms and orbitals (legacy function).
+    
+    This is a convenience function that wraps the DOS class method for backward compatibility.
+    
+    Args:
+        doscarfile: Path to DOSCAR file
+        atoms: List of atom indices
+        orbitals: List of orbital names or shorthand ('all-d', 't2g', 'eg', etc.)
+        states: List of states ('s_states', 'p_states', 'd_states') - mutually exclusive with orbitals
+        energy_range: Optional tuple (E_min, E_max) to limit integration range
+        spin_treatment: How to handle spin ('combined', 'separate', 'up', 'down')
+        
+    Returns:
+        Band center energy in eV relative to Fermi level.
+        For spin_treatment='separate': Dict with 'up' and 'down' keys
+        
+    Raises:
+        ValueError: If no partial DOS data, invalid parameters, or empty DOS
+    """
+    dos = DOS(doscarfile)
+    return dos.calculate_band_center(atoms, orbitals=orbitals, states=states, 
+                                   energy_range=energy_range, spin_treatment=spin_treatment)
