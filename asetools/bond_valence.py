@@ -236,7 +236,9 @@ class BondValenceSum:
     
     def __init__(self, atoms: Atoms, valence_states: Optional[Dict[str, int]] = None,
                  custom_parameters: Optional[Dict[str, Dict[str, float]]] = None,
-                 distance_cutoff: float = 3.5):
+                 distance_cutoff: float = 3.5,
+                 allowed_pairs: Optional[List[Tuple[str, str]]] = None,
+                 exclude_same_element: bool = True):
         """
         Initialize BondValenceSum calculator.
         
@@ -245,9 +247,13 @@ class BondValenceSum:
             valence_states: Dict mapping element symbols to valence states
             custom_parameters: Dict with custom R0 and B values for specific elements
             distance_cutoff: Maximum distance for neighbor detection (Angstrom)
+            allowed_pairs: List of element pairs to consider, e.g., [('Ti', 'O'), ('Fe', 'O')]
+                          If None, will use default meaningful pairs based on elements present
+            exclude_same_element: If True, exclude same-element pairs (e.g., Ti-Ti, O-O)
         """
         self.atoms = atoms
         self.distance_cutoff = distance_cutoff
+        self.exclude_same_element = exclude_same_element
         
         # Load bond valence parameters
         self.bv_params = BondValenceParameters()
@@ -279,6 +285,16 @@ class BondValenceSum:
         # Apply custom parameters if provided
         self.custom_parameters = custom_parameters or {}
         
+        # Set up allowed element pairs
+        if allowed_pairs is not None:
+            # Convert to set of tuples for fast lookup, including both orientations
+            self.allowed_pairs = set()
+            for pair in allowed_pairs:
+                self.allowed_pairs.add(tuple(sorted(pair)))
+        else:
+            # Generate default allowed pairs based on elements present
+            self.allowed_pairs = self._get_default_allowed_pairs()
+        
         # Initialize analysis results
         self.bond_valence_sums = None
         self.bond_data = None
@@ -292,6 +308,74 @@ class BondValenceSum:
             return self.default_valences[element]
         else:
             raise ValueError(f"No valence state specified for element {element}")
+    
+    def _get_default_allowed_pairs(self) -> set:
+        """
+        Generate default allowed element pairs based on elements present in the structure.
+        
+        Returns sensible pairs like metal-oxygen, metal-halogen, etc. and excludes
+        same-element pairs and non-meaningful pairs like metal-metal or hydrogen-metal.
+        """
+        elements = set(self.atoms.get_chemical_symbols())
+        allowed_pairs = set()
+        
+        # Define element categories
+        metals = {'Li', 'Be', 'Na', 'Mg', 'Al', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 
+                 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo',
+                 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Cs', 'Ba', 'La', 'Ce',
+                 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+                 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi'}
+        
+        anions = {'O', 'F', 'Cl', 'Br', 'I', 'S', 'Se', 'Te', 'N', 'P', 'As'}
+        
+        # Generate meaningful pairs
+        for elem1 in elements:
+            for elem2 in elements:
+                pair = tuple(sorted([elem1, elem2]))
+                
+                # Skip same-element pairs if requested
+                if self.exclude_same_element and elem1 == elem2:
+                    continue
+                
+                # Include metal-anion pairs (most common for BVS analysis)
+                if (elem1 in metals and elem2 in anions) or (elem2 in metals and elem1 in anions):
+                    allowed_pairs.add(pair)
+                
+                # Include metal-metal pairs only if specifically common (e.g., mixed oxides)
+                # but this is rare, so we'll be conservative
+                
+                # Skip hydrogen-metal pairs (usually not relevant for BVS)
+                if ('H' in pair and any(elem in metals for elem in pair)):
+                    continue
+                
+                # Add other meaningful pairs if they have bond valence parameters
+                try:
+                    val1 = self._get_valence_state(elem1)
+                    val2 = self._get_valence_state(elem2)
+                    self.bv_params.get_parameters(elem1, val1, elem2, val2)
+                    # If we get here, parameters exist - consider adding the pair
+                    # But be selective to avoid unwanted pairs
+                    if not ('H' in pair and any(elem in metals for elem in pair)):
+                        allowed_pairs.add(pair)
+                except (ValueError, KeyError):
+                    # No parameters available, skip this pair
+                    continue
+        
+        return allowed_pairs
+    
+    def _is_pair_allowed(self, element1: str, element2: str) -> bool:
+        """
+        Check if a specific element pair is allowed for bond valence calculation.
+        
+        Args:
+            element1: First element
+            element2: Second element
+            
+        Returns:
+            True if the pair should be considered for BVS calculation
+        """
+        pair = tuple(sorted([element1, element2]))
+        return pair in self.allowed_pairs
     
     def _find_neighbors(self):
         """Find neighbors for each atom using distance cutoff with proper minimum image convention."""
@@ -378,6 +462,10 @@ class BondValenceSum:
                 element2 = self.atoms[j].symbol
                 valence2 = self._get_valence_state(element2)
                 
+                # Check if this element pair is allowed
+                if not self._is_pair_allowed(element1, element2):
+                    continue
+                
                 # Calculate bond valence
                 bond_valence = self._calculate_bond_valence(element1, valence1, element2, valence2, distance)
                 
@@ -441,6 +529,25 @@ class BondValenceSum:
             self.calculate_bvs()
         
         return self.bond_data.get(atom_index, [])
+    
+    def get_allowed_pairs(self) -> List[Tuple[str, str]]:
+        """
+        Get the list of element pairs that are considered in BVS calculations.
+        
+        Returns:
+            List of allowed element pairs as tuples
+        """
+        return sorted(list(self.allowed_pairs))
+    
+    def print_allowed_pairs(self):
+        """Print the allowed element pairs for bond valence calculations."""
+        pairs = self.get_allowed_pairs()
+        print("Allowed element pairs for bond valence calculations:")
+        for i, pair in enumerate(pairs):
+            print(f"  {i+1:2d}. {pair[0]}-{pair[1]}")
+        print(f"\nTotal: {len(pairs)} pairs")
+        if self.exclude_same_element:
+            print("Note: Same-element pairs are excluded")
     
     def print_summary(self):
         """Print a summary of the bond valence analysis."""

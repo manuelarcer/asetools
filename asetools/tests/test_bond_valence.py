@@ -322,3 +322,105 @@ class TestBondValenceIntegration:
         bvs_results = bvs_calc.calculate_bvs()
         assert isinstance(bvs_results, dict)
         assert len(bvs_results) == 2
+    
+    def test_allowed_pairs_specification(self):
+        """Test custom specification of allowed element pairs."""
+        atoms = Atoms('TiO2H', positions=[
+            [0, 0, 0],    # Ti
+            [1.2, 0, 0],  # O  
+            [0, 1.2, 0],  # O
+            [2.0, 0, 0]   # H
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test with only Ti-O pairs allowed
+        valence_states = {'Ti': 4, 'O': -2, 'H': 1}
+        bvs_calc = BondValenceSum(atoms, valence_states=valence_states, 
+                                 allowed_pairs=[('Ti', 'O')], distance_cutoff=3.0)
+        
+        # Check allowed pairs
+        allowed_pairs = bvs_calc.get_allowed_pairs()
+        assert ('O', 'Ti') in allowed_pairs
+        assert len(allowed_pairs) == 1
+        
+        # Calculate BVS - should only consider Ti-O bonds
+        bvs_results = bvs_calc.calculate_bvs()
+        
+        # Check bond details for Ti atom (index 0)
+        ti_bonds = bvs_calc.get_bond_details(0)
+        for bond in ti_bonds:
+            assert bond['neighbor_element'] == 'O'  # Only O neighbors should be considered
+    
+    def test_exclude_same_element_pairs(self):
+        """Test exclusion of same-element pairs."""
+        # Create structure with metal atoms close together
+        atoms = Atoms('Ti2O', positions=[
+            [0, 0, 0],     # Ti
+            [1.0, 0, 0],   # Ti (close to first Ti)
+            [2.0, 0, 0]    # O
+        ], cell=[5, 5, 5], pbc=True)
+        
+        valence_states = {'Ti': 4, 'O': -2}
+        
+        # Test with same-element exclusion (default)
+        bvs_calc = BondValenceSum(atoms, valence_states=valence_states, 
+                                 exclude_same_element=True, distance_cutoff=2.5)
+        
+        allowed_pairs = bvs_calc.get_allowed_pairs()
+        assert ('Ti', 'Ti') not in allowed_pairs
+        assert ('O', 'Ti') in allowed_pairs
+        
+        # Test without same-element exclusion
+        bvs_calc_include = BondValenceSum(atoms, valence_states=valence_states, 
+                                         exclude_same_element=False, distance_cutoff=2.5)
+        
+        allowed_pairs_include = bvs_calc_include.get_allowed_pairs()
+        # Note: Ti-Ti might still not be included if no bond valence parameters exist
+        
+        # Calculate BVS and check that Ti-Ti bonds are not considered in first case
+        bvs_results = bvs_calc.calculate_bvs()
+        ti_bonds = bvs_calc.get_bond_details(0)  # First Ti atom
+        
+        # Should not have Ti-Ti bonds in excluded case
+        for bond in ti_bonds:
+            assert bond['neighbor_element'] != 'Ti'
+    
+    def test_hydrogen_metal_exclusion(self):
+        """Test that hydrogen-metal pairs are excluded by default."""
+        atoms = Atoms('TiO2H2', positions=[
+            [0, 0, 0],     # Ti
+            [1.5, 0, 0],   # O
+            [0, 1.5, 0],   # O
+            [2.2, 0, 0],   # H (bonded to O)
+            [0, 2.2, 0]    # H (bonded to O)
+        ], cell=[4, 4, 4], pbc=True)
+        
+        valence_states = {'Ti': 4, 'O': -2, 'H': 1}
+        bvs_calc = BondValenceSum(atoms, valence_states=valence_states, distance_cutoff=3.0)
+        
+        # Check that Ti-H pairs are not in allowed pairs by default
+        allowed_pairs = bvs_calc.get_allowed_pairs()
+        assert ('H', 'Ti') not in allowed_pairs
+        
+        # Calculate BVS for Ti atom
+        bvs_results = bvs_calc.calculate_bvs()
+        ti_bonds = bvs_calc.get_bond_details(0)  # Ti atom
+        
+        # Ti should only bond to O, not H
+        for bond in ti_bonds:
+            assert bond['neighbor_element'] != 'H'
+    
+    def test_allowed_pairs_methods(self):
+        """Test methods for getting and printing allowed pairs."""
+        atoms = Atoms('TiO2', positions=[[0, 0, 0], [1.2, 0, 0], [0, 1.2, 0]], 
+                     cell=[4, 4, 4], pbc=True)
+        
+        valence_states = {'Ti': 4, 'O': -2}
+        bvs_calc = BondValenceSum(atoms, valence_states=valence_states)
+        
+        # Test get_allowed_pairs method
+        allowed_pairs = bvs_calc.get_allowed_pairs()
+        assert isinstance(allowed_pairs, list)
+        assert all(isinstance(pair, tuple) for pair in allowed_pairs)
+        
+        # Test print_allowed_pairs method (should not raise error)
+        bvs_calc.print_allowed_pairs()

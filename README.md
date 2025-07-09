@@ -101,6 +101,13 @@ print(f"Ti BVS: {bvs_results[0]:.3f}")
 df = bvs_calc.analyze_structure()
 print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
 
+# Specify allowed element pairs (e.g., only Ti-O bonds)
+bvs_selective = BondValenceSum(atoms, valence_states=valence_states,
+                              allowed_pairs=[('Ti', 'O')])
+
+# Check which pairs are being considered
+bvs_selective.print_allowed_pairs()
+
 # Use custom bond valence parameters
 custom_params = {'Ti-O': {'R0': 1.9, 'B': 0.4}}
 bvs_custom = BondValenceSum(atoms, valence_states=valence_states, 
@@ -151,6 +158,10 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`get_parameters(element1, valence1, element2, valence2)`**: Parameter lookup with reliability ordering
 - **`calculate_bvs()`**: Bond valence sum calculation with neighbor detection
 - **`analyze_structure()`**: Comprehensive structural analysis with validation metrics
+- **`allowed_pairs`**: Specify element pairs to consider (e.g., only Ti-O bonds)
+- **`exclude_same_element`**: Automatically exclude same-element pairs (default: True)
+- **`get_allowed_pairs()`**: List allowed element pairs for BVS calculation
+- **`print_allowed_pairs()`**: Display allowed pairs with statistics
 
 ### Surface Science (`asetools.adsorbate`)
 - **`SurfaceAnalyzer`**: Comprehensive surface analysis toolkit
