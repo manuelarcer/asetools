@@ -101,6 +101,18 @@ print(f"Ti BVS: {bvs_results[0]:.3f}")
 df = bvs_calc.analyze_structure()
 print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
 
+# Automatic valence determination for metals
+bvs_auto = BondValenceSum(atoms, valence_states={'O': -2}, 
+                         auto_determine_valence=True)
+df_auto = bvs_auto.analyze_structure()
+
+# Check optimization results
+print(f"Optimized Ti valence: {df_auto[df_auto['element'] == 'Ti']['used_valence'].iloc[0]:+d}")
+print(f"Optimization deviation: {df_auto[df_auto['element'] == 'Ti']['optimization_deviation'].iloc[0]:.3f}")
+
+# Detailed optimization summary
+bvs_auto.print_valence_optimization_summary()
+
 # Specify allowed element pairs (e.g., only Ti-O bonds)
 bvs_selective = BondValenceSum(atoms, valence_states=valence_states,
                               allowed_pairs=[('Ti', 'O')])
@@ -158,6 +170,9 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`get_parameters(element1, valence1, element2, valence2)`**: Parameter lookup with reliability ordering
 - **`calculate_bvs()`**: Bond valence sum calculation with neighbor detection
 - **`analyze_structure()`**: Comprehensive structural analysis with validation metrics
+- **`auto_determine_valence`**: Automatically optimize metal valence states to minimize BVS deviation
+- **`get_valence_optimization_results()`**: Detailed optimization results for each optimized atom
+- **`print_valence_optimization_summary()`**: Display optimization details and tried valences
 - **`allowed_pairs`**: Specify element pairs to consider (e.g., only Ti-O bonds)
 - **`exclude_same_element`**: Automatically exclude same-element pairs (default: True)
 - **`get_allowed_pairs()`**: List allowed element pairs for BVS calculation

@@ -30,6 +30,7 @@ Core dependencies are defined in `setup.cfg`:
 ### Core Module Structure
 - **`analysis.py`**: VASP output analysis (convergence, energy, forces, magnetic moments)
 - **`doscar_analysis.py`**: Electronic structure analysis (DOS, PDOS, orbital projections)
+- **`bond_valence.py`**: Bond valence sum analysis using Brown's equation with automatic valence determination
 - **`adsorbate.py`**: Surface science toolkit with `SurfaceAnalyzer` class
 - **`appliedpotential.py`**: Electrochemistry support with potential-dependent calculations
 - **`databases.py`**: ASE database integration and DataFrame conversion
@@ -38,6 +39,8 @@ Core dependencies are defined in `setup.cfg`:
 
 ### Key Classes and Patterns
 - **`SurfaceAnalyzer`**: Main class for surface analysis and adsorbate placement
+- **`BondValenceSum`**: Bond valence sum calculator with automatic valence optimization
+- **`BondValenceParameters`**: Bond valence parameter database from Brown's accumulated table
 - **`VASPConfigurationFromYAML`**: Workflow configuration management
 - **Integration-first design**: All modules work with ASE Atoms objects
 - **VASP-centric**: Functions expect standard VASP output files (OUTCAR, DOSCAR, POSCAR)
@@ -45,7 +48,7 @@ Core dependencies are defined in `setup.cfg`:
 ### Testing Strategy
 - Uses pytest with real VASP output files in `asetools/data/`
 - Integration tests rather than unit tests
-- Test files: `test_analysis.py`, `test_database.py`, `test_doscar.py`, `test_freq.py`
+- Test files: `test_analysis.py`, `test_database.py`, `test_doscar.py`, `test_freq.py`, `test_bond_valence.py`
 
 ### Command-Line Tools
 Key scripts in `asetools/bin/`:
@@ -83,6 +86,7 @@ Key scripts in `asetools/bin/`:
 ### Materials Science Focus
 - Designed for surface science, electrochemistry, and catalysis
 - Extensive DOS and electronic structure analysis
+- Bond valence analysis for structural validation and valence state determination
 - Reaction pathway analysis (NEB) support
 - Applied potential calculations for electrochemistry
 

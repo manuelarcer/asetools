@@ -424,3 +424,136 @@ class TestBondValenceIntegration:
         
         # Test print_allowed_pairs method (should not raise error)
         bvs_calc.print_allowed_pairs()
+    
+    def test_auto_determine_valence(self):
+        """Test automatic valence determination functionality."""
+        # Create a structure with Ti that could be +3 or +4
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O (distance suggests Ti+4)
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test with auto-determination enabled
+        bvs_calc = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                 auto_determine_valence=True, distance_cutoff=3.0)
+        
+        # Calculate BVS (should trigger auto-determination)
+        bvs_results = bvs_calc.calculate_bvs()
+        
+        # Check that Ti valence was optimized
+        assert hasattr(bvs_calc, 'optimized_valences')
+        assert bvs_calc.optimized_valences is not None
+        
+        # Check that optimization results are available
+        opt_results = bvs_calc.get_valence_optimization_results()
+        assert isinstance(opt_results, dict)
+        
+        # Ti should have been optimized
+        if 'Ti' in opt_results:
+            assert len(opt_results['Ti']) > 0
+            ti_result = opt_results['Ti'][0]  # First Ti atom
+            assert 'best_valence' in ti_result
+            assert 'best_deviation' in ti_result
+            assert 'optimization_results' in ti_result
+    
+    def test_analyze_structure_with_valence_optimization(self):
+        """Test analyze_structure method with valence optimization."""
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test with optimization enabled
+        bvs_calc = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                 auto_determine_valence=True, distance_cutoff=3.0)
+        
+        df = bvs_calc.analyze_structure()
+        
+        # Check that optimization columns are present
+        expected_opt_columns = ['valence_optimized', 'optimization_deviation', 
+                               'tried_valences', 'tried_deviations']
+        for col in expected_opt_columns:
+            assert col in df.columns
+        
+        # Check that we have used_valence column
+        assert 'used_valence' in df.columns
+        
+        # Ti row should have optimization info
+        ti_rows = df[df['element'] == 'Ti']
+        assert len(ti_rows) > 0
+        
+        # At least one Ti atom should be optimized
+        if any(ti_rows['valence_optimized']):
+            optimized_ti = ti_rows[ti_rows['valence_optimized']].iloc[0]
+            assert optimized_ti['optimization_deviation'] is not None
+            assert optimized_ti['tried_valences'] is not None
+    
+    def test_valence_optimization_methods(self):
+        """Test valence optimization utility methods."""
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test with optimization enabled
+        bvs_calc = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                 auto_determine_valence=True, distance_cutoff=3.0)
+        
+        # Test get_valence_optimization_results
+        opt_results = bvs_calc.get_valence_optimization_results()
+        assert isinstance(opt_results, dict)
+        
+        # Test print methods (should not raise errors)
+        bvs_calc.print_valence_optimization_summary()
+        bvs_calc.print_summary()
+    
+    def test_no_valence_optimization(self):
+        """Test behavior when valence optimization is disabled."""
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test with optimization disabled (default)
+        bvs_calc = BondValenceSum(atoms, valence_states={'Ti': 4, 'O': -2}, 
+                                 auto_determine_valence=False, distance_cutoff=3.0)
+        
+        df = bvs_calc.analyze_structure()
+        
+        # Optimization columns should not be present
+        opt_columns = ['valence_optimized', 'optimization_deviation', 
+                      'tried_valences', 'tried_deviations']
+        for col in opt_columns:
+            assert col not in df.columns
+        
+        # get_valence_optimization_results should return empty dict
+        opt_results = bvs_calc.get_valence_optimization_results()
+        assert opt_results == {}
+    
+    def test_metal_element_detection(self):
+        """Test metal element detection for valence optimization."""
+        atoms = Atoms('TiO2H', positions=[
+            [0, 0, 0],     # Ti (metal)
+            [1.9, 0, 0],   # O (non-metal)
+            [0, 1.9, 0],   # O (non-metal)
+            [2.5, 0, 0]    # H (non-metal)
+        ], cell=[4, 4, 4], pbc=True)
+        
+        bvs_calc = BondValenceSum(atoms, valence_states={'O': -2, 'H': 1}, 
+                                 auto_determine_valence=True, distance_cutoff=3.0)
+        
+        # Test metal detection
+        assert bvs_calc._is_metal_element('Ti') == True
+        assert bvs_calc._is_metal_element('O') == False
+        assert bvs_calc._is_metal_element('H') == False
+        
+        # Only Ti should be optimized
+        opt_results = bvs_calc.get_valence_optimization_results()
+        if opt_results:
+            assert 'Ti' in opt_results or len(opt_results) == 0  # Ti should be optimized if parameters exist
+            assert 'O' not in opt_results  # O should not be optimized
+            assert 'H' not in opt_results  # H should not be optimized

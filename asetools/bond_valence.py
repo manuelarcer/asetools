@@ -20,8 +20,6 @@ from typing import Dict, List, Tuple, Optional, Union
 from ase import Atoms
 from ase.neighborlist import NeighborList
 import os
-import re
-from collections import defaultdict
 
 
 class BondValenceParameters:
@@ -238,7 +236,8 @@ class BondValenceSum:
                  custom_parameters: Optional[Dict[str, Dict[str, float]]] = None,
                  distance_cutoff: float = 3.5,
                  allowed_pairs: Optional[List[Tuple[str, str]]] = None,
-                 exclude_same_element: bool = True):
+                 exclude_same_element: bool = True,
+                 auto_determine_valence: bool = False):
         """
         Initialize BondValenceSum calculator.
         
@@ -250,10 +249,13 @@ class BondValenceSum:
             allowed_pairs: List of element pairs to consider, e.g., [('Ti', 'O'), ('Fe', 'O')]
                           If None, will use default meaningful pairs based on elements present
             exclude_same_element: If True, exclude same-element pairs (e.g., Ti-Ti, O-O)
+            auto_determine_valence: If True, automatically determine best valence states for metals
+                                   by minimizing BVS deviation from expected values
         """
         self.atoms = atoms
         self.distance_cutoff = distance_cutoff
         self.exclude_same_element = exclude_same_element
+        self.auto_determine_valence = auto_determine_valence
         
         # Load bond valence parameters
         self.bv_params = BondValenceParameters()
@@ -299,6 +301,10 @@ class BondValenceSum:
         self.bond_valence_sums = None
         self.bond_data = None
         self.neighbors = None
+        
+        # For auto-determined valence states
+        self.optimized_valences = None
+        self.valence_optimization_results = None
         
     def _get_valence_state(self, element: str) -> int:
         """Get valence state for an element."""
@@ -377,6 +383,145 @@ class BondValenceSum:
         pair = tuple(sorted([element1, element2]))
         return pair in self.allowed_pairs
     
+    def _get_possible_valences(self, element: str) -> List[int]:
+        """
+        Get possible valence states for an element from the bond valence parameter database.
+        
+        Args:
+            element: Element symbol
+            
+        Returns:
+            List of possible valence states
+        """
+        return self.bv_params.get_valence_states(element)
+    
+    def _is_metal_element(self, element: str) -> bool:
+        """
+        Determine if an element is a metal (for auto-valence determination).
+        
+        Args:
+            element: Element symbol
+            
+        Returns:
+            True if element is considered a metal
+        """
+        metals = {'Li', 'Be', 'Na', 'Mg', 'Al', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 
+                 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo',
+                 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Cs', 'Ba', 'La', 'Ce',
+                 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+                 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi'}
+        return element in metals
+    
+    def _determine_best_valence(self, atom_index: int, element: str) -> Tuple[int, float, Dict]:
+        """
+        Determine the best valence state for a metal atom by minimizing BVS deviation.
+        
+        Args:
+            atom_index: Index of the atom
+            element: Element symbol
+            
+        Returns:
+            Tuple of (best_valence, best_deviation, optimization_results)
+        """
+        if self.neighbors is None:
+            self._find_neighbors()
+        
+        possible_valences = self._get_possible_valences(element)
+        if not possible_valences:
+            # Fall back to default valence if no options available
+            default_val = self._get_valence_state(element)
+            return default_val, 0.0, {'tried_valences': [default_val], 'deviations': [0.0]}
+        
+        optimization_results = {'tried_valences': [], 'deviations': [], 'bvs_values': []}
+        best_valence = None
+        best_deviation = float('inf')
+        
+        for valence in possible_valences:
+            # Temporarily set this valence
+            original_valence = self.valence_states.get(element, self.default_valences.get(element, valence))
+            self.valence_states[element] = valence
+            
+            # Calculate BVS for this atom with this valence
+            bvs = 0.0
+            for neighbor in self.neighbors[atom_index]:
+                j = neighbor['index']
+                distance = neighbor['distance']
+                
+                element2 = self.atoms[j].symbol
+                valence2 = self._get_valence_state(element2)
+                
+                # Check if this element pair is allowed
+                if not self._is_pair_allowed(element, element2):
+                    continue
+                
+                # Calculate bond valence
+                bond_valence = self._calculate_bond_valence(element, valence, element2, valence2, distance)
+                if bond_valence > 0:
+                    bvs += bond_valence
+            
+            # Calculate deviation from expected BVS (which equals the valence magnitude)
+            expected_bvs = abs(valence)
+            deviation = abs(bvs - expected_bvs)
+            
+            optimization_results['tried_valences'].append(valence)
+            optimization_results['deviations'].append(deviation)
+            optimization_results['bvs_values'].append(bvs)
+            
+            if deviation < best_deviation:
+                best_deviation = deviation
+                best_valence = valence
+            
+            # Restore original valence
+            if element in self.valence_states:
+                self.valence_states[element] = original_valence
+        
+        return best_valence, best_deviation, optimization_results
+    
+    def _auto_determine_valences(self):
+        """
+        Automatically determine the best valence states for all metal atoms.
+        """
+        if self.neighbors is None:
+            self._find_neighbors()
+        
+        self.optimized_valences = {}
+        self.valence_optimization_results = {}
+        
+        # Get unique elements in the structure
+        elements = set(self.atoms.get_chemical_symbols())
+        
+        for element in elements:
+            if self._is_metal_element(element):
+                # Get all atom indices for this element
+                atom_indices = [i for i, sym in enumerate(self.atoms.get_chemical_symbols()) if sym == element]
+                
+                # Determine best valence for each atom of this element
+                element_results = {}
+                valence_votes = {}
+                
+                for atom_idx in atom_indices:
+                    best_valence, best_deviation, opt_results = self._determine_best_valence(atom_idx, element)
+                    element_results[atom_idx] = {
+                        'best_valence': best_valence,
+                        'best_deviation': best_deviation,
+                        'optimization_results': opt_results
+                    }
+                    
+                    # Vote for the best valence across all atoms of this element
+                    if best_valence not in valence_votes:
+                        valence_votes[best_valence] = 0
+                    valence_votes[best_valence] += 1
+                
+                # Choose the most common valence or the one with lowest average deviation
+                if valence_votes:
+                    # For now, use the most common valence
+                    best_element_valence = max(valence_votes, key=valence_votes.get)
+                    self.optimized_valences[element] = best_element_valence
+                    self.valence_optimization_results[element] = element_results
+                    
+                    # Update the valence_states with the optimized value
+                    self.valence_states[element] = best_element_valence
+    
     def _find_neighbors(self):
         """Find neighbors for each atom using distance cutoff with proper minimum image convention."""
         # Use full distance_cutoff for NeighborList to ensure we don't miss neighbors
@@ -445,6 +590,10 @@ class BondValenceSum:
         if self.neighbors is None:
             self._find_neighbors()
         
+        # Auto-determine valences if requested
+        if self.auto_determine_valence:
+            self._auto_determine_valences()
+        
         self.bond_valence_sums = {}
         self.bond_data = {}
         
@@ -498,20 +647,51 @@ class BondValenceSum:
         
         for i in range(len(self.atoms)):
             element = self.atoms[i].symbol
-            expected_valence = abs(self._get_valence_state(element))
+            current_valence = self._get_valence_state(element)
+            expected_valence = abs(current_valence)
             calculated_bvs = self.bond_valence_sums[i]
             deviation = calculated_bvs - expected_valence
             coordination = len(self.bond_data[i])
             
-            analysis_data.append({
+            # Base analysis data
+            atom_data = {
                 'atom_index': i,
                 'element': element,
+                'used_valence': current_valence,
                 'expected_valence': expected_valence,
                 'calculated_bvs': calculated_bvs,
                 'deviation': deviation,
                 'coordination_number': coordination,
                 'relative_deviation': deviation / expected_valence if expected_valence > 0 else 0
-            })
+            }
+            
+            # Add valence optimization results if available
+            if self.auto_determine_valence and self.valence_optimization_results:
+                if element in self.valence_optimization_results:
+                    if i in self.valence_optimization_results[element]:
+                        opt_results = self.valence_optimization_results[element][i]
+                        atom_data.update({
+                            'valence_optimized': True,
+                            'optimization_deviation': opt_results['best_deviation'],
+                            'tried_valences': str(opt_results['optimization_results']['tried_valences']),
+                            'tried_deviations': str([f"{d:.3f}" for d in opt_results['optimization_results']['deviations']])
+                        })
+                    else:
+                        atom_data.update({
+                            'valence_optimized': False,
+                            'optimization_deviation': None,
+                            'tried_valences': None,
+                            'tried_deviations': None
+                        })
+                else:
+                    atom_data.update({
+                        'valence_optimized': False,
+                        'optimization_deviation': None,
+                        'tried_valences': None,
+                        'tried_deviations': None
+                    })
+            
+            analysis_data.append(atom_data)
         
         return pd.DataFrame(analysis_data)
     
@@ -549,6 +729,51 @@ class BondValenceSum:
         if self.exclude_same_element:
             print("Note: Same-element pairs are excluded")
     
+    def get_valence_optimization_results(self) -> Dict:
+        """
+        Get detailed results from valence optimization.
+        
+        Returns:
+            Dictionary with optimization results for each element
+        """
+        if not self.auto_determine_valence:
+            return {}
+        
+        if self.valence_optimization_results is None:
+            self.calculate_bvs()  # This will trigger optimization
+        
+        return self.valence_optimization_results or {}
+    
+    def print_valence_optimization_summary(self):
+        """Print a summary of the valence optimization results."""
+        if not self.auto_determine_valence:
+            print("Valence optimization was not performed.")
+            return
+        
+        opt_results = self.get_valence_optimization_results()
+        if not opt_results:
+            print("No valence optimization results available.")
+            return
+        
+        print("Valence Optimization Summary")
+        print("=" * 40)
+        
+        for element, element_results in opt_results.items():
+            print(f"\n{element} atoms:")
+            if element in self.optimized_valences:
+                print(f"  Optimized valence: {self.optimized_valences[element]:+d}")
+            
+            for atom_idx, result in element_results.items():
+                opt_data = result['optimization_results']
+                best_valence = result['best_valence']
+                best_deviation = result['best_deviation']
+                
+                print(f"  Atom {atom_idx}:")
+                print(f"    Best valence: {best_valence:+d} (deviation: {best_deviation:.3f})")
+                print(f"    Tried valences: {opt_data['tried_valences']}")
+                print(f"    Deviations: {[f'{d:.3f}' for d in opt_data['deviations']]}")
+                print(f"    BVS values: {[f'{bvs:.3f}' for bvs in opt_data['bvs_values']]}")
+    
     def print_summary(self):
         """Print a summary of the bond valence analysis."""
         df = self.analyze_structure()
@@ -557,14 +782,35 @@ class BondValenceSum:
         print("=" * 50)
         print(f"Total atoms: {len(self.atoms)}")
         print(f"Distance cutoff: {self.distance_cutoff:.2f} Å")
+        if self.auto_determine_valence:
+            print("Valence optimization: ENABLED")
+        else:
+            print("Valence optimization: DISABLED")
         print()
         
         # Group by element
         for element in sorted(df['element'].unique()):
             element_data = df[df['element'] == element]
             print(f"{element} atoms ({len(element_data)}):")
-            print(f"  Expected valence: {element_data['expected_valence'].iloc[0]:.2f}")
+            
+            # Show valence information
+            used_valence = element_data['used_valence'].iloc[0]
+            expected_valence = element_data['expected_valence'].iloc[0]
+            print(f"  Used valence: {used_valence:+d} (expected: {expected_valence:.2f})")
+            
+            # Show optimization info if available
+            if self.auto_determine_valence and 'valence_optimized' in element_data.columns:
+                optimized_count = element_data['valence_optimized'].sum()
+                if optimized_count > 0:
+                    avg_opt_deviation = element_data[element_data['valence_optimized']]['optimization_deviation'].mean()
+                    print(f"  Optimized atoms: {optimized_count}/{len(element_data)} (avg deviation: {avg_opt_deviation:.3f})")
+            
             print(f"  Average BVS: {element_data['calculated_bvs'].mean():.3f} ± {element_data['calculated_bvs'].std():.3f}")
             print(f"  Average deviation: {element_data['deviation'].mean():.3f} ± {element_data['deviation'].std():.3f}")
             print(f"  Average coordination: {element_data['coordination_number'].mean():.1f}")
             print()
+        
+        # Print detailed valence optimization results if available
+        if self.auto_determine_valence:
+            print("-" * 50)
+            self.print_valence_optimization_summary()
