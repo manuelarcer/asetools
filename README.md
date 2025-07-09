@@ -13,7 +13,8 @@ ASEtools is a specialized Python package designed for computational materials sc
 ## Key Features
 
 - **VASP Analysis Tools**: Convergence checking, energy/force extraction, magnetic moment analysis
-- **Electronic Structure Analysis**: Comprehensive DOS analysis with orbital projections
+- **Electronic Structure Analysis**: Comprehensive DOS analysis with orbital projections and band center calculations
+- **Band Center Analysis**: d-band and p-band center calculations for catalysis and electronic structure studies
 - **Surface Science**: Automated adsorbate placement and surface analysis
 - **Electrochemistry**: Applied potential calculations with Fermi shift corrections
 - **Reaction Pathways**: NEB analysis and potential energy surface plotting
@@ -54,12 +55,26 @@ print(f"Converged: {converged}, Energy: {energy:.4f} eV, Max Force: {max_force:.
 ### DOS Analysis
 
 ```python
-from asetools.doscar_analysis import extract_dos, extract_pdos_perstate
+from asetools.doscar_analysis import DOS, calculate_band_center
 
-# Extract density of states
+# Modern DOS class approach (recommended)
+dos = DOS('DOSCAR')
+
+# Calculate d-band center for transition metal catalysis
+d_center = dos.calculate_band_center([0], orbitals='all-d')
+print(f"d-band center: {d_center:.3f} eV")
+
+# Calculate t2g and eg orbital contributions
+t2g_center = dos.calculate_band_center([0], orbitals='t2g')
+eg_center = dos.calculate_band_center([0], orbitals='eg')
+
+# Spin-resolved band center analysis
+spin_resolved = dos.calculate_band_center([0], orbitals='all-d', spin_treatment='separate')
+print(f"Spin-up d-center: {spin_resolved['up']:.3f} eV")
+print(f"Spin-down d-center: {spin_resolved['down']:.3f} eV")
+
+# Legacy approach
 dos_data = extract_dos('DOSCAR')
-
-# Get projected DOS for specific atoms and orbitals
 atoms_of_interest = [0, 1, 2]
 states = ['s_states', 'p_states', 'd_states']
 energy, dos_up, dos_down = extract_pdos_perstate(dos_data, atoms_of_interest, states)
@@ -95,6 +110,8 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`extract_pdos_perstate(data, atoms, states)`**: Projects DOS onto s/p/d orbitals
 - **`extract_pdos_perorbital(data, atoms, orbitals)`**: Detailed orbital projections with crystalline field
 - **`extract_fermi_e(doscarfile)`**: Simple Fermi energy extraction
+- **`calculate_band_center(doscarfile, atoms, orbitals/states)`**: d-band and p-band center calculations
+- **`DOS` class**: Modern object-oriented interface with comprehensive plotting and analysis methods
 
 ### Surface Science (`asetools.adsorbate`)
 - **`SurfaceAnalyzer`**: Comprehensive surface analysis toolkit
