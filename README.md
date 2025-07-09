@@ -15,6 +15,7 @@ ASEtools is a specialized Python package designed for computational materials sc
 - **VASP Analysis Tools**: Convergence checking, energy/force extraction, magnetic moment analysis
 - **Electronic Structure Analysis**: Comprehensive DOS analysis with orbital projections and band center calculations
 - **Band Center Analysis**: d-band and p-band center calculations for catalysis and electronic structure studies
+- **Bond Valence Analysis**: Bond valence sum calculations using Brown's equation for structural validation
 - **Surface Science**: Automated adsorbate placement and surface analysis
 - **Electrochemistry**: Applied potential calculations with Fermi shift corrections
 - **Reaction Pathways**: NEB analysis and potential energy surface plotting
@@ -80,6 +81,37 @@ states = ['s_states', 'p_states', 'd_states']
 energy, dos_up, dos_down = extract_pdos_perstate(dos_data, atoms_of_interest, states)
 ```
 
+### Bond Valence Sum Analysis
+
+```python
+from asetools.bond_valence import BondValenceSum, BondValenceParameters
+
+# Load atomic structure
+atoms = read('POSCAR')
+
+# Calculate bond valence sums using Brown's equation
+valence_states = {'Ti': 4, 'O': -2}
+bvs_calc = BondValenceSum(atoms, valence_states=valence_states)
+
+# Get bond valence sum results
+bvs_results = bvs_calc.calculate_bvs()
+print(f"Ti BVS: {bvs_results[0]:.3f}")
+
+# Analyze structure with detailed DataFrame
+df = bvs_calc.analyze_structure()
+print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
+
+# Use custom bond valence parameters
+custom_params = {'Ti-O': {'R0': 1.9, 'B': 0.4}}
+bvs_custom = BondValenceSum(atoms, valence_states=valence_states, 
+                           custom_parameters=custom_params)
+
+# Access bond valence parameter database
+bv_params = BondValenceParameters()
+ti_o_params = bv_params.get_parameters('Ti', 4, 'O', -2)
+print(f"Ti-O: R0={ti_o_params['R0']:.3f}, B={ti_o_params['B']:.3f}")
+```
+
 ### Surface Analysis and Adsorbate Placement
 
 ```python
@@ -112,6 +144,13 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`extract_fermi_e(doscarfile)`**: Simple Fermi energy extraction
 - **`calculate_band_center(doscarfile, atoms, orbitals/states)`**: d-band and p-band center calculations
 - **`DOS` class**: Modern object-oriented interface with comprehensive plotting and analysis methods
+
+### Bond Valence Analysis (`asetools.bond_valence`)
+- **`BondValenceParameters`**: Bond valence parameter database from Brown's accumulated table
+- **`BondValenceSum`**: Bond valence sum calculator using Brown's equation
+- **`get_parameters(element1, valence1, element2, valence2)`**: Parameter lookup with reliability ordering
+- **`calculate_bvs()`**: Bond valence sum calculation with neighbor detection
+- **`analyze_structure()`**: Comprehensive structural analysis with validation metrics
 
 ### Surface Science (`asetools.adsorbate`)
 - **`SurfaceAnalyzer`**: Comprehensive surface analysis toolkit
