@@ -294,8 +294,10 @@ class BondValenceSum:
             raise ValueError(f"No valence state specified for element {element}")
     
     def _find_neighbors(self):
-        """Find neighbors for each atom using distance cutoff."""
-        cutoffs = [self.distance_cutoff / 2] * len(self.atoms)
+        """Find neighbors for each atom using distance cutoff with proper minimum image convention."""
+        # Use full distance_cutoff for NeighborList to ensure we don't miss neighbors
+        # due to periodic boundary conditions
+        cutoffs = [self.distance_cutoff] * len(self.atoms)
         nl = NeighborList(cutoffs, self_interaction=False, bothways=True)
         nl.update(self.atoms)
         
@@ -305,8 +307,8 @@ class BondValenceSum:
             self.neighbors[i] = []
             
             for j, offset in zip(indices, offsets):
-                # Calculate distance including periodic boundary conditions
-                distance = self.atoms.get_distance(i, j, vector=False)
+                # Calculate distance with proper minimum image convention
+                distance = self.atoms.get_distance(i, j, mic=True, vector=False)
                 if distance <= self.distance_cutoff:
                     self.neighbors[i].append({
                         'index': j,

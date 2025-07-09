@@ -242,6 +242,43 @@ class TestBondValenceSum:
 class TestBondValenceIntegration:
     """Test integration and edge cases."""
     
+    def test_layered_oxide_coordination(self):
+        """Test coordination numbers for layered oxide structure with proper periodic boundary conditions."""
+        from ase.io import read
+        
+        # Load the layered oxide structure (Co9Li27Mn9Ni9O54)
+        atoms = read('asetools/data/summary_test/0_1.2/CONTCAR')
+        
+        # Set up BVS calculator with appropriate cutoff for first coordination shell
+        valence_states = {'Li': 1, 'O': -2, 'Mn': 3, 'Co': 3, 'Ni': 2}
+        bvs_calc = BondValenceSum(atoms, valence_states=valence_states, distance_cutoff=2.5)
+        
+        # Force neighbor calculation
+        bvs_calc._find_neighbors()
+        
+        # Calculate coordination numbers by element
+        coord_by_element = {'Li': [], 'O': [], 'Mn': [], 'Co': [], 'Ni': []}
+        
+        for i, symbol in enumerate(atoms.get_chemical_symbols()):
+            coord_num = len(bvs_calc.neighbors[i])
+            if symbol in coord_by_element:
+                coord_by_element[symbol].append(coord_num)
+        
+        # Calculate average coordination numbers
+        avg_coords = {}
+        for element, coords in coord_by_element.items():
+            if coords:
+                avg_coords[element] = sum(coords) / len(coords)
+        
+        # Test that metal atoms have octahedral coordination (~6 neighbors)
+        # With proper minimum image convention, should be exactly 6
+        for metal in ['Li', 'Mn', 'Co', 'Ni']:
+            assert abs(avg_coords[metal] - 6.0) < 0.1, \
+                f"{metal} coordination {avg_coords[metal]:.1f} should be ~6.0 (octahedral)"
+        
+        # Oxygen should also have consistent coordination
+        assert avg_coords['O'] > 5.0, f"O coordination {avg_coords['O']:.1f} should be >5"
+    
     def test_empty_structure(self):
         """Test with empty structure."""
         atoms = Atoms()
