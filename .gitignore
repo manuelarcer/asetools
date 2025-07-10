@@ -1,3 +1,31 @@
 __pycache__/
 *.pyc
 
+# HTML files and related directories (generated documentation)
+*_files/
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Python egg info
+*.egg-info/
+dist/
+build/

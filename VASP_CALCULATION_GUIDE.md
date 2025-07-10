@@ -80,30 +80,6 @@ MAGMOM = 4.5 3.5 0.0 0.0  # Different Fe oxidation states
 - Set non-magnetic atoms (O, C, etc.) to 0.0
 - For unknown systems, try different initial values if convergence fails
 
-### ASEtools Integration
-
-When using ASEtools for magnetic calculations:
-
-```python
-from ase.calculators.vasp import Vasp
-from asetools.manager import make_calculator, VASPConfigurationFromYAML
-
-# Example workflow for magnetic system
-calc = Vasp(
-    xc='PBE',
-    encut=500,
-    ismear=0,
-    sigma=0.05,
-    ispin=2,           # Spin-polarized
-    nelm=800,          # High electronic steps
-    amix=0.2,          # Conservative mixing
-    amix_mag=0.8,      # Magnetic mixing
-    bmix=0.0001,
-    bmix_mag=0.0001,
-    magmom=[4.0, 4.0, 0.0, 0.0]  # Fe2O system
-)
-```
-
 ### Common Issues and Solutions
 
 | Problem | Solution |
