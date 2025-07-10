@@ -101,7 +101,7 @@ print(f"Ti BVS: {bvs_results[0]:.3f}")
 df = bvs_calc.analyze_structure()
 print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
 
-# Automatic valence determination for metals
+# Automatic valence determination for metals (uniform per element)
 bvs_auto = BondValenceSum(atoms, valence_states={'O': -2}, 
                          auto_determine_valence=True)
 df_auto = bvs_auto.analyze_structure()
@@ -109,6 +109,23 @@ df_auto = bvs_auto.analyze_structure()
 # Check optimization results
 print(f"Optimized Ti valence: {df_auto[df_auto['element'] == 'Ti']['used_valence'].iloc[0]:+d}")
 print(f"Optimization deviation: {df_auto[df_auto['element'] == 'Ti']['optimization_deviation'].iloc[0]:.3f}")
+
+# Per-atom valence optimization (allows mixed valences)
+bvs_per_atom = BondValenceSum(atoms, valence_states={'O': -2}, 
+                             auto_determine_valence=True, 
+                             per_atom_valence=True)  # Each atom gets individually optimized valence
+df_per_atom = bvs_per_atom.analyze_structure()
+
+# Check individual atom valences - now atoms can have different valences!
+ti_atoms = df_per_atom[df_per_atom['element'] == 'Ti']
+for _, row in ti_atoms.iterrows():
+    print(f"Ti atom {row['atom_index']}: valence {row['used_valence']:+d}, "
+          f"coordination {row['coordination_number']}, BVS {row['calculated_bvs']:.3f}")
+
+# Analyze valence distribution
+from collections import Counter
+valence_counts = Counter(ti_atoms['used_valence'])
+print(f"Ti valence distribution: {dict(valence_counts)}")  # e.g., {2: 3, 3: 2}
 
 # Detailed optimization summary
 bvs_auto.print_valence_optimization_summary()
@@ -171,6 +188,7 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`calculate_bvs()`**: Bond valence sum calculation with neighbor detection
 - **`analyze_structure()`**: Comprehensive structural analysis with validation metrics
 - **`auto_determine_valence`**: Automatically optimize metal valence states to minimize BVS deviation
+- **`per_atom_valence`**: Enable per-atom valence optimization (allows mixed valences per element)
 - **`get_valence_optimization_results()`**: Detailed optimization results for each optimized atom
 - **`print_valence_optimization_summary()`**: Display optimization details and tried valences
 - **`allowed_pairs`**: Specify element pairs to consider (e.g., only Ti-O bonds)

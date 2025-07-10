@@ -557,3 +557,76 @@ class TestBondValenceIntegration:
             assert 'Ti' in opt_results or len(opt_results) == 0  # Ti should be optimized if parameters exist
             assert 'O' not in opt_results  # O should not be optimized
             assert 'H' not in opt_results  # H should not be optimized
+    
+    def test_per_atom_valence_optimization(self):
+        """Test per-atom valence optimization functionality."""
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Test per-atom optimization
+        bvs_per_atom = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                     auto_determine_valence=True, 
+                                     per_atom_valence=True, 
+                                     distance_cutoff=3.0)
+        
+        df_per_atom = bvs_per_atom.analyze_structure()
+        
+        # Should have per-atom optimization results
+        assert hasattr(bvs_per_atom, 'per_atom_optimized_valences')
+        
+        # Check that optimization results are available
+        opt_results = bvs_per_atom.get_valence_optimization_results()
+        assert isinstance(opt_results, dict)
+        
+        # Ti should be optimized (if parameters exist)
+        if 'Ti' in opt_results:
+            assert len(opt_results['Ti']) > 0
+            ti_result = list(opt_results['Ti'].values())[0]
+            assert 'best_valence' in ti_result
+            assert 'best_deviation' in ti_result
+            assert 'optimization_results' in ti_result
+        
+        # Test that per-atom valences can be retrieved
+        ti_rows = df_per_atom[df_per_atom['element'] == 'Ti']
+        assert len(ti_rows) > 0
+        
+        # Test that the used_valence is correctly assigned
+        for _, row in ti_rows.iterrows():
+            assert row['used_valence'] is not None
+            assert isinstance(row['used_valence'], (int, np.integer))
+    
+    def test_per_atom_vs_uniform_valence(self):
+        """Test comparison between per-atom and uniform valence optimization."""
+        atoms = Atoms('TiO2', positions=[
+            [0, 0, 0],     # Ti
+            [1.9, 0, 0],   # O
+            [0, 1.9, 0]    # O
+        ], cell=[4, 4, 4], pbc=True)
+        
+        # Uniform valence optimization
+        bvs_uniform = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                    auto_determine_valence=True, 
+                                    per_atom_valence=False, 
+                                    distance_cutoff=3.0)
+        df_uniform = bvs_uniform.analyze_structure()
+        
+        # Per-atom valence optimization
+        bvs_per_atom = BondValenceSum(atoms, valence_states={'O': -2}, 
+                                     auto_determine_valence=True, 
+                                     per_atom_valence=True, 
+                                     distance_cutoff=3.0)
+        df_per_atom = bvs_per_atom.analyze_structure()
+        
+        # Both should have same number of rows
+        assert len(df_uniform) == len(df_per_atom)
+        
+        # Both should have Ti optimization results (if parameters exist)
+        uniform_opt = bvs_uniform.get_valence_optimization_results()
+        per_atom_opt = bvs_per_atom.get_valence_optimization_results()
+        
+        # Check that both have valid optimization results structure
+        assert isinstance(uniform_opt, dict)
+        assert isinstance(per_atom_opt, dict)

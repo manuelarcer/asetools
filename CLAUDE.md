@@ -86,7 +86,7 @@ Key scripts in `asetools/bin/`:
 ### Materials Science Focus
 - Designed for surface science, electrochemistry, and catalysis
 - Extensive DOS and electronic structure analysis
-- Bond valence analysis for structural validation and valence state determination
+- Bond valence analysis for structural validation and valence state determination (with per-atom optimization)
 - Reaction pathway analysis (NEB) support
 - Applied potential calculations for electrochemistry
 
