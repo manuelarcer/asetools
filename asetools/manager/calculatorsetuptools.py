@@ -1,6 +1,9 @@
 # ASE/calculator setup utilities
 
+import logging
 import yaml
+
+logger = logging.getLogger(__name__)
 
 class VASPConfigurationFromYAML:
     def __init__(self, config_file: str, system: str = 'default'):
