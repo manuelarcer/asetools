@@ -24,6 +24,9 @@ class VASPConfigurationFromYAML:
     def system_config(self) -> dict:
         try:
             system_dict = self.config['systems'][self.system]
+            if system_dict is None:
+                logger.warning(f"System configuration for '{self.system}' is None. Returning an empty dictionary.")
+                return {}
         except KeyError:
             logger.warning(f"System configuration for '{self.system}' not found. Returning an empty dictionary.")
             return {}
@@ -31,6 +34,8 @@ class VASPConfigurationFromYAML:
 
     def initial_magmom(self) -> dict:
         system_config = self.system_config
+        if system_config is None:
+            return {}
         if 'magmom' in system_config:
             return system_config['magmom']
         elif 'initial_magmom' in system_config:
