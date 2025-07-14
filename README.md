@@ -15,6 +15,7 @@ ASEtools is a specialized Python package designed for computational materials sc
 - **VASP Analysis Tools**: Convergence checking, energy/force extraction, magnetic moment analysis
 - **Electronic Structure Analysis**: Comprehensive DOS analysis with orbital projections and band center calculations
 - **Band Center Analysis**: d-band and p-band center calculations for catalysis and electronic structure studies
+- **Bond Valence Analysis**: Bond valence sum calculations using Brown's equation for structural validation
 - **Surface Science**: Automated adsorbate placement and surface analysis
 - **Electrochemistry**: Applied potential calculations with Fermi shift corrections
 - **Reaction Pathways**: NEB analysis and potential energy surface plotting
@@ -80,6 +81,73 @@ states = ['s_states', 'p_states', 'd_states']
 energy, dos_up, dos_down = extract_pdos_perstate(dos_data, atoms_of_interest, states)
 ```
 
+### Bond Valence Sum Analysis
+
+```python
+from asetools.bond_valence import BondValenceSum, BondValenceParameters
+
+# Load atomic structure
+atoms = read('POSCAR')
+
+# Calculate bond valence sums using Brown's equation
+valence_states = {'Ti': 4, 'O': -2}
+bvs_calc = BondValenceSum(atoms, valence_states=valence_states)
+
+# Get bond valence sum results
+bvs_results = bvs_calc.calculate_bvs()
+print(f"Ti BVS: {bvs_results[0]:.3f}")
+
+# Analyze structure with detailed DataFrame
+df = bvs_calc.analyze_structure()
+print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
+
+# Automatic valence determination for metals (uniform per element)
+bvs_auto = BondValenceSum(atoms, valence_states={'O': -2}, 
+                         auto_determine_valence=True)
+df_auto = bvs_auto.analyze_structure()
+
+# Check optimization results
+print(f"Optimized Ti valence: {df_auto[df_auto['element'] == 'Ti']['used_valence'].iloc[0]:+d}")
+print(f"Optimization deviation: {df_auto[df_auto['element'] == 'Ti']['optimization_deviation'].iloc[0]:.3f}")
+
+# Per-atom valence optimization (allows mixed valences)
+bvs_per_atom = BondValenceSum(atoms, valence_states={'O': -2}, 
+                             auto_determine_valence=True, 
+                             per_atom_valence=True)  # Each atom gets individually optimized valence
+df_per_atom = bvs_per_atom.analyze_structure()
+
+# Check individual atom valences - now atoms can have different valences!
+ti_atoms = df_per_atom[df_per_atom['element'] == 'Ti']
+for _, row in ti_atoms.iterrows():
+    print(f"Ti atom {row['atom_index']}: valence {row['used_valence']:+d}, "
+          f"coordination {row['coordination_number']}, BVS {row['calculated_bvs']:.3f}")
+
+# Analyze valence distribution
+from collections import Counter
+valence_counts = Counter(ti_atoms['used_valence'])
+print(f"Ti valence distribution: {dict(valence_counts)}")  # e.g., {2: 3, 3: 2}
+
+# Detailed optimization summary
+bvs_auto.print_valence_optimization_summary()
+
+# Specify allowed element pairs (e.g., only Ti-O bonds)
+bvs_selective = BondValenceSum(atoms, valence_states=valence_states,
+                              allowed_pairs=[('Ti', 'O')])
+
+# Check which pairs are being considered
+bvs_selective.print_allowed_pairs()
+
+# Use custom bond valence parameters
+custom_params = {'Ti-O': {'R0': 1.9, 'B': 0.4}}
+bvs_custom = BondValenceSum(atoms, valence_states=valence_states, 
+                           custom_parameters=custom_params)
+
+# Access bond valence parameter database
+bv_params = BondValenceParameters()
+ti_o_params = bv_params.get_parameters('Ti', 4, 'O', -2)
+print(f"Ti-O: R0={ti_o_params['R0']:.3f}, B={ti_o_params['B']:.3f}")
+```
+
 ### Surface Analysis and Adsorbate Placement
 
 ```python
@@ -112,6 +180,21 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`extract_fermi_e(doscarfile)`**: Simple Fermi energy extraction
 - **`calculate_band_center(doscarfile, atoms, orbitals/states)`**: d-band and p-band center calculations
 - **`DOS` class**: Modern object-oriented interface with comprehensive plotting and analysis methods
+
+### Bond Valence Analysis (`asetools.bond_valence`)
+- **`BondValenceParameters`**: Bond valence parameter database from Brown's accumulated table
+- **`BondValenceSum`**: Bond valence sum calculator using Brown's equation
+- **`get_parameters(element1, valence1, element2, valence2)`**: Parameter lookup with reliability ordering
+- **`calculate_bvs()`**: Bond valence sum calculation with neighbor detection
+- **`analyze_structure()`**: Comprehensive structural analysis with validation metrics
+- **`auto_determine_valence`**: Automatically optimize metal valence states to minimize BVS deviation
+- **`per_atom_valence`**: Enable per-atom valence optimization (allows mixed valences per element)
+- **`get_valence_optimization_results()`**: Detailed optimization results for each optimized atom
+- **`print_valence_optimization_summary()`**: Display optimization details and tried valences
+- **`allowed_pairs`**: Specify element pairs to consider (e.g., only Ti-O bonds)
+- **`exclude_same_element`**: Automatically exclude same-element pairs (default: True)
+- **`get_allowed_pairs()`**: List allowed element pairs for BVS calculation
+- **`print_allowed_pairs()`**: Display allowed pairs with statistics
 
 ### Surface Science (`asetools.adsorbate`)
 - **`SurfaceAnalyzer`**: Comprehensive surface analysis toolkit

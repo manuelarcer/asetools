@@ -87,7 +87,7 @@ def _mark_done(step_name: str):
         f.write(f"{step_name} completed\n")
 
 
-def load_structure(pattern_initial_default: str = 'POSCAR'):
+def load_structure(pattern_initial_default: str = 'POSCAR') -> Atoms:
     """Load the structure from CONTCAR or initial configuration."""
     if os.path.exists('CONTCAR'):
         logger.info("Loading structure from CONTCAR")
