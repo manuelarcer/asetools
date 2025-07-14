@@ -15,7 +15,7 @@ class VASPConfigurationFromYAML:
         
         # Remove the magmom shorthand so it won't sneak into system_config
         systems = self.config.get('systems', {})
-        if system in systems:
+        if system in systems and systems[system] is not None:
             systems[system].pop('magmom', None)
             
         self.initial_magmom_data = self.initial_magmom()
