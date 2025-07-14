@@ -22,6 +22,7 @@ class VASPConfigurationFromYAML:
         try:
             system_dict = self.config['systems'][self.system]
         except KeyError:
+            logger.warning(f"System configuration for '{self.system}' not found. Returning an empty dictionary.")
             return {}
         return system_dict
 
