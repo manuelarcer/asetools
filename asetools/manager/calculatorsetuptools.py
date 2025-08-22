@@ -13,12 +13,13 @@ class VASPConfigurationFromYAML:
         self.workflows = self.config['workflows']
         self.globals = self.config['globals']
         
+        self.initial_magmom_data = self.initial_magmom()
+        
         # Remove the magmom shorthand so it won't sneak into system_config
         systems = self.config.get('systems', {})
         if system in systems and systems[system] is not None:
             systems[system].pop('magmom', None)
             
-        self.initial_magmom_data = self.initial_magmom()
 
     @property
     def system_config(self) -> dict:
