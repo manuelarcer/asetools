@@ -23,9 +23,10 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
         )
     calc = Vasp(**vasp_kwargs)
 
-    if 'magmom' in cfg.system_config:
-        logger.warning(f' ** WARNING **  There is a "magmom" key in the system config, '
-                       f' make sure you run setup_initial_magmom() from asetools/manager/calculatorsetuptools.py ')
+    # DELETE: I THINK THIS DOES NOTHING NOW. THE MAGMOM IS SKIPPED DURING LOADING CONFIG FILE
+    #if 'magmom' in cfg.system_config:
+    #    logger.warning(f' ** WARNING **  There is a "magmom" key in the system config, '
+    #                   f' make sure you run setup_initial_magmom() from asetools/manager/calculatorsetuptools.py ')
 
     logger.info(" ** Calculator created")
     return calc
