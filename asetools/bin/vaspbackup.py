@@ -23,27 +23,27 @@ def main():
     actions = {
         'copy': [
             'CONTCAR*',      # keep a copy of CONTCAR in the backup
+            'POSCAR*',
+            'KPOINTS*',
+            'INCAR*',
+            '*.cif',
+            '*.xyz',
+            '*.json',
+            '*.py',
+            '*.traj',
+            '*.out',
+            '*.txt',
+            '*.log',
+            '*.err',
+            '*.info',
             '*.arc',         # requested patterns to copy
             '*.vasp',
             '*.in',
             '*.sh',
         ],
         'move': [
-            '*.traj',
-            '*.cif',
-            '*.xyz',
-            '*.json',
-            '*.py',
-            '*.out',
-            '*.txt',
-            '*.log',
-            '*.err',
-            '*.info',
             'OUTCAR*',
             'OSZICAR*',
-            'INCAR*',
-            'KPOINTS*',
-            'POSCAR*',
         ],
     }
 
