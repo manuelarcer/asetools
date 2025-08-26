@@ -29,7 +29,12 @@ def main():
         '*.out' 
         '*.sh', 
         '*.txt', 
-        '*.log', 
+        '*.log',
+        '*.err',
+        '*.in',
+        '*.out',
+        '*.info',
+        '*.arc', 
         'OUTCAR*',
         'OSZICAR*',
         'INCAR*',
