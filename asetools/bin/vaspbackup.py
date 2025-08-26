@@ -19,29 +19,33 @@ def main():
     parser.add_argument('backupname', type=str, help='name of backup folder')
     args = parser.parse_args()
 
-    wildcard_patterns = [
-        '*.vasp', 
-        '*.traj', 
-        '*.cif', 
-        '*.xyz', 
-        '*.json', 
-        '*.py',
-        '*.out' 
-        '*.sh', 
-        '*.txt', 
-        '*.log',
-        '*.err',
-        '*.in',
-        '*.out',
-        '*.info',
-        '*.arc', 
-        'OUTCAR*',
-        'OSZICAR*',
-        'INCAR*',
-        'KPOINTS*',
-        'CONTCAR*',
-        'POSCAR*',
-    ]
+    # Define which patterns should be copied (kept in place or copied) vs moved
+    actions = {
+        'copy': [
+            'CONTCAR*',      # keep a copy of CONTCAR in the backup
+            '*.arc',         # requested patterns to copy
+            '*.vasp',
+            '*.in',
+            '*.sh',
+        ],
+        'move': [
+            '*.traj',
+            '*.cif',
+            '*.xyz',
+            '*.json',
+            '*.py',
+            '*.out',
+            '*.txt',
+            '*.log',
+            '*.err',
+            '*.info',
+            'OUTCAR*',
+            'OSZICAR*',
+            'INCAR*',
+            'KPOINTS*',
+            'POSCAR*',
+        ],
+    }
 
     if os.path.exists(args.backupname):
         print('Backup folder already exists')
@@ -51,29 +55,59 @@ def main():
         os.makedirs(args.backupname)
         print(f'Created backup folder: {args.backupname}')
 
-        file_list = []
+        # Collect files to copy and move according to actions dict
+        files_to_copy = []
+        files_to_move = []
+
+        # vasprun.xml is handled specially: include it in move list if present
         if not os.path.exists('vasprun.xml'):
             print('vasprun.xml not found in the current directory')
         else:
-            file_list.append('vasprun.xml')
+            files_to_move.append('vasprun.xml')
 
-        # Add all files matching wildcard patterns
-        for pattern in wildcard_patterns:
-            file_list.extend(glob.glob(pattern))
+        for pattern in actions['copy']:
+            files_to_copy.extend(glob.glob(pattern))
 
-        for filename in file_list:
-            # Make sure CONTCAR stays in the current directory
+        for pattern in actions['move']:
+            files_to_move.extend(glob.glob(pattern))
+
+        # Deduplicate while preserving order
+        def dedupe(seq):
+            seen = set()
+            out = []
+            for x in seq:
+                if x not in seen:
+                    seen.add(x)
+                    out.append(x)
+            return out
+
+        files_to_copy = dedupe(files_to_copy)
+        files_to_move = dedupe(files_to_move)
+
+        # Perform copy operations
+        for filename in files_to_copy:
+            # ensure destination filename for CONTCAR remains 'CONTCAR'
             if 'CONTCAR' in filename:
                 shutil.copy(filename, os.path.join(args.backupname, 'CONTCAR'))
                 print(f'Copied {filename} to {args.backupname}')
             else:
-                shutil.move(filename, args.backupname)
-                print(f'Moved {filename} to {args.backupname}')
+                shutil.copy(filename, args.backupname)
+                print(f'Copied {filename} to {args.backupname}')
+
+        # Perform move operations
+        for filename in files_to_move:
+            # skip if file was already copied
+            if filename in files_to_copy:
+                continue
+            shutil.move(filename, args.backupname)
+            print(f'Moved {filename} to {args.backupname}')
 
         # Compress specific files within the backup directory
         for file in glob.glob(os.path.join(args.backupname, 'OUTCAR*')):
             compress_file(file)
-        compress_file(os.path.join(args.backupname, 'vasprun.xml'))
+        # Compress vasprun.xml only if it was moved into the backup
+        if os.path.exists(os.path.join(args.backupname, 'vasprun.xml')):
+            compress_file(os.path.join(args.backupname, 'vasprun.xml'))
 
 
         print('Backup and compression completed successfully.')
