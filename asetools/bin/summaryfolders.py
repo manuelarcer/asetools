@@ -49,9 +49,9 @@ def main():
 
     folders = glob.glob('*/')
     if args.magmom:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target fmax': [], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target-fmax': [], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     else:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target fmax': [], 'MaxForce': [], 'Energy':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target-fmax': [], 'MaxForce': [], 'Energy':[]}
 
     # Define alternative filenames to look for when fast mode is enabled
     alternative_filenames = ['vasp.out', 'out.txt']
@@ -93,7 +93,7 @@ def main():
                 dic['Config'].append(f)
                 dic['Converged'].append((True, 'pyatoms'))
                 dic['ENCUT'].append('N/A')
-                dic['Target fmax'].append('N/A')
+                dic['Target-fmax'].append('N/A')
                 dic['MaxForce'].append( round(fmax[-1], 3) )
                 dic['Energy'].append( round(e[-1], 3) )
 
@@ -104,7 +104,7 @@ def main():
                 dic['Config'].append(f)
                 dic['Converged'].append(converged)
                 dic['ENCUT'].append('N/A')
-                dic['Target fmax'].append('N/A')
+                dic['Target-fmax'].append('N/A')
                 dic['MaxForce'].append('N/A')
                 dic['Energy'].append('N/A')
             else:
@@ -138,7 +138,7 @@ def main():
                     dic['ISIF'].append(isif)
                     dic['Converged'].append(converged[0])
                     dic['ENCUT'].append(encut)
-                    dic['Target fmax'].append(target_fmax)
+                    dic['Target-fmax'].append(target_fmax)
                     dic['MaxForce'].append(round(maxforce, 3))
                     dic['Energy'].append(round(energy, 3))
                     
