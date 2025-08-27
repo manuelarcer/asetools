@@ -44,6 +44,7 @@ def main():
         'move': [
             'OUTCAR*',
             'OSZICAR*',
+            'STAGE_*'
         ],
     }
 
