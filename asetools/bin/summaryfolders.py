@@ -7,6 +7,28 @@ import numpy as np
 import glob, os
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence, get_parameter_from_run
 
+def is_summary_up_to_date():
+    """Check if summary.log exists and is newer than all folders"""
+    if not os.path.exists('summary.log'):
+        return False
+    
+    summary_mtime = os.path.getmtime('summary.log')
+    folders = glob.glob('*/')
+    
+    for folder in folders:
+        # Check if any OUTCAR in folders is newer than summary.log
+        outcar_path = os.path.join(folder, 'OUTCAR')
+        if os.path.exists(outcar_path):
+            if os.path.getmtime(outcar_path) > summary_mtime:
+                return False
+        # Also check for log.info files (pyatoms)
+        loginfo_path = os.path.join(folder, 'log.info')
+        if os.path.exists(loginfo_path):
+            if os.path.getmtime(loginfo_path) > summary_mtime:
+                return False
+    
+    return True
+
 def main():
     ## Block from chatgpt
     parser = argparse.ArgumentParser(description='Process folders.')
@@ -17,11 +39,19 @@ def main():
     args = parser.parse_args()
     ##
 
+    # Check if summary.log is up to date
+    if is_summary_up_to_date():
+        print("Summary is up to date. Reading from summary.log:")
+        print()
+        with open('summary.log', 'r') as f:
+            print(f.read())
+        return
+
     folders = glob.glob('*/')
     if args.magmom:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target fmax': [], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
     else:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'MaxForce': [], 'Energy':[]}
+        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target fmax': [], 'MaxForce': [], 'Energy':[]}
 
     # Define alternative filenames to look for when fast mode is enabled
     alternative_filenames = ['vasp.out', 'out.txt']
@@ -62,6 +92,8 @@ def main():
                 print(f, 'Pyatoms Job Finished')
                 dic['Config'].append(f)
                 dic['Converged'].append((True, 'pyatoms'))
+                dic['ENCUT'].append('N/A')
+                dic['Target fmax'].append('N/A')
                 dic['MaxForce'].append( round(fmax[-1], 3) )
                 dic['Energy'].append( round(e[-1], 3) )
 
@@ -71,6 +103,8 @@ def main():
             if converged:
                 dic['Config'].append(f)
                 dic['Converged'].append(converged)
+                dic['ENCUT'].append('N/A')
+                dic['Target fmax'].append('N/A')
                 dic['MaxForce'].append('N/A')
                 dic['Energy'].append('N/A')
             else:
@@ -94,10 +128,17 @@ def main():
                         energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
                     
                     isif, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ISIF')
+                    encut, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ENCUT')
+                    ediffg, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='EDIFFG')
+                    
+                    # Convert EDIFFG to positive value for target fmax (VASP uses negative for forces)
+                    target_fmax = abs(ediffg) if ediffg is not None else 'N/A'
 
                     dic['Config'].append(f)
                     dic['ISIF'].append(isif)
                     dic['Converged'].append(converged[0])
+                    dic['ENCUT'].append(encut)
+                    dic['Target fmax'].append(target_fmax)
                     dic['MaxForce'].append(round(maxforce, 3))
                     dic['Energy'].append(round(energy, 3))
                     
@@ -127,6 +168,14 @@ def main():
     not_converged = [f.split('/')[0] for f in not_converged]
     print('Not converged:')
     print(' '.join(not_converged))
+    
+    # Write output to summary.log
+    with open('summary.log', 'w') as f:
+        f.write(str(df))
+        f.write('\n\n')
+        f.write('Not converged:\n')
+        f.write(' '.join(not_converged))
+        f.write('\n')
 
 def fast_mode_check(f, alternative_filenames):
     for alt in alternative_filenames:
