@@ -20,7 +20,7 @@ def example_single_adsorbate_interpolation():
     """
     print("=== Example 1: Single Adsorbate with Interpolation Model ===")
     
-    # Create example CSV data (normally you'd have this from DFT calculations)
+    # Create example data (normally you'd have this from DFT calculations)
     ru_co_data = pd.DataFrame({
         'Catalyst': ['Ru(fcc)', 'Ru(fcc)', 'Ru(fcc)', 'Ru(fcc)'] * 4,
         'facet': ['111'] * 4 + ['100'] * 4 + ['111'] * 4 + ['100'] * 4,
@@ -37,12 +37,9 @@ def example_single_adsorbate_interpolation():
         ]
     })
     
-    # Save to temporary CSV
-    ru_co_data.to_csv('temp_ru_co_data.csv', index=False)
-    
-    # Initialize calculator
+    # Initialize calculator and load data directly (no CSV file needed!)
     calc = ThermodynamicsCalculator('Ru(fcc)', ['CO'])
-    calc.load_interpolation_model('temp_ru_co_data.csv')
+    calc.load_interpolation_model(ru_co_data)  # Pass DataFrame directly
     
     # Calculate equilibrium over temperature range
     results = calc.calculate_equilibrium(
@@ -54,10 +51,6 @@ def example_single_adsorbate_interpolation():
     print(f"Calculated {len(results)} temperature points")
     print("Sample results:")
     print(results[['Temp', 'Cov_CO_111', 'Cov_CO_100', 'Gamma_111', 'Gamma_100']].head())
-    
-    # Clean up
-    import os
-    os.remove('temp_ru_co_data.csv')
     
     return results
 

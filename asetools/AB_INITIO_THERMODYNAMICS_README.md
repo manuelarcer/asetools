@@ -36,9 +36,10 @@ data = pd.DataFrame({
 })
 data.to_csv('co_ads_data.csv', index=False)
 
-# Initialize calculator
+# Initialize calculator - can use DataFrame directly or CSV file
 calc = ThermodynamicsCalculator('Ru(fcc)', ['CO'])
-calc.load_interpolation_model('co_ads_data.csv')
+calc.load_interpolation_model(data)  # Pass DataFrame directly
+# OR: calc.load_interpolation_model('co_ads_data.csv')  # Load from CSV
 
 # Calculate equilibrium
 results = calc.calculate_equilibrium(
@@ -83,7 +84,26 @@ print(results[['Temp', 'Cov_CO_111', 'Cov_O_111', 'Gamma_111']].head())
 
 ## Data Formats
 
-### CSV Input for Interpolation Model
+### Input for Interpolation Model
+
+The interpolation model accepts data in two formats:
+
+**DataFrame Input (Recommended)**
+```python
+import pandas as pd
+
+data = pd.DataFrame({
+    'Catalyst': ['Ru(fcc)', 'Ru(fcc)', 'Ru(fcc)', 'Ru(fcc)'],
+    'facet': ['111', '111', '111', '111'],
+    'Ads': ['CO', 'CO', 'CO', 'CO'],
+    'cov': [0.0, 0.33, 0.67, 1.0],
+    'Eads': [-1.03, -1.15, -1.35, -1.56]
+})
+
+calc.load_interpolation_model(data)  # Direct DataFrame input
+```
+
+**CSV File Input**
 
 Required columns: `['Catalyst', 'facet', 'Ads', 'cov', 'Eads']`
 
@@ -93,6 +113,10 @@ Ru(fcc),111,CO,0.0,-1.03
 Ru(fcc),111,CO,0.33,-1.15
 Ru(fcc),111,CO,0.67,-1.35
 Ru(fcc),111,CO,1.0,-1.56
+```
+
+```python
+calc.load_interpolation_model('data.csv')  # CSV file input
 ```
 
 ### Lattice Gas Interaction Parameters
@@ -173,7 +197,7 @@ Results are returned as pandas DataFrame with columns:
 Main calculation class:
 
 - `__init__(metal, adsorbates, surface_properties=None)`
-- `load_interpolation_model(csv_file)`
+- `load_interpolation_model(data_source)` - accepts DataFrame or CSV file path
 - `load_lattice_gas_model(interaction_params)`
 - `calculate_equilibrium_coverage(facet, temperature, pressures)`
 - `calculate_surface_energy(facet, coverages, temperature, pressures)`

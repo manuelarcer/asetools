@@ -145,17 +145,24 @@ class SurfaceProperties:
 class InterpolationModel:
     """
     Simple coverage-dependent adsorption energy model using interpolation.
-    Loads data from CSV with columns: ['Catalyst', 'facet', 'Ads', 'cov', 'Eads']
+    Accepts data from CSV file or directly as pandas DataFrame.
+    Data must contain columns: ['Catalyst', 'facet', 'Ads', 'cov', 'Eads']
     """
     
-    def __init__(self, csv_file: str):
+    def __init__(self, data_source: Union[str, pd.DataFrame]):
         """
-        Initialize interpolation model from CSV file.
+        Initialize interpolation model from CSV file or DataFrame.
         
         Args:
-            csv_file: Path to CSV file with adsorption energy data
+            data_source: Either path to CSV file or pandas DataFrame with adsorption energy data
         """
-        self.data = pd.read_csv(csv_file)
+        if isinstance(data_source, str):
+            self.data = pd.read_csv(data_source)
+        elif isinstance(data_source, pd.DataFrame):
+            self.data = data_source.copy()
+        else:
+            raise ValueError("data_source must be either a file path (str) or pandas DataFrame")
+        
         self._validate_data()
     
     def _validate_data(self):
@@ -297,9 +304,14 @@ class ThermodynamicsCalculator:
         if metal not in self.surface_props.get_available_metals():
             raise ValueError(f"Metal '{metal}' not in surface database")
     
-    def load_interpolation_model(self, csv_file: str):
-        """Load interpolation model from CSV file."""
-        self.model = InterpolationModel(csv_file)
+    def load_interpolation_model(self, data_source: Union[str, pd.DataFrame]):
+        """
+        Load interpolation model from CSV file or DataFrame.
+        
+        Args:
+            data_source: Either path to CSV file or pandas DataFrame with adsorption energy data
+        """
+        self.model = InterpolationModel(data_source)
         self.model_type = 'interpolation'
     
     def load_lattice_gas_model(self, interaction_params: Dict):

@@ -88,6 +88,26 @@ class TestInterpolationModel(unittest.TestCase):
         # Test interpolation
         eads_mid = model.get_adsorption_energy('Ru(fcc)', '111', 'CO', 0.25)
         self.assertAlmostEqual(eads_mid, -1.1, places=6)
+    
+    def test_dataframe_input(self):
+        """Test direct DataFrame input instead of CSV file."""
+        model = InterpolationModel(self.test_data)
+        
+        # Test exact values
+        eads_0 = model.get_adsorption_energy('Ru(fcc)', '111', 'CO', 0.0)
+        self.assertEqual(eads_0, -1.0)
+        
+        eads_1 = model.get_adsorption_energy('Ru(fcc)', '111', 'CO', 1.0)
+        self.assertEqual(eads_1, -1.5)
+        
+        # Test interpolation
+        eads_mid = model.get_adsorption_energy('Ru(fcc)', '111', 'CO', 0.25)
+        self.assertAlmostEqual(eads_mid, -1.1, places=6)
+    
+    def test_invalid_input_type(self):
+        """Test that invalid input types raise appropriate errors."""
+        with self.assertRaises(ValueError):
+            InterpolationModel(123)  # Invalid type
 
 
 class TestLatticeGasModel(unittest.TestCase):
@@ -149,6 +169,12 @@ class TestThermodynamicsCalculator(unittest.TestCase):
     
     def test_load_interpolation_model(self):
         self.calc.load_interpolation_model(self.temp_file.name)
+        self.assertEqual(self.calc.model_type, 'interpolation')
+        self.assertIsNotNone(self.calc.model)
+    
+    def test_load_interpolation_model_dataframe(self):
+        """Test loading interpolation model with DataFrame directly."""
+        self.calc.load_interpolation_model(self.test_data)
         self.assertEqual(self.calc.model_type, 'interpolation')
         self.assertIsNotNone(self.calc.model)
     
