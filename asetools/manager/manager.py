@@ -7,12 +7,13 @@ import sys
 import glob
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
-from ase.calculators.vasp import Vasp
+#from ase.calculators.vasp import Vasp
+from vasp_interactive import VaspInteractive 
 from ase import Atoms
 
 logger = logging.getLogger(__name__)    
 
-def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) -> Vasp:
+def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) -> VaspInteractive:
     if run_overrides is None:
         run_overrides = {}
     else:
@@ -21,7 +22,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) 
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides
         )
-    calc = Vasp(**vasp_kwargs)
+    calc = VaspInteractive(**vasp_kwargs)
 
     # DELETE: I THINK THIS DOES NOTHING NOW. THE MAGMOM IS SKIPPED DURING LOADING CONFIG FILE
     #if 'magmom' in cfg.system_config:
