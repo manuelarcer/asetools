@@ -194,22 +194,45 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     
     OptClass = optimizer_map[optimizer_name_lower]
     
-    # Default parameters
-    default_kwargs = {'logfile': f'{optimizer_name.upper()}.log'}
-    default_kwargs.update(optimizer_kwargs)
+    # Separate initialization kwargs from run kwargs
+    init_kwargs = {'logfile': f'{optimizer_name.upper()}.log'}
+    run_kwargs = {}
     
-    logger.info(f"    Initializing {optimizer_name} optimizer with kwargs: {default_kwargs}")
+    # Define which parameters go to run() vs __init__() for each optimizer
+    run_only_params = {'fmax', 'steps'}  # These always go to run()
     
-    # Create and run optimizer
-    opt = OptClass(atoms, **default_kwargs)
+    # Optimizer-specific parameter routing
+    optimizer_init_params = {
+        'bfgs': {'maxstep', 'alpha', 'damping'},
+        'fire': {'dt', 'maxmove', 'dtmax', 'Nmin', 'finc', 'fdec', 'astart', 'fa'},
+        'lbfgs': {'maxstep', 'memory', 'damping', 'alpha'},
+    }
+    
+    # Route parameters correctly
+    current_optimizer_init_params = optimizer_init_params.get(optimizer_name_lower, set())
+    
+    for key, value in optimizer_kwargs.items():
+        if key in run_only_params:
+            run_kwargs[key] = value
+        elif key in current_optimizer_init_params:
+            init_kwargs[key] = value
+        else:
+            # Default to run kwargs for unknown parameters
+            run_kwargs[key] = value
+    
+    logger.info(f"    Initializing {optimizer_name} optimizer with init_kwargs: {init_kwargs}")
+    logger.info(f"    Running optimization with run_kwargs: {run_kwargs}")
+    
+    # Create optimizer
+    opt = OptClass(atoms, **init_kwargs)
     
     # Set default convergence criteria if not specified
-    if 'fmax' not in default_kwargs:
-        fmax = 0.02  # Default force convergence
-        logger.info(f"    Using default fmax={fmax} eV/Å")
-        opt.run(fmax=fmax)
-    else:
-        opt.run()
+    if 'fmax' not in run_kwargs:
+        run_kwargs['fmax'] = 0.02  # Default force convergence
+        logger.info(f"    Using default fmax={run_kwargs['fmax']} eV/Å")
+    
+    # Run optimization
+    opt.run(**run_kwargs)
 
 
 def _mark_done(step_name: str):
