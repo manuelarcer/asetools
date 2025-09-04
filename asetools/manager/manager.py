@@ -97,19 +97,61 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     for step in steps:
         # Make calculator for each step based on step requirements
         logger.info('  * Setting up calculator from config')
-        calc = _make_step_calculator(cfg, step, run_overrides)
-        atoms.calc = calc
-        atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
-        _run_step(atoms, step, dry_run)
         
-        # Finalize VaspInteractive if used
-        if isinstance(calc, VaspInteractive):
-            calc.finalize()
-            logger.debug("    VaspInteractive calculator finalized")
+        # Check if step needs VaspInteractive with proper context management
+        if step.get('optimizer') is not None:
+            _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, initial_magmom, dry_run)
+        else:
+            # Regular Vasp calculator
+            calc = _make_step_calculator(cfg, step, run_overrides)
+            atoms.calc = calc
+            atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
+            _run_step(atoms, step, dry_run)
     
     backup_output_files(name=name)
     logger.info(f" -- ✅ Stage '{name}' completed and backed up")
     _mark_done(name)
+
+
+def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict, initial_magmom: dict, dry_run: bool):
+    """
+    Run a step that requires VaspInteractive using the documented with-clause pattern.
+    This ensures proper process management and prevents hanging.
+    """
+    # Build VaspInteractive parameters
+    vasp_kwargs = deep_update(
+        deep_update(cfg.basic_config.copy(), cfg.system_config),
+        run_overrides or {}
+    )
+    
+    # Apply step overrides and VaspInteractive parameter fixes
+    overrides = step.get('overrides', {})
+    overrides = _fix_vaspinteractive_params(overrides, using_ase_optimizer=True)
+    
+    # Merge overrides into vasp_kwargs
+    vasp_kwargs.update(overrides)
+    
+    logger.info(f" ** Creating VaspInteractive with parameters for ASE optimizer")
+    logger.info(f"    VaspInteractive parameters: {overrides}")
+    
+    if dry_run:
+        logger.info("    (dry-run, skipping VaspInteractive calculation)")
+        return
+    
+    # Use the documented with-clause pattern
+    with VaspInteractive(**vasp_kwargs) as calc:
+        atoms.calc = calc
+        atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
+        
+        # Run ASE optimizer
+        optimizer_name = step.get('optimizer')
+        optimizer_kwargs = step.get('optimizer_kwargs', {})
+        
+        logger.info(f"    Running ASE optimizer {optimizer_name} with VaspInteractive")
+        _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
+        
+    logger.info(f"    ✔ VaspInteractive step '{step['name']}' completed and finalized")
+
 
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     name      = step['name']
@@ -176,7 +218,10 @@ def _fix_vaspinteractive_params(overrides: dict, using_ase_optimizer: bool = Fal
 
 
 def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs: dict):
-    """Run optimization using ASE optimizers with VaspInteractive calculator."""
+    """
+    Run optimization using ASE optimizers with VaspInteractive calculator.
+    Uses the documented with-clause pattern for proper process management.
+    """
     
     # Map optimizer names to classes
     optimizer_map = {
@@ -223,16 +268,23 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     logger.info(f"    Initializing {optimizer_name} optimizer with init_kwargs: {init_kwargs}")
     logger.info(f"    Running optimization with run_kwargs: {run_kwargs}")
     
-    # Create optimizer
-    opt = OptClass(atoms, **init_kwargs)
-    
     # Set default convergence criteria if not specified
     if 'fmax' not in run_kwargs:
         run_kwargs['fmax'] = 0.02  # Default force convergence
         logger.info(f"    Using default fmax={run_kwargs['fmax']} eV/Å")
     
-    # Run optimization
+    # Use the documented pattern: VaspInteractive should already be initialized
+    # Just create and run the ASE optimizer with the existing calculator
+    if not isinstance(atoms.calc, VaspInteractive):
+        raise RuntimeError("Expected VaspInteractive calculator for ASE optimization")
+    
+    logger.info(f"    Running ASE {optimizer_name} optimization...")
+    
+    # Create and run optimizer with existing VaspInteractive calculator
+    opt = OptClass(atoms, **init_kwargs)
     opt.run(**run_kwargs)
+    
+    logger.info(f"    ASE {optimizer_name} optimization completed")
 
 
 def _mark_done(step_name: str):
