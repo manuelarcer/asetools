@@ -7,29 +7,36 @@ import sys
 import glob
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
-#from ase.calculators.vasp import Vasp
+from ase.calculators.vasp import Vasp
 from vasp_interactive import VaspInteractive 
 from ase import Atoms
+from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
 
 logger = logging.getLogger(__name__)    
 
-def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None) -> VaspInteractive:
+def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
     if run_overrides is None:
         run_overrides = {}
     else:
         logger.info(f" ** Overriding run parameters with: {run_overrides}")
+    
+    # Determine calculator type from configuration
+    calculator_type = cfg.globals.get('calculator_type', 'vasp_interactive')
+    
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides
-        )
-    calc = VaspInteractive(**vasp_kwargs)
+    )
+    
+    if calculator_type.lower() == 'vasp_interactive':
+        calc = VaspInteractive(**vasp_kwargs)
+        logger.info(" ** VaspInteractive calculator created")
+    elif calculator_type.lower() == 'vasp':
+        calc = Vasp(**vasp_kwargs)
+        logger.info(" ** Regular Vasp calculator created")
+    else:
+        raise ValueError(f"Unknown calculator type: {calculator_type}. Use 'vasp_interactive' or 'vasp'")
 
-    # DELETE: I THINK THIS DOES NOTHING NOW. THE MAGMOM IS SKIPPED DURING LOADING CONFIG FILE
-    #if 'magmom' in cfg.system_config:
-    #    logger.warning(f' ** WARNING **  There is a "magmom" key in the system config, '
-    #                   f' make sure you run setup_initial_magmom() from asetools/manager/calculatorsetuptools.py ')
-
-    logger.info(" ** Calculator created")
     return calc
 
 def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
@@ -72,16 +79,62 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     name      = step['name']
     overrides = step.get('overrides', {})
+    optimizer_name = step.get('optimizer', None)
+    optimizer_kwargs = step.get('optimizer_kwargs', {})
+    
     logger.info(f"  • Step '{name}' overrides={overrides}")
     atoms.calc.set(**overrides)
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")
         return
     
-    # trigger VASP run
-    atoms.get_potential_energy()
-    logger.info(f"    ✔ Step '{name}' done")
+    # Check if we should use ASE optimizer (VaspInteractive only)
+    if optimizer_name and isinstance(atoms.calc, VaspInteractive):
+        logger.info(f"    Using ASE optimizer: {optimizer_name}")
+        _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
+    else:
+        # trigger VASP run (regular optimization or single point)
+        atoms.get_potential_energy()
     
+    logger.info(f"    ✔ Step '{name}' done")
+
+
+def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs: dict):
+    """Run optimization using ASE optimizers with VaspInteractive calculator."""
+    
+    # Map optimizer names to classes
+    optimizer_map = {
+        'bfgs': BFGS,
+        'fire': FIRE,
+        'lbfgs': LBFGS,
+        'gpmin': GPMin,
+        'mdmin': MDMin,
+        'quasinewton': QuasiNewton,
+    }
+    
+    optimizer_name_lower = optimizer_name.lower()
+    if optimizer_name_lower not in optimizer_map:
+        raise ValueError(f"Unknown optimizer: {optimizer_name}. Available: {list(optimizer_map.keys())}")
+    
+    OptClass = optimizer_map[optimizer_name_lower]
+    
+    # Default parameters
+    default_kwargs = {'logfile': f'{optimizer_name.upper()}.log'}
+    default_kwargs.update(optimizer_kwargs)
+    
+    logger.info(f"    Initializing {optimizer_name} optimizer with kwargs: {default_kwargs}")
+    
+    # Create and run optimizer
+    opt = OptClass(atoms, **default_kwargs)
+    
+    # Set default convergence criteria if not specified
+    if 'fmax' not in default_kwargs:
+        fmax = 0.02  # Default force convergence
+        logger.info(f"    Using default fmax={fmax} eV/Å")
+        opt.run(fmax=fmax)
+    else:
+        opt.run()
+
 
 def _mark_done(step_name: str):
     path = f"STAGE_{step_name}_DONE"
