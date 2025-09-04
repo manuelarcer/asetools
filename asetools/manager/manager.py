@@ -83,7 +83,15 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     optimizer_kwargs = step.get('optimizer_kwargs', {})
     
     logger.info(f"  • Step '{name}' overrides={overrides}")
+    
+    # For VaspInteractive, we need to ensure proper parameter handling
+    if isinstance(atoms.calc, VaspInteractive):
+        # Handle VaspInteractive-specific parameter conflicts
+        overrides = _fix_vaspinteractive_params(overrides, optimizer_name is not None)
+        logger.info(f"    VaspInteractive adjusted overrides: {overrides}")
+    
     atoms.calc.set(**overrides)
+    
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")
         return
@@ -94,9 +102,42 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
         _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
     else:
         # trigger VASP run (regular optimization or single point)
-        atoms.get_potential_energy()
+        logger.info("    Starting VASP calculation...")
+        try:
+            energy = atoms.get_potential_energy()
+            logger.info(f"    Calculation completed, energy: {energy:.6f} eV")
+        except Exception as e:
+            logger.error(f"    VASP calculation failed: {e}")
+            raise
     
     logger.info(f"    ✔ Step '{name}' done")
+
+
+def _fix_vaspinteractive_params(overrides: dict, using_ase_optimizer: bool = False) -> dict:
+    """
+    Fix parameter conflicts for VaspInteractive calculator based on documentation:
+    
+    1. IBRION doesn't enable VASP's internal optimizer - VaspInteractive handles this
+    2. NSW should be >= max steps for ASE optimizers (default 2000) 
+    3. For single point (NSW=0): disable interactive mode to avoid stdin hang
+    """
+    fixed_overrides = overrides.copy()
+    
+    # Critical fix for single point calculations hanging at stdin
+    if overrides.get('nsw', 0) == 0:
+        # Single point - disable interactive mode to avoid "reading from stdin" hang
+        fixed_overrides['ibrion'] = -1  # No ionic optimization
+        logger.debug("    Single point: set IBRION=-1 to avoid VaspInteractive stdin hang")
+    
+    # For ASE optimizers, ensure proper NSW and IBRION settings
+    if using_ase_optimizer:
+        # Ensure NSW is high enough for ASE optimizer steps (VaspInteractive requirement)
+        if 'nsw' not in fixed_overrides or fixed_overrides.get('nsw', 0) < 100:
+            fixed_overrides['nsw'] = 2000  # VaspInteractive default
+        fixed_overrides['ibrion'] = -1   # VaspInteractive handles optimization externally
+        logger.debug(f"    ASE optimizer: NSW={fixed_overrides['nsw']}, IBRION=-1")
+    
+    return fixed_overrides
 
 
 def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs: dict):
