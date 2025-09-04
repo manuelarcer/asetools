@@ -21,7 +21,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
         logger.info(f" ** Overriding run parameters with: {run_overrides}")
     
     # Determine calculator type from configuration
-    calculator_type = cfg.globals.get('calculator_type', 'vasp_interactive')
+    calculator_type = cfg.globals.get('calculator_type', 'vasp')
     
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
@@ -37,6 +37,36 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
     else:
         raise ValueError(f"Unknown calculator type: {calculator_type}. Use 'vasp_interactive' or 'vasp'")
 
+    return calc
+
+
+def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict = None):
+    """
+    Create calculator for a specific step, choosing between Vasp and VaspInteractive
+    based on step requirements:
+    
+    - VaspInteractive: when step has 'optimizer' field (ASE optimizers)
+    - Regular Vasp: for single point calculations and VASP internal optimization
+    """
+    if run_overrides is None:
+        run_overrides = {}
+    
+    # Check if step requires VaspInteractive
+    needs_interactive = step.get('optimizer') is not None
+    
+    # Build calculator parameters
+    vasp_kwargs = deep_update(
+        deep_update(cfg.basic_config.copy(), cfg.system_config),
+        run_overrides
+    )
+    
+    if needs_interactive:
+        calc = VaspInteractive(**vasp_kwargs)
+        logger.info(" ** VaspInteractive calculator created for ASE optimizer")
+    else:
+        calc = Vasp(**vasp_kwargs)
+        logger.info(" ** Regular Vasp calculator created")
+    
     return calc
 
 def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
@@ -65,12 +95,17 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
     for step in steps:
-        # Make calculator for each step
+        # Make calculator for each step based on step requirements
         logger.info('  * Setting up calculator from config')
-        calc = make_calculator(cfg, run_overrides=run_overrides)
+        calc = _make_step_calculator(cfg, step, run_overrides)
         atoms.calc = calc
         atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
         _run_step(atoms, step, dry_run)
+        
+        # Finalize VaspInteractive if used
+        if isinstance(calc, VaspInteractive):
+            calc.finalize()
+            logger.debug("    VaspInteractive calculator finalized")
     
     backup_output_files(name=name)
     logger.info(f" -- ✅ Stage '{name}' completed and backed up")
