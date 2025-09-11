@@ -210,7 +210,7 @@ def _fix_vaspinteractive_params(overrides: dict, using_ase_optimizer: bool = Fal
     if using_ase_optimizer:
         # Ensure NSW is high enough for ASE optimizer steps (VaspInteractive requirement)
         if 'nsw' not in fixed_overrides or fixed_overrides.get('nsw', 0) < 100:
-            fixed_overrides['nsw'] = 2000  # VaspInteractive default
+            fixed_overrides['nsw'] = 1000  # VaspInteractive default
         fixed_overrides['ibrion'] = -1   # VaspInteractive handles optimization externally
         logger.debug(f"    ASE optimizer: NSW={fixed_overrides['nsw']}, IBRION=-1")
     
