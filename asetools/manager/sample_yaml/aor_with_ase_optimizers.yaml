@@ -139,17 +139,16 @@ globals:
   initial_conf_pattern: "*.vasp"
   
   # === CALCULATOR SELECTION ===
-  # New parameter to choose calculator type
-  # Options: 
-  #   - 'vasp_interactive' (default): Use VaspInteractive for ASE optimizers and constraints
-  #   - 'vasp': Use regular ASE Vasp calculator (VASP handles optimization internally)
-  calculator_type: 'vasp_interactive'
+  # Calculator type is automatically determined by the manager:
+  #   - Steps with 'optimizer' field: Use VaspInteractive for ASE optimizers
+  #   - Steps without 'optimizer': Use regular Vasp calculator (VASP internal optimization)
+  # No manual calculator_type setting needed
 
 # === USAGE NOTES ===
 #
-# 1. CALCULATOR SELECTION:
-#    - Set calculator_type: 'vasp_interactive' to use VaspInteractive with ASE optimizers
-#    - Set calculator_type: 'vasp' to use regular VASP calculator
+# 1. AUTOMATIC CALCULATOR SELECTION:
+#    - Steps with 'optimizer' field automatically use VaspInteractive
+#    - Steps without 'optimizer' automatically use regular VASP calculator
 #
 # 2. ASE OPTIMIZERS (VaspInteractive only):
 #    - Add 'optimizer' field to any step to use ASE optimizer instead of VASP's internal optimizer
