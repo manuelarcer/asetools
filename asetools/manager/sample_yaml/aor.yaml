@@ -1,0 +1,169 @@
+# vasp_config.yaml
+
+##########################
+# 1) BASIC VASP SETTINGS #
+##########################
+basic:
+  algo:         Fast          # ✓
+  ediff:        !!float 1e-6  # ✓
+  ediffg:       -0.02          # ✓
+  encut:        500           # ✓
+  kspacing:     0.6         # ✓
+  ibrion:       2          # ✓
+  icharg:       1         # ✓
+  isif:         0        # ✓
+  ismear:       0        # ✓
+  ispin:        2        # ✓
+  istart:       0        # ✓
+  isym:         0        # ✓
+  kpar:         1        # ✓
+  lasph:        true      # ✓
+  lcharg:       false     # ✓
+#  lplane:       false      # ✓
+  lreal:        Auto     # NOt in original script but it may help with performance
+  lwave:        false     # ✓
+  maxmix:       80       # ✓
+  nelm:         120      # ✓
+  nelmin:       4        # ✓
+  npar:         8        # ✓
+  nsim:         8        # ✓
+  nsw:          500      # ✓
+  nupdown:      -1       # ✓
+  prec:         Normal   # ✓
+##  symprec:      !!float 1e-6
+  sigma:        0.05     # ✓
+  xc:           PBE      # ✓
+
+################################
+# 2) MATERIAL-SPECIFIC OVERRIDES#
+################################
+systems:
+  CuNiOOH:
+    setups:
+      #Cu: _pv
+      Ni: _pv
+    ldau:     false
+    #ldautype: 2
+    #ldau_luj:
+    #  Ni: { L:  2, U: 0.00, J: 0.0 }
+    #  Cu: { L: -1, U: 0.00, J: 0.0 }
+    #  O:  { L: -1, U: 0.00, J: 0.0 }
+    #  H:  { L: -1, U: 0.00, J: 0.0 }
+    #  N:  { L: -1, U: 0.00, J: 0.0 }
+    magmom:
+      Ni: 2.0
+      Cu: 0.0
+    ivdw: 11
+    lmaxmix: 4
+    lorbit: 11
+    amix:         0.4           # ✓
+    amix_mag:     1.6           # ✓
+    bmix:         1.0000        # ✓
+    bmix_mag:     1.0000        # ✓
+    imix:         4         
+
+  GasPhase:
+    ispin: 1  
+
+###########################
+# 3) WORKFLOW DEFINITIONS #
+###########################
+workflows:
+  # Use any of: relax, neb, dos, sp
+  #     After each workflow, you can define stages of the calculation
+  #     Each stage can have its own overrides, e.g. nsw, isif
+  relax:
+    # optimize at ISIF = 4,3,2 with single_point in before each optimization
+    stages:       # is a list of Calculation Stages
+      - name: OPT_ENCUT_340
+        steps:    # list of Calculation Steps, eg, SP + OPT
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 340 }
+          - name: optimization
+            overrides: { encut: 340 }
+
+      - name: OPT_ENCUT_420
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 420 }
+          - name: optimization
+            overrides: { encut: 420 }
+
+      - name: OPT_ENCUT_500
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500 }
+          - name: optimization
+            overrides: { encut: 500 }
+
+  gas:
+    stages:
+      - name: GAS
+        steps:
+          - name: optimization
+            overrides: {ispin: 1}
+
+  freq:
+    stages:
+      - name: FREQ
+        steps:
+          - name: non-spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, prec: Accurate, ediff: !!float 1e-8 }
+          - name: spinpolarized
+            overrides: { nelm: 800,  prec: Accurate, ibrion: 5, nfree: 2, ediff: !!float 1e-8 }
+
+  bader:
+    stages:
+      - name: BADER
+        steps:
+          - name: non-spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500, prec: Accurate }
+          - name: spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 2, lcharg: true, encut: 500, laechg: true, prec: Accurate }
+
+  dos:
+    stages:
+      - name: DOS
+        steps:
+          - name: non-spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500, prec: Accurate }
+          - name: spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 2, lcharg: true, encut: 500, laechg: true, prec: Accurate }
+          - name: non-self-consistent
+            overrides: { nsw: 0, nelm: 800, ispin: 2, lcharg: false, encut: 500, prec: Accurate, icharg: 11, nedos: 1000, emin: -15.0, emax: 10.0 }
+  
+  dos-w-chgcar:
+    stages:
+      - name: DOS_WITH_CHG
+        steps:
+          - name: non-self-consistent
+            overrides: { nsw: 0, nelm: 800, ispin: 2, lcharg: false, encut: 500, prec: Accurate, icharg: 11, nedos: 1000, emin: -15.0, emax: 10.0 }
+
+  sp_lreal_false:
+    stages:
+      - name: SP_LREAL_FALSE
+        steps:
+          - name: non-spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500, lreal: false }
+          - name: spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 2, lcharg: true, encut: 500, lreal: false }
+
+  dimer:
+    stages:
+      - name: DIMER
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500 }
+          - name: dimer
+            overrides: { encut: 500, ediff: !!float 1e-7, 
+                         ichain: 2, ibrion: 3, potim: 0, iopt: 2, 
+                       }
+
+  # TODO: Template for NEB, DOS, etc.
+
+############################
+# 4) OTHER PROJECT GLOBALS #
+############################
+globals:
+  VASP_PP_PATH: "/home/users/astar/ihpc/juar/PP_VASP/AOR"
+  initial_conf_pattern: "*.vasp"

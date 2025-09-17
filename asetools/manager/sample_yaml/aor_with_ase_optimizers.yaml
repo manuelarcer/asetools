@@ -1,0 +1,172 @@
+# vasp_config.yaml - Example with ASE optimizers and calculator selection
+
+##########################
+# 1) BASIC VASP SETTINGS #
+##########################
+basic:
+  algo:         Fast          
+  ediff:        !!float 1e-6  
+  ediffg:       -0.02          
+  encut:        500           
+  kspacing:     0.6         
+  ibrion:       2          
+  icharg:       1         
+  isif:         0        
+  ismear:       0        
+  ispin:        2        
+  istart:       0        
+  isym:         0        
+  kpar:         1        
+  lasph:        true      
+  lcharg:       false     
+  lreal:        Auto     
+  lwave:        false     
+  maxmix:       80       
+  nelm:         120      
+  nelmin:       4        
+  npar:         8        
+  nsim:         8        
+  nsw:          500      
+  nupdown:      -1       
+  prec:         Normal   
+  sigma:        0.05     
+  xc:           PBE      
+
+################################
+# 2) MATERIAL-SPECIFIC OVERRIDES#
+################################
+systems:
+  CuNiOOH:
+    setups:
+      Ni: _pv
+    ldau:     false
+    magmom:
+      Ni: 2.0
+      Cu: 0.0
+    ivdw: 11
+    lmaxmix: 4
+    lorbit: 11
+    amix:         0.4           
+    amix_mag:     1.6           
+    bmix:         1.0000        
+    bmix_mag:     1.0000        
+    imix:         4         
+
+  GasPhase:
+    ispin: 1  
+
+###########################
+# 3) WORKFLOW DEFINITIONS #
+###########################
+workflows:
+  # Example using regular VASP calculator (VASP handles optimization internally)
+  relax_vasp:
+    stages:       
+      - name: OPT_VASP_INTERNAL
+        steps:    
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500 }
+          - name: optimization
+            overrides: { nsw: 100, ibrion: 2, isif: 2 }
+
+  # Example using VaspInteractive with ASE optimizers
+  relax_ase_optimizers:
+    stages:       
+      - name: OPT_ASE_BFGS
+        steps:    
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, encut: 500 }
+          - name: optimization_bfgs
+            overrides: { nsw: 0 }  # nsw=0 for ASE optimizer control
+            optimizer: BFGS
+            optimizer_kwargs: 
+              fmax: 0.02
+              maxstep: 0.2
+              
+      - name: OPT_ASE_FIRE
+        steps:    
+          - name: optimization_fire
+            overrides: { nsw: 0 }  # nsw=0 for ASE optimizer control
+            optimizer: FIRE
+            optimizer_kwargs: 
+              fmax: 0.01
+              dt: 0.1
+              maxmove: 0.2
+
+  # Example with different optimizers for different stages
+  relax_mixed_optimizers:
+    stages:
+      - name: COARSE_OPT_FIRE
+        steps:
+          - name: coarse_optimization
+            overrides: { nsw: 0, encut: 400 }
+            optimizer: FIRE
+            optimizer_kwargs: 
+              fmax: 0.05
+              dt: 0.1
+              
+      - name: FINE_OPT_BFGS
+        steps:
+          - name: fine_optimization
+            overrides: { nsw: 0, encut: 500, ediff: !!float 1e-7 }
+            optimizer: BFGS
+            optimizer_kwargs: 
+              fmax: 0.01
+              maxstep: 0.1
+
+  # Regular workflows without ASE optimizers still work
+  gas:
+    stages:
+      - name: GAS
+        steps:
+          - name: optimization
+            overrides: {ispin: 1}
+
+  freq:
+    stages:
+      - name: FREQ
+        steps:
+          - name: non-spinpolarized
+            overrides: { nsw: 0, nelm: 800, ispin: 1, lcharg: true, prec: Accurate, ediff: !!float 1e-8 }
+          - name: spinpolarized
+            overrides: { nelm: 800,  prec: Accurate, ibrion: 5, nfree: 2, ediff: !!float 1e-8 }
+
+############################
+# 4) OTHER PROJECT GLOBALS #
+############################
+globals:
+  VASP_PP_PATH: "/home/users/astar/ihpc/juar/PP_VASP/AOR"
+  initial_conf_pattern: "*.vasp"
+  
+  # === CALCULATOR SELECTION ===
+  # Calculator type is automatically determined by the manager:
+  #   - Steps with 'optimizer' field: Use VaspInteractive for ASE optimizers
+  #   - Steps without 'optimizer': Use regular Vasp calculator (VASP internal optimization)
+  # No manual calculator_type setting needed
+
+# === USAGE NOTES ===
+#
+# 1. AUTOMATIC CALCULATOR SELECTION:
+#    - Steps with 'optimizer' field automatically use VaspInteractive
+#    - Steps without 'optimizer' automatically use regular VASP calculator
+#
+# 2. ASE OPTIMIZERS (VaspInteractive only):
+#    - Add 'optimizer' field to any step to use ASE optimizer instead of VASP's internal optimizer
+#    - Set nsw: 0 in overrides when using ASE optimizers
+#    - Available optimizers: BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
+#    - Use 'optimizer_kwargs' to pass parameters to the optimizer
+#
+# 3. OPTIMIZER PARAMETERS:
+#    - fmax: Force convergence criterion (eV/Å)
+#    - maxstep: Maximum step size for BFGS (Å)
+#    - dt: Time step for FIRE (fs)
+#    - maxmove: Maximum atomic displacement per step (Å)
+#    - logfile: Optimizer log file name (defaults to OPTIMIZER_NAME.log)
+#
+# 4. MIXED WORKFLOWS:
+#    - You can mix ASE optimizers and VASP internal optimization in the same workflow
+#    - Steps without 'optimizer' field will use VASP's internal optimization or single-point
+#
+# 5. BACKWARDS COMPATIBILITY:
+#    - Existing YAML files will continue to work (defaults to vasp_interactive)
+#    - Steps without optimizer field behave exactly as before
