@@ -1,0 +1,296 @@
+# Production-ready YAML configuration for dimer method with VaspInteractive
+# Based on the test implementation and configuration example
+
+##########################
+# 1) BASIC VASP SETTINGS #
+##########################
+basic:
+  algo:         Fast
+  ediff:        !!float 1e-7    # Tight electronic convergence for saddle points
+  ediffg:       -0.01           # Tight ionic convergence
+  encut:        500             # High cutoff for accuracy
+  kspacing:     0.6             # Adjust based on system size
+  ibrion:       -1              # VaspInteractive handles optimization
+  icharg:       1
+  isif:         0               # Fix cell for surface calculations
+  ismear:       0
+  ispin:        2               # Spin-polarized (adjust as needed)
+  istart:       0
+  isym:         0
+  kpar:         1
+  lasph:        true
+  lcharg:       false
+  lreal:        Auto
+  lwave:        false
+  maxmix:       80
+  nelm:         200             # More electronic steps for difficult cases
+  nelmin:       4
+  npar:         8               # Adjust for your system
+  nsim:         8
+  nsw:          2000            # High NSW for VaspInteractive
+  nupdown:      -1
+  prec:         Accurate        # High precision for saddle points
+  sigma:        0.05
+  xc:           PBE
+
+################################
+# 2) MATERIAL-SPECIFIC OVERRIDES#
+################################
+systems:
+  # Surface with adsorbates (e.g., metal surface + CO)
+  Surface_CO:
+    setups:
+      # Add any special pseudopotential setups here
+      # Ni: _pv
+    ldau:     false             # Set to true if using DFT+U
+    magmom:
+      # Initial magnetic moments for atoms
+      # Ni: 2.0
+      # Co: 1.0
+      # Fe: 4.0
+    ivdw: 11                    # vdW corrections if needed
+    lmaxmix: 4
+    lorbit: 11
+    amix:         0.2           # Conservative mixing for stability
+    amix_mag:     0.8
+    bmix:         1.0000
+    bmix_mag:     1.0000
+    imix:         4
+
+  # Bulk materials
+  Bulk:
+    kspacing:     0.4           # Denser k-points for bulk
+    isif:         3             # Allow cell relaxation if needed
+
+  # Gas phase molecules
+  GasPhase:
+    ispin:        1             # Usually non-magnetic
+    kspacing:     1.0           # Gamma point only
+    ismear:       0
+    sigma:        0.01
+
+###########################
+# 3) WORKFLOW DEFINITIONS #
+###########################
+workflows:
+  # Complete dimer workflow: optimize → dimer search → verify
+  dimer_complete:
+    stages:
+      - name: INITIAL_OPT
+        steps:
+          - name: coarse_optimization
+            overrides: {
+              encut: 400,
+              ediff: !!float 1e-5,
+              nsw: 200,
+              prec: Normal
+            }
+            optimizer: FIRE
+            optimizer_kwargs:
+              fmax: 0.05
+              dt: 0.1
+              maxmove: 0.2
+
+      - name: DIMER_SEARCH
+        steps:
+          - name: single_point_check
+            overrides: { nsw: 0, nelm: 200, lcharg: true }
+
+          - name: dimer_optimization
+            overrides: {
+              encut: 500,
+              ediff: !!float 1e-7,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Accurate
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.001                         # Tight convergence for saddle point
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              # MODECAR file will be used if present in working directory
+              # displacement_vector: null         # Manual specification if needed
+              mask: null                          # null = all atoms participate (constraints control movement)
+              logfile: 'dimer_optimization.log'
+              trajectory: 'dimer_optimization.traj'
+
+      - name: FREQUENCY_CHECK
+        steps:
+          - name: frequency_calculation
+            overrides: {
+              nsw: 0,
+              ibrion: 5,                          # Frequency calculation
+              nfree: 2,                           # Central differences
+              prec: Accurate,
+              ediff: !!float 1e-8
+            }
+
+  # Simple dimer-only search (for structures already close to saddle point)
+  dimer_simple:
+    stages:
+      - name: DIMER_ONLY
+        steps:
+          - name: dimer_optimization
+            overrides: {
+              encut: 500,
+              ediff: !!float 1e-7,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Accurate
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.001
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              logfile: 'dimer_simple.log'
+              trajectory: 'dimer_simple.traj'
+
+  # Multi-stage dimer refinement (coarse → fine)
+  dimer_multistage:
+    stages:
+      - name: COARSE_DIMER
+        steps:
+          - name: coarse_dimer
+            overrides: {
+              encut: 400,
+              ediff: !!float 1e-6,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Normal
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.01                          # Loose convergence first
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              logfile: 'dimer_coarse.log'
+
+      - name: FINE_DIMER
+        steps:
+          - name: fine_dimer
+            overrides: {
+              encut: 500,
+              ediff: !!float 1e-7,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Accurate
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.001                         # Tight final convergence
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              logfile: 'dimer_fine.log'
+              trajectory: 'dimer_fine.traj'
+
+  # Constrained dimer search (e.g., fix substrate atoms)
+  dimer_constrained:
+    stages:
+      - name: DIMER_CONSTRAINED
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 200, lcharg: true }
+
+          - name: dimer_with_constraints
+            overrides: {
+              encut: 500,
+              ediff: !!float 1e-7,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Accurate
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.001
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              # Use mask to control which atoms participate in dimer search
+              # Note: FixAtoms constraints should be applied to atoms object before workflow
+              # mask: [false, false, false, false, true, true, true, true]  # Example: only last 4 atoms
+              mask: null                          # Use constraints only
+              logfile: 'dimer_constrained.log'
+              trajectory: 'dimer_constrained.traj'
+
+  # Dimer refinement from NEB saddle point estimate
+  dimer_from_neb:
+    stages:
+      - name: DIMER_REFINE_NEB
+        steps:
+          - name: dimer_from_neb_saddle
+            overrides: {
+              encut: 500,
+              ediff: !!float 1e-7,
+              nsw: 2000,
+              ibrion: -1,
+              prec: Accurate
+            }
+            optimizer: DIMER
+            optimizer_kwargs:
+              fmax: 0.0005                        # Very tight for NEB refinement
+              initial_eigenmode_method: 'displacement'
+              displacement_method: 'vector'
+              # MODECAR should be generated from NEB using neb2dim.pl or custom script
+              logfile: 'dimer_neb_refine.log'
+              trajectory: 'dimer_neb_refine.traj'
+
+############################
+# 4) OTHER PROJECT GLOBALS #
+############################
+globals:
+  VASP_PP_PATH: "/path/to/your/vasp/pseudopotentials"  # UPDATE THIS PATH
+  initial_conf_pattern: "POSCAR"
+
+# === USAGE INSTRUCTIONS ===
+#
+# 1. BEFORE RUNNING:
+#    - Update VASP_PP_PATH to your pseudopotential directory
+#    - Ensure VaspInteractive is properly installed and configured
+#    - Apply any ASE constraints (FixAtoms, etc.) to your atoms object before running
+#
+# 2. STRUCTURE SETUP:
+#    - Place your initial structure in POSCAR file
+#    - Optionally create MODECAR file with initial displacement vector
+#    - If no MODECAR, random displacement will be used
+#
+# 3. CONSTRAINT HANDLING:
+#    # Example: Fix bottom 2 layers of slab
+#    from ase.constraints import FixAtoms
+#    positions = atoms.get_positions()
+#    z_coords = positions[:, 2]
+#    z_threshold = z_coords.min() + 2.0  # Fix bottom 2 Å
+#    mask = z_coords < z_threshold
+#    constraint = FixAtoms(mask=mask)
+#    atoms.set_constraint(constraint)
+#
+# 4. RUNNING WORKFLOWS:
+#    from asetools.manager.calculatorsetuptools import VASPConfigurationFromYAML
+#    from asetools.manager.manager import run_workflow
+#
+#    cfg = VASPConfigurationFromYAML('dimer_production_config.yaml', 'Surface_CO')
+#    run_workflow(atoms, cfg, 'dimer_complete')
+#
+# 5. MONITORING CONVERGENCE:
+#    - Check log files: dimer_optimization.log
+#    - Monitor trajectory: dimer_optimization.traj
+#    - Look for negative eigenvalue (indicates saddle point)
+#    - Final eigenvector saved to MODECAR_final
+#
+# 6. MODECAR FILE HANDLING:
+#    - If MODECAR exists in working directory, it will be used automatically
+#    - Generate MODECAR from NEB: use neb2dim.pl or asetools utilities
+#    - Manual MODECAR: use asetools.dimer.write_modecar()
+#
+# 7. WORKFLOW SELECTION GUIDE:
+#    - dimer_complete: Full workflow with optimization and verification
+#    - dimer_simple: Direct dimer search (if already near saddle point)
+#    - dimer_multistage: Coarse → fine refinement for difficult cases
+#    - dimer_constrained: With geometric constraints on atoms
+#    - dimer_from_neb: Refine NEB saddle point estimate
+#
+# 8. TROUBLESHOOTING:
+#    - If convergence is slow: try dimer_multistage workflow
+#    - If eigenvector is wrong: check MODECAR or try different displacement
+#    - If constraints not working: verify FixAtoms setup before workflow
+#    - If VASP crashes: check memory, reduce NPAR, or use more conservative mixing
