@@ -41,13 +41,13 @@ def example_direct_dimer():
     from vasp_interactive import VaspInteractive
 
     calc_kwargs = {
-        'encut': 500,
-        'kspacing': 0.6,
-        'ediff': 1e-7,
+        'encut': 300,
+        'kspacing': 1.0,
+        'ediff': 1e-6,
         'nsw': 2000,
         'ibrion': -1,  # Let ASE handle optimization
         'isif': 0,
-        'prec': 'Accurate',
+        'prec': 'Normal',
         'xc': 'PBE',
     }
 
@@ -78,16 +78,16 @@ def example_workflow_dimer():
     # Create a YAML configuration file
     yaml_content = """
 basic:
-  encut: 500
-  ediff: !!float 1e-7
+  encut: 300
+  ediff: !!float 1e-6
   nsw: 2000
   ibrion: -1
-  prec: Accurate
+  prec: Normal
   xc: PBE
 
 systems:
   default:
-    kspacing: 0.6
+    kspacing: 1.0
     isif: 0
 
 workflows:
@@ -259,7 +259,7 @@ def main():
         # Create a simple example structure
         from ase.build import fcc111, add_adsorbate
 
-        slab = fcc111('Al', size=(3, 3, 4), vacuum=10.0)
+        slab = fcc111('Al', size=(2, 2, 2), vacuum=7.0)
         add_adsorbate(slab, 'O', height=2.0, position='hcp')
 
         write('POSCAR', slab, format='vasp')
