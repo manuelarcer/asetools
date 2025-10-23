@@ -17,8 +17,9 @@ def is_summary_up_to_date(magmom_requested=False):
         log_content = f.read()
         log_has_magmom = 'MagMom' in log_content
 
-    # If magmom is requested but log doesn't have it, or vice versa, regenerate
-    if magmom_requested != log_has_magmom:
+    # Only regenerate if magmom is requested but log doesn't have it
+    # If log has magmom but not requested, still use existing log (saves time)
+    if magmom_requested and not log_has_magmom:
         return False
 
     summary_mtime = os.path.getmtime('summary.log')
