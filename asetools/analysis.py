@@ -18,6 +18,8 @@ def check_outcar_convergence(outcar, verbose=False):
     opt = False
     convergence = False
     vasp = ''
+    has_general_timing = False
+
     for line in lines:
         if 'vasp.6' in line:
             vasp = 'vasp6'
@@ -30,7 +32,7 @@ def check_outcar_convergence(outcar, verbose=False):
             elif verbose:
                 print(f'Not an OPTIMIZATION job')
                 opt = False
-            else:    
+            else:
                 opt = False
         elif 'NSW' in line:
             nsw = int( line.split()[2] )
@@ -38,17 +40,28 @@ def check_outcar_convergence(outcar, verbose=False):
                 opt = True
         elif 'reached required accuracy' in line and opt:
             convergence = True
-        elif not opt and 'General timing and accounting informations for this job:' in line:
-            convergence = True
+        elif 'General timing and accounting informations for this job:' in line:
+            has_general_timing = True
+            if not opt:
+                convergence = True
+
+    # Special handling for ASE optimizers: IBRION=-1 with NSW>0
+    # ASE controls optimization externally, VASP just runs single-point calculations
+    # Check if VASP completed normally (has General timing section)
+    if ibrion == -1 and nsw > 0 and has_general_timing:
+        convergence = True
+        if verbose:
+            print('ASE optimizer job (IBRION=-1, NSW>0) --> Assuming converged (VASP completed normally)')
+
     if verbose:
-        print(f'IBRION --> {ibrion}, NSW --> {nsw}')    
-    
+        print(f'IBRION --> {ibrion}, NSW --> {nsw}')
+
     if ibrion == 1 or ibrion == 2 or ibrion == 3:
         if nsw > 0 and convergence and verbose:
             print('Optimization Job --> CONVERGED')
         elif nsw > 0 and not convergence and verbose:
             print('Optimization Job --> *NOT* converged')
-            
+
     return convergence, vasp
 
 def check_energy_and_maxforce(outcar, magmom=False, verbose=False):

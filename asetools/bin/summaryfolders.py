@@ -7,14 +7,24 @@ import numpy as np
 import glob, os
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence, get_parameter_from_run
 
-def is_summary_up_to_date():
-    """Check if summary.log exists and is newer than all folders"""
+def is_summary_up_to_date(magmom_requested=False):
+    """Check if summary.log exists and is newer than all folders, and if magmom flag status matches"""
     if not os.path.exists('summary.log'):
         return False
-    
+
+    # Check if magnetic moments flag status has changed
+    with open('summary.log', 'r') as f:
+        log_content = f.read()
+        log_has_magmom = 'MagMom' in log_content
+
+    # Only regenerate if magmom is requested but log doesn't have it
+    # If log has magmom but not requested, still use existing log (saves time)
+    if magmom_requested and not log_has_magmom:
+        return False
+
     summary_mtime = os.path.getmtime('summary.log')
     folders = glob.glob('*/')
-    
+
     for folder in folders:
         # Check if any OUTCAR in folders is newer than summary.log
         outcar_path = os.path.join(folder, 'OUTCAR')
@@ -26,7 +36,7 @@ def is_summary_up_to_date():
         if os.path.exists(loginfo_path):
             if os.path.getmtime(loginfo_path) > summary_mtime:
                 return False
-    
+
     return True
 
 def main():
@@ -40,7 +50,7 @@ def main():
     ##
 
     # Check if summary.log is up to date
-    if is_summary_up_to_date():
+    if is_summary_up_to_date(magmom_requested=args.magmom):
         print("Summary is up to date. Reading from summary.log:")
         print()
         with open('summary.log', 'r') as f:

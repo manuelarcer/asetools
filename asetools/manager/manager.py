@@ -5,12 +5,15 @@ import os
 import shutil
 import sys
 import glob
+import numpy as np
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
 from ase.calculators.vasp import Vasp
-from vasp_interactive import VaspInteractive 
+from vasp_interactive import VaspInteractive
 from ase import Atoms
 from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
+from ase.mep import MinModeTranslate
+from ..analysis import check_outcar_convergence
 
 logger = logging.getLogger(__name__)    
 
@@ -94,6 +97,14 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
+
+    # Apply constraints if specified in stage configuration
+    if 'constraints' in stage:
+        from ..constraints import ConstraintManager
+        logger.info(f"  * Applying constraints from stage configuration")
+        cm = ConstraintManager()
+        cm.apply_stage_constraints(atoms, stage['constraints'])
+
     for step in steps:
         # Make calculator for each step based on step requirements
         logger.info('  * Setting up calculator from config')
@@ -107,9 +118,17 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             atoms.calc = calc
             atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
             _run_step(atoms, step, dry_run)
-    
+
+    # Check convergence before marking as done
+    if not dry_run:
+        convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
+        if not convergence:
+            logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
+            logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
+            raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
+
     backup_output_files(name=name)
-    logger.info(f" -- ✅ Stage '{name}' completed and backed up")
+    logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
     _mark_done(name)
 
 
@@ -231,12 +250,17 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
         'gpmin': GPMin,
         'mdmin': MDMin,
         'quasinewton': QuasiNewton,
+        'dimer': MinModeTranslate,
     }
     
     optimizer_name_lower = optimizer_name.lower()
     if optimizer_name_lower not in optimizer_map:
         raise ValueError(f"Unknown optimizer: {optimizer_name}. Available: {list(optimizer_map.keys())}")
-    
+
+    # Special handling for dimer optimizer
+    if optimizer_name_lower == 'dimer':
+        return _run_with_dimer_optimizer(atoms, optimizer_kwargs)
+
     OptClass = optimizer_map[optimizer_name_lower]
     
     # Separate initialization kwargs from run kwargs
@@ -285,6 +309,77 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     opt.run(**run_kwargs)
     
     logger.info(f"    ASE {optimizer_name} optimization completed")
+
+
+def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
+    """
+    Run dimer optimization using ASE dimer method with VaspInteractive calculator.
+    Handles MODECAR file detection and MinModeAtoms setup.
+    """
+    from ..dimer import setup_dimer_atoms, validate_dimer_kwargs
+
+    # Validate and separate dimer-specific kwargs
+    dimer_control_kwargs, optimizer_init_kwargs, optimizer_run_kwargs = validate_dimer_kwargs(optimizer_kwargs)
+
+    logger.info(f"    Setting up dimer calculation")
+    logger.info(f"    Dimer control kwargs: {dimer_control_kwargs}")
+    logger.info(f"    Optimizer init kwargs: {optimizer_init_kwargs}")
+    logger.info(f"    Optimizer run kwargs: {optimizer_run_kwargs}")
+
+    # Check for VaspInteractive calculator
+    if not isinstance(atoms.calc, VaspInteractive):
+        raise RuntimeError("Expected VaspInteractive calculator for dimer optimization")
+
+    # Handle displacement vector
+    displacement_vector = None
+    if 'displacement_vector' in optimizer_kwargs:
+        displacement_vector = np.array(optimizer_kwargs['displacement_vector'])
+        if displacement_vector.shape != (len(atoms), 3):
+            raise ValueError(f"Displacement vector shape {displacement_vector.shape} doesn't match atoms shape ({len(atoms)}, 3)")
+
+    # Set up MinModeAtoms with dimer control
+    d_atoms = setup_dimer_atoms(atoms, displacement_vector, dimer_control_kwargs)
+
+    # Set default convergence criteria if not specified
+    if 'fmax' not in optimizer_run_kwargs:
+        optimizer_run_kwargs['fmax'] = 0.01  # Stricter default for dimer
+        logger.info(f"    Using default dimer fmax={optimizer_run_kwargs['fmax']} eV/Å")
+
+    # Set default logfile if not specified
+    if 'logfile' not in optimizer_init_kwargs:
+        optimizer_init_kwargs['logfile'] = 'DIMER.log'
+
+    logger.info(f"    Running dimer optimization...")
+
+    # Create and run dimer optimizer
+    from ase.mep import MinModeTranslate
+    dimer_opt = MinModeTranslate(d_atoms, **optimizer_init_kwargs)
+    dimer_opt.run(**optimizer_run_kwargs)
+
+    logger.info(f"    Dimer optimization completed")
+
+    # Save final MODECAR file with converged eigenvector
+    try:
+        from ..dimer import write_modecar
+        if hasattr(d_atoms, 'eigenvector') and d_atoms.eigenvector is not None:
+            write_modecar(d_atoms.eigenvector, atoms, 'MODECAR_final')
+            logger.info("    Saved final eigenvector to MODECAR_final")
+    except Exception as e:
+        logger.warning(f"    Could not save final MODECAR: {e}")
+
+    # Log convergence information
+    try:
+        from ..dimer import check_dimer_convergence, extract_saddle_point_info
+        conv_info = check_dimer_convergence(d_atoms)
+        if conv_info.get('converged', False):
+            saddle_info = extract_saddle_point_info(d_atoms)
+            logger.info(f"    ✓ Converged to saddle point: E={saddle_info.get('energy', 'N/A'):.6f} eV")
+            logger.info(f"    Final eigenvalue: {saddle_info.get('eigenvalue', 'N/A')}")
+        else:
+            logger.warning(f"    Dimer may not have converged properly")
+            logger.warning(f"    Final max force: {conv_info.get('max_force', 'N/A'):.4f} eV/Å")
+    except Exception as e:
+        logger.warning(f"    Could not check convergence: {e}")
 
 
 def _mark_done(step_name: str):
