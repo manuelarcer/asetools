@@ -1,0 +1,266 @@
+# vasp_config.yaml - Example with Hookean constraints for proton transfer reactions
+#
+# This configuration demonstrates how to use Hookean spring constraints to
+# maintain O-H bond distances during optimization, useful for:
+# - Proton-coupled electron transfer (PCET) reactions
+# - Maintaining hydrogen bonding networks
+# - Constraining reactive intermediates
+
+##########################
+# 1) BASIC VASP SETTINGS #
+##########################
+basic:
+  algo:         Fast
+  ediff:        !!float 1e-6
+  ediffg:       -0.02
+  encut:        500
+  kspacing:     0.6
+  ibrion:       2
+  icharg:       1
+  isif:         0
+  ismear:       0
+  ispin:        2
+  istart:       0
+  isym:         0
+  kpar:         1
+  lasph:        true
+  lcharg:       false
+  lreal:        Auto
+  lwave:        false
+  maxmix:       80
+  nelm:         120
+  nelmin:       4
+  npar:         8
+  nsim:         8
+  nsw:          500
+  nupdown:      -1
+  prec:         Normal
+  sigma:        0.05
+  xc:           PBE
+
+################################
+# 2) MATERIAL-SPECIFIC OVERRIDES#
+################################
+systems:
+  CuNiOOH:
+    setups:
+      Ni: _pv
+    ldau:     false
+    magmom:
+      Ni: 2.0
+      Cu: 0.0
+      O: 0.0
+      H: 0.0
+    ivdw: 11           # DFT-D3 dispersion correction
+    lmaxmix: 4
+    lorbit: 11
+    amix:         0.4
+    amix_mag:     1.6
+    bmix:         1.0000
+    bmix_mag:     1.0000
+    imix:         4
+
+###########################
+# 3) WORKFLOW DEFINITIONS #
+###########################
+workflows:
+  # Regular optimization without constraints (for comparison)
+  relax_unconstrained:
+    stages:
+      - name: OPT_NO_CONSTRAINTS
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, lcharg: true, encut: 500 }
+          - name: optimization
+            overrides: { nsw: 100, ibrion: 2, isif: 2 }
+            optimizer: FIRE
+            optimizer_kwargs:
+              fmax: 0.02
+
+  # Optimization with Hookean constraints from JSON file
+  relax_with_hookean_constraints:
+    stages:
+      - name: OPT_WITH_HOOKEAN
+        # Constraints configuration
+        constraints:
+          type: hookean                         # Constraint type (currently only 'hookean' supported)
+          config_file: proton_mappings.json     # JSON file with atom pairs
+          spring_constant: 20.0                 # Spring constant in eV/Å²
+          distance_factor: 1.134                # Factor for calculating r0 from covalent radii
+        steps:
+          - name: single_point
+            overrides: { nsw: 0, nelm: 800, lcharg: true }
+          - name: constrained_optimization
+            overrides: { nsw: 0 }                # ASE optimizer controls ionic steps
+            optimizer: FIRE                      # Use FIRE optimizer
+            optimizer_kwargs:
+              fmax: 0.02                         # Force convergence criterion
+              dt: 0.1
+              maxmove: 0.2
+
+  # Multi-stage optimization with different constraint strengths
+  relax_staged_constraints:
+    stages:
+      # Stage 1: Loose constraints for initial relaxation
+      - name: OPT_LOOSE_CONSTRAINTS
+        constraints:
+          type: hookean
+          config_file: proton_mappings.json
+          spring_constant: 10.0                  # Weaker spring constant
+          distance_factor: 1.15                  # Slightly larger equilibrium distance
+        steps:
+          - name: coarse_optimization
+            overrides: { nsw: 0 }
+            optimizer: FIRE
+            optimizer_kwargs:
+              fmax: 0.05                         # Loose convergence
+              dt: 0.15
+              maxmove: 0.3
+
+      # Stage 2: Tight constraints for final optimization
+      - name: OPT_TIGHT_CONSTRAINTS
+        constraints:
+          type: hookean
+          config_file: proton_mappings.json
+          spring_constant: 30.0                  # Stronger spring constant
+          distance_factor: 1.134
+        steps:
+          - name: fine_optimization
+            overrides: { nsw: 0, encut: 600 }    # Higher ENCUT for final stage
+            optimizer: BFGS
+            optimizer_kwargs:
+              fmax: 0.01                         # Tight convergence
+              maxstep: 0.1
+
+  # Workflow for testing different spring constants
+  relax_scan_spring_constants:
+    stages:
+      - name: OPT_K10
+        constraints: { type: hookean, config_file: proton_mappings.json, spring_constant: 10.0 }
+        steps:
+          - name: opt_k10
+            overrides: { nsw: 0 }
+            optimizer: FIRE
+            optimizer_kwargs: { fmax: 0.02 }
+
+      - name: OPT_K20
+        constraints: { type: hookean, config_file: proton_mappings.json, spring_constant: 20.0 }
+        steps:
+          - name: opt_k20
+            overrides: { nsw: 0 }
+            optimizer: FIRE
+            optimizer_kwargs: { fmax: 0.02 }
+
+      - name: OPT_K30
+        constraints: { type: hookean, config_file: proton_mappings.json, spring_constant: 30.0 }
+        steps:
+          - name: opt_k30
+            overrides: { nsw: 0 }
+            optimizer: FIRE
+            optimizer_kwargs: { fmax: 0.02 }
+
+###########################
+# 4) GLOBAL SETTINGS      #
+###########################
+globals:
+  calculator_type: vasp_interactive  # Use VaspInteractive for ASE optimizers
+  initial_conf_pattern: 'POSCAR'     # Pattern to load initial structure
+
+# === USAGE NOTES ===
+#
+# 1. JSON CONSTRAINT FILE FORMAT:
+#    Create a JSON file (e.g., proton_mappings.json) with the following format:
+#    {
+#      "pairs": [
+#        [114, 179],    # Atom indices for first constraint
+#        [116, 180],    # Atom indices for second constraint
+#        [112, 175]     # etc.
+#      ]
+#    }
+#
+#    Optional metadata can be included:
+#    {
+#      "pairs": [[114, 179], ...],
+#      "metadata": {
+#        "description": "O-H proton mappings for NiOOH surface",
+#        "spring_constant": 20.0,
+#        "distance_factor": 1.134
+#      }
+#    }
+#
+# 2. CONSTRAINT PARAMETERS:
+#    - spring_constant (k): Controls strength of constraint (eV/Å²)
+#      * Typical range: 10-50 eV/Å²
+#      * Higher k = stiffer constraint (less deviation from r0)
+#      * Lower k = softer constraint (more flexibility)
+#
+#    - distance_factor: Multiplier for covalent radii sum to get r0
+#      * Default 1.134 is calibrated for O-H bonds
+#      * For other bonds, may need adjustment
+#      * r0 = (r_cov1 + r_cov2) × distance_factor
+#
+# 3. WHEN TO USE CONSTRAINTS:
+#    - Maintaining hydrogen bonding networks during optimization
+#    - Preventing unwanted proton transfers
+#    - Studying proton-coupled electron transfer (PCET)
+#    - Constraining reactive intermediates
+#    - Scanning reaction coordinates with fixed geometries
+#
+# 4. CONSTRAINT APPLICATION:
+#    - Constraints are applied at the STAGE level
+#    - All steps within a stage share the same constraints
+#    - Different stages can have different constraints
+#    - Constraints are preserved alongside FixAtoms (fixed layers)
+#
+# 5. COMPATIBILITY:
+#    - Works with both regular VASP and VaspInteractive calculators
+#    - For ASE optimizers (FIRE, BFGS, etc.), use VaspInteractive
+#    - Automatically merges with existing FixAtoms constraints
+#
+# 6. MIGRATION FROM MANUAL SCRIPTS:
+#    Old approach (in Python script):
+#      from ase.constraints import Hookean
+#      with open('proton_mappings.json') as f:
+#          mapping = json.load(f)
+#      # ... 60 lines of boilerplate code ...
+#
+#    New approach (in YAML):
+#      constraints:
+#        type: hookean
+#        config_file: proton_mappings.json
+#        spring_constant: 20.0
+#
+# 7. DEBUGGING:
+#    - Check log files for constraint application messages
+#    - Visualize constrained atoms before running calculation
+#    - Use lower spring constants for initial testing
+#    - Verify atom indices in JSON file match your structure
+#
+# 8. EXAMPLE PYTHON SCRIPT:
+#    from asetools.manager.manager import load_structure, run_workflow
+#    from asetools.manager.calculatorsetuptools import VASPConfigurationFromYAML
+#    from asetools.manager.logger import configure_logging
+#
+#    configure_logging(file_prefix="run")
+#    cfg = VASPConfigurationFromYAML(config_file='this_file.yaml', system='CuNiOOH')
+#    atoms = load_structure(cfg.globals["initial_conf_pattern"])
+#
+#    # Constraints are automatically applied from YAML configuration
+#    run_workflow(atoms, cfg=cfg, workflow_name='relax_with_hookean_constraints')
+#
+# === ADVANCED USAGE ===
+#
+# For custom constraint logic not covered by JSON configuration,
+# you can still use the ConstraintManager directly in your Python script:
+#
+#    from asetools.constraints import ConstraintManager
+#
+#    cm = ConstraintManager(distance_factor=1.2)
+#
+#    # Apply from JSON
+#    cm.apply_from_json(atoms, 'my_constraints.json', k=25.0)
+#
+#    # Or apply from pairs directly
+#    pairs = [[0, 1], [2, 3]]
+#    hookean_constraints = cm.apply_hookean_from_pairs(atoms, pairs, k=20.0)
+#    cm.merge_constraints(atoms, hookean_constraints)

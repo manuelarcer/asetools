@@ -97,6 +97,14 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
+
+    # Apply constraints if specified in stage configuration
+    if 'constraints' in stage:
+        from ..constraints import ConstraintManager
+        logger.info(f"  * Applying constraints from stage configuration")
+        cm = ConstraintManager()
+        cm.apply_stage_constraints(atoms, stage['constraints'])
+
     for step in steps:
         # Make calculator for each step based on step requirements
         logger.info('  * Setting up calculator from config')
