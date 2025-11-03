@@ -9,10 +9,11 @@ import numpy as np
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
 from ase.calculators.vasp import Vasp
-from vasp_interactive import VaspInteractive 
+from vasp_interactive import VaspInteractive
 from ase import Atoms
 from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
 from ase.mep import MinModeTranslate
+from ..analysis import check_outcar_convergence
 
 logger = logging.getLogger(__name__)    
 
@@ -109,9 +110,17 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             atoms.calc = calc
             atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
             _run_step(atoms, step, dry_run)
-    
+
+    # Check convergence before marking as done
+    if not dry_run:
+        convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
+        if not convergence:
+            logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
+            logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
+            raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
+
     backup_output_files(name=name)
-    logger.info(f" -- ✅ Stage '{name}' completed and backed up")
+    logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
     _mark_done(name)
 
 
