@@ -169,9 +169,11 @@ def main():
 
     df = pd.DataFrame.from_dict(dic)
 
-    # Add these lines to display the entire DataFrame
+    # Configure pandas display options to show all data in one table
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', None)
+    pd.set_option('display.max_colwidth', None)
 
     print(df)
     print()
