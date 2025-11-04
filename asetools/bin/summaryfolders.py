@@ -169,13 +169,8 @@ def main():
 
     df = pd.DataFrame.from_dict(dic)
 
-    # Configure pandas display options to show all data in one table
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', None)
-    pd.set_option('display.max_colwidth', None)
-
-    print(df)
+    # Use to_string() to ensure all columns display in one line
+    print(df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
     print()
     not_converged = [f.split('/')[0] for f in not_converged]
     print('Not converged:')
@@ -183,7 +178,7 @@ def main():
     
     # Write output to summary.log
     with open('summary.log', 'w') as f:
-        f.write(str(df))
+        f.write(df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
         f.write('\n\n')
         f.write('Not converged:\n')
         f.write(' '.join(not_converged))
