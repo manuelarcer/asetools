@@ -110,7 +110,11 @@ def main():
         ########## Block for fast mode ########
         elif args.fast:
             converged = fast_mode_check(f, alternative_filenames)
-            if converged:
+            if converged is None:
+                # Timeout or error reading files (likely OneDrive not downloaded)
+                print(f, 'skipped (files not accessible)')
+                not_converged.append(f)
+            elif converged:
                 dic['Config'].append(f)
                 dic['Converged'].append(converged)
                 dic['ENCUT'].append('N/A')
@@ -185,38 +189,85 @@ def main():
         f.write('\n')
 
 def fast_mode_check(f, alternative_filenames):
-    for alt in alternative_filenames:
+    """Check convergence in fast mode with error handling for OneDrive files.
+
+    Args:
+        f: Folder path
+        alternative_filenames: List of alternative output filenames to check
+
+    Returns:
+        Convergence status (True/False) or None if file read fails/times out
+    """
+    try:
+        # Find and open output file
         foundout = False
-        if os.path.exists(f + alt):
-            vaspout = open(f + alt, 'r')
-            foundout = True
-            break
-    if not foundout:
-        print(f'No OUT file ({alternative_filenames}) in', f)
-        return False
-    incar = open(f + 'INCAR', 'r')
-    incarlines = incar.readlines()
-    ibrion = None
-    for line in incarlines:
-        if 'IBRION' in line:
-            ibrion = int(line.split()[2])
-            break
-    lines = vaspout.readlines()[-5:]
-    if ibrion == 1 or ibrion == 2 or ibrion == 3:
-        for line in lines:
-            if 'reached required accuracy' in line:
-                converged = True
-                break
-            else:
-                converged = False
-    else:
-        for line in lines:
-            if 'E0=' in line:
-                converged = True
-                break
-            else:
-                converged = False
-    return converged
+        vaspout = None
+        for alt in alternative_filenames:
+            filepath = f + alt
+            if os.path.exists(filepath):
+                try:
+                    # Try to open with timeout protection
+                    vaspout = open(filepath, 'r')
+                    # Test read to check if file is accessible (will fail for OneDrive placeholders)
+                    _ = vaspout.readline()
+                    vaspout.seek(0)  # Reset to beginning
+                    foundout = True
+                    break
+                except (OSError, TimeoutError, IOError) as e:
+                    if vaspout:
+                        vaspout.close()
+                    continue
+
+        if not foundout:
+            print(f'No accessible OUT file ({alternative_filenames}) in {f}')
+            return None
+
+        # Read INCAR to get IBRION
+        ibrion = None
+        incar_path = f + 'INCAR'
+        if os.path.exists(incar_path):
+            try:
+                with open(incar_path, 'r') as incar:
+                    # Test read first to check accessibility
+                    incarlines = incar.readlines()
+                    for line in incarlines:
+                        if 'IBRION' in line:
+                            ibrion = int(line.split()[2])
+                            break
+            except (OSError, TimeoutError, IOError) as e:
+                print(f'Warning: Cannot read INCAR in {f} (file may not be downloaded)')
+                if vaspout:
+                    vaspout.close()
+                return None
+
+        # Read output file (last 5 lines to check convergence)
+        try:
+            lines = vaspout.readlines()[-5:]
+            vaspout.close()
+        except (OSError, TimeoutError, IOError) as e:
+            print(f'Warning: Cannot read output file in {f} (file may not be downloaded)')
+            if vaspout:
+                vaspout.close()
+            return None
+
+        # Check convergence based on IBRION
+        if ibrion in [1, 2, 3]:
+            for line in lines:
+                if 'reached required accuracy' in line:
+                    return True
+            return False
+        else:
+            for line in lines:
+                if 'E0=' in line:
+                    return True
+            return False
+
+    except TimeoutError as e:
+        print(f'Timeout reading files in {f} (OneDrive files may not be downloaded)')
+        return None
+    except Exception as e:
+        print(f'Error reading files in {f}: {e}')
+        return None
 
 
 if __name__ == "__main__":
