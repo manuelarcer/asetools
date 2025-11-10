@@ -105,13 +105,18 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
         cm = ConstraintManager()
         cm.apply_stage_constraints(atoms, stage['constraints'])
 
+    # Track if any step used ASE optimizer (for proper convergence checking)
+    ase_optimizer_converged = None
+
     for step in steps:
         # Make calculator for each step based on step requirements
         logger.info('  * Setting up calculator from config')
-        
+
         # Check if step needs VaspInteractive with proper context management
         if step.get('optimizer') is not None:
-            _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, initial_magmom, dry_run)
+            opt_converged = _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, initial_magmom, dry_run)
+            if opt_converged is not None:
+                ase_optimizer_converged = opt_converged
         else:
             # Regular Vasp calculator
             calc = _make_step_calculator(cfg, step, run_overrides)
@@ -121,11 +126,23 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
 
     # Check convergence before marking as done
     if not dry_run:
-        convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
-        if not convergence:
-            logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
-            logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
-            raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
+        # If an ASE optimizer was used, trust its convergence status
+        # (ASE optimizers use constraint-adjusted forces, not raw VASP forces)
+        if ase_optimizer_converged is not None:
+            convergence = ase_optimizer_converged
+            if convergence:
+                logger.info(f"  ✓ ASE optimizer converged successfully")
+            else:
+                logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
+                logger.error(f"    ASE optimizer did not reach convergence criteria")
+                raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
+        else:
+            # No ASE optimizer used, check OUTCAR convergence (standard VASP optimization)
+            convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
+            if not convergence:
+                logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
+                logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
+                raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
 
     backup_output_files(name=name)
     logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
@@ -136,40 +153,44 @@ def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML,
     """
     Run a step that requires VaspInteractive using the documented with-clause pattern.
     This ensures proper process management and prevents hanging.
+
+    Returns:
+        bool or None: Optimizer convergence status (True/False) or None if dry_run
     """
     # Build VaspInteractive parameters
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides or {}
     )
-    
+
     # Apply step overrides and VaspInteractive parameter fixes
     overrides = step.get('overrides', {})
     overrides = _fix_vaspinteractive_params(overrides, using_ase_optimizer=True)
-    
+
     # Merge overrides into vasp_kwargs
     vasp_kwargs.update(overrides)
-    
+
     logger.info(f" ** Creating VaspInteractive with parameters for ASE optimizer")
     logger.info(f"    VaspInteractive parameters: {overrides}")
-    
+
     if dry_run:
         logger.info("    (dry-run, skipping VaspInteractive calculation)")
-        return
-    
+        return None
+
     # Use the documented with-clause pattern
     with VaspInteractive(**vasp_kwargs) as calc:
         atoms.calc = calc
         atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
-        
+
         # Run ASE optimizer
         optimizer_name = step.get('optimizer')
         optimizer_kwargs = step.get('optimizer_kwargs', {})
-        
+
         logger.info(f"    Running ASE optimizer {optimizer_name} with VaspInteractive")
-        _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
-        
+        converged = _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
+
     logger.info(f"    ✔ VaspInteractive step '{step['name']}' completed and finalized")
+    return converged
 
 
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
@@ -240,8 +261,11 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     """
     Run optimization using ASE optimizers with VaspInteractive calculator.
     Uses the documented with-clause pattern for proper process management.
+
+    Returns:
+        bool: True if optimizer converged, False otherwise
     """
-    
+
     # Map optimizer names to classes
     optimizer_map = {
         'bfgs': BFGS,
@@ -252,7 +276,7 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
         'quasinewton': QuasiNewton,
         'dimer': MinModeTranslate,
     }
-    
+
     optimizer_name_lower = optimizer_name.lower()
     if optimizer_name_lower not in optimizer_map:
         raise ValueError(f"Unknown optimizer: {optimizer_name}. Available: {list(optimizer_map.keys())}")
@@ -262,24 +286,24 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
         return _run_with_dimer_optimizer(atoms, optimizer_kwargs)
 
     OptClass = optimizer_map[optimizer_name_lower]
-    
+
     # Separate initialization kwargs from run kwargs
     init_kwargs = {'logfile': f'{optimizer_name.upper()}.log'}
     run_kwargs = {}
-    
+
     # Define which parameters go to run() vs __init__() for each optimizer
     run_only_params = {'fmax', 'steps'}  # These always go to run()
-    
+
     # Optimizer-specific parameter routing
     optimizer_init_params = {
         'bfgs': {'maxstep', 'alpha', 'damping'},
         'fire': {'dt', 'maxmove', 'dtmax', 'Nmin', 'finc', 'fdec', 'astart', 'fa'},
         'lbfgs': {'maxstep', 'memory', 'damping', 'alpha'},
     }
-    
+
     # Route parameters correctly
     current_optimizer_init_params = optimizer_init_params.get(optimizer_name_lower, set())
-    
+
     for key, value in optimizer_kwargs.items():
         if key in run_only_params:
             run_kwargs[key] = value
@@ -288,33 +312,45 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
         else:
             # Default to run kwargs for unknown parameters
             run_kwargs[key] = value
-    
+
     logger.info(f"    Initializing {optimizer_name} optimizer with init_kwargs: {init_kwargs}")
     logger.info(f"    Running optimization with run_kwargs: {run_kwargs}")
-    
+
     # Set default convergence criteria if not specified
     if 'fmax' not in run_kwargs:
         run_kwargs['fmax'] = 0.02  # Default force convergence
         logger.info(f"    Using default fmax={run_kwargs['fmax']} eV/Å")
-    
+
     # Use the documented pattern: VaspInteractive should already be initialized
     # Just create and run the ASE optimizer with the existing calculator
     if not isinstance(atoms.calc, VaspInteractive):
         raise RuntimeError("Expected VaspInteractive calculator for ASE optimization")
-    
+
     logger.info(f"    Running ASE {optimizer_name} optimization...")
-    
+
     # Create and run optimizer with existing VaspInteractive calculator
     opt = OptClass(atoms, **init_kwargs)
-    opt.run(**run_kwargs)
-    
+    converged = opt.run(**run_kwargs)
+
     logger.info(f"    ASE {optimizer_name} optimization completed")
+
+    # Check convergence status
+    # ASE optimizers return True if converged, False if hit step limit
+    if converged:
+        logger.info(f"    ✓ Optimizer converged to fmax={run_kwargs['fmax']} eV/Å")
+    else:
+        logger.warning(f"    ⚠ Optimizer did not converge (hit step limit)")
+
+    return converged
 
 
 def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     """
     Run dimer optimization using ASE dimer method with VaspInteractive calculator.
     Handles MODECAR file detection and MinModeAtoms setup.
+
+    Returns:
+        bool: True if dimer converged, False otherwise
     """
     from ..dimer import setup_dimer_atoms, validate_dimer_kwargs
 
@@ -354,7 +390,7 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     # Create and run dimer optimizer
     from ase.mep import MinModeTranslate
     dimer_opt = MinModeTranslate(d_atoms, **optimizer_init_kwargs)
-    dimer_opt.run(**optimizer_run_kwargs)
+    converged = dimer_opt.run(**optimizer_run_kwargs)
 
     logger.info(f"    Dimer optimization completed")
 
@@ -368,10 +404,12 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
         logger.warning(f"    Could not save final MODECAR: {e}")
 
     # Log convergence information
+    dimer_converged = False
     try:
         from ..dimer import check_dimer_convergence, extract_saddle_point_info
         conv_info = check_dimer_convergence(d_atoms)
-        if conv_info.get('converged', False):
+        dimer_converged = conv_info.get('converged', False)
+        if dimer_converged:
             saddle_info = extract_saddle_point_info(d_atoms)
             logger.info(f"    ✓ Converged to saddle point: E={saddle_info.get('energy', 'N/A'):.6f} eV")
             logger.info(f"    Final eigenvalue: {saddle_info.get('eigenvalue', 'N/A')}")
@@ -380,6 +418,11 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
             logger.warning(f"    Final max force: {conv_info.get('max_force', 'N/A'):.4f} eV/Å")
     except Exception as e:
         logger.warning(f"    Could not check convergence: {e}")
+
+    # Use ASE optimizer convergence if dimer-specific check not available
+    if converged is not None:
+        return converged
+    return dimer_converged
 
 
 def _mark_done(step_name: str):
