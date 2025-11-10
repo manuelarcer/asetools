@@ -130,32 +130,50 @@ def main():
         elif not ispyatoms:
             if os.path.exists(f + 'OUTCAR'):
                 try:
-                    converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
-                    if not converged[0]:
-                        print(f, 'not converged')
-                        not_converged.append(f)
-                    
+                    # First check if an ASE optimizer was used (check for optimizer log files)
+                    ase_converged, ase_fmax, optimizer_type = check_ase_optimizer_convergence(f)
+
+                    if ase_converged is not None:
+                        # ASE optimizer was used - use its convergence status
+                        # (ASE optimizers use constraint-adjusted forces, not raw VASP forces)
+                        converged_status = ase_converged
+                        final_fmax = ase_fmax
+                        if not converged_status:
+                            print(f, f'not converged ({optimizer_type}: fmax={ase_fmax:.4f})')
+                            not_converged.append(f)
+                    else:
+                        # No ASE optimizer - use standard OUTCAR convergence check
+                        converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
+                        converged_status = converged[0]
+                        energy, maxforce_outcar = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+                        final_fmax = maxforce_outcar
+                        if not converged_status:
+                            print(f, 'not converged')
+                            not_converged.append(f)
+
+                    # Get energy and forces
                     if args.magmom:
                         energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
                         dic['MagMom'].append(round(magmom, 3))
                     else:
                         energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
-                    
+
                     isif, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ISIF')
                     encut, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ENCUT')
                     ediffg, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='EDIFFG')
-                    
+
                     # Convert EDIFFG to positive value for target fmax (VASP uses negative for forces)
                     target_fmax = abs(ediffg) if ediffg is not None else 'N/A'
 
                     dic['Config'].append(f)
                     dic['ISIF'].append(isif)
-                    dic['Converged'].append(converged[0])
+                    dic['Converged'].append(converged_status)
                     dic['ENCUT'].append(encut)
                     dic['Target-fmax'].append(target_fmax)
-                    dic['MaxForce'].append(round(maxforce, 3))
+                    # Use ASE fmax if available, otherwise use OUTCAR maxforce
+                    dic['MaxForce'].append(round(final_fmax if ase_converged is not None else maxforce, 3))
                     dic['Energy'].append(round(energy, 3))
-                    
+
 
                 except ValueError as e:
                     print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
@@ -187,6 +205,59 @@ def main():
         f.write('Not converged:\n')
         f.write(' '.join(not_converged))
         f.write('\n')
+
+def check_ase_optimizer_convergence(folder, fmax_threshold=0.02):
+    """
+    Check if an ASE optimizer converged by reading optimizer log files.
+
+    ASE optimizers (BFGS, FIRE, LBFGS, etc.) write their own log files that contain
+    the actual convergence information based on constraint-adjusted forces.
+
+    Args:
+        folder: Path to folder containing optimizer log
+        fmax_threshold: Maximum force threshold for convergence (default: 0.02 eV/Å)
+
+    Returns:
+        tuple: (converged: bool or None, final_fmax: float or None, optimizer_type: str or None)
+               Returns (None, None, None) if no ASE optimizer log found
+    """
+    # Common ASE optimizer log files
+    optimizer_logs = ['BFGS.log', 'FIRE.log', 'LBFGS.log', 'GPMIN.log',
+                      'MDMIN.log', 'QUASINEWTON.log', 'DIMER.log']
+
+    for log_name in optimizer_logs:
+        log_path = os.path.join(folder, log_name)
+        if os.path.exists(log_path):
+            try:
+                with open(log_path, 'r') as f:
+                    lines = f.readlines()
+
+                # Parse the last optimization step
+                # Format: "BFGS:  step  time  energy  fmax"
+                optimizer_type = log_name.replace('.log', '')
+                final_fmax = None
+
+                for line in reversed(lines):
+                    line = line.strip()
+                    if line.startswith(optimizer_type + ':'):
+                        parts = line.split()
+                        try:
+                            # Last column is typically fmax
+                            final_fmax = float(parts[-1])
+                            break
+                        except (ValueError, IndexError):
+                            continue
+
+                if final_fmax is not None:
+                    converged = final_fmax <= fmax_threshold
+                    return (converged, final_fmax, optimizer_type)
+
+            except (OSError, IOError) as e:
+                continue
+
+    # No ASE optimizer log found
+    return (None, None, None)
+
 
 def fast_mode_check(f, alternative_filenames):
     """Check convergence in fast mode with error handling for OneDrive files.
