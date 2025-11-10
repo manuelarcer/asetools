@@ -81,7 +81,8 @@ Key scripts in `asetools/bin/`:
 ### Package Configuration
 - Uses `setup.cfg` for metadata and dependencies
 - Minimal `setup.py` for setuptools compatibility
-- Only 3 scripts listed in setup.cfg (incomplete - actual bin/ has 14+ scripts)
+- Scripts in `bin/` directory are NOT installed via pip - run directly from source
+- `bin/` contains 15+ command-line tools that should be accessed via PATH or direct invocation
 
 ### Materials Science Focus
 - Designed for surface science, electrochemistry, and catalysis
