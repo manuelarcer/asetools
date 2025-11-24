@@ -9,7 +9,6 @@ import numpy as np
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
 from ase.calculators.vasp import Vasp
-from vasp_interactive import VaspInteractive
 from ase import Atoms
 from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
 from ase.mep import MinModeTranslate
@@ -22,16 +21,23 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
         run_overrides = {}
     else:
         logger.info(f" ** Overriding run parameters with: {run_overrides}")
-    
+
     # Determine calculator type from configuration
     calculator_type = cfg.globals.get('calculator_type', 'vasp')
-    
+
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides
     )
-    
+
     if calculator_type.lower() == 'vasp_interactive':
+        try:
+            from vasp_interactive import VaspInteractive
+        except ImportError:
+            raise ImportError(
+                "VaspInteractive calculator requested but 'vasp_interactive' package is not installed. "
+                "Install it with: pip install vasp-interactive"
+            )
         calc = VaspInteractive(**vasp_kwargs)
         logger.info(" ** VaspInteractive calculator created")
     elif calculator_type.lower() == 'vasp':
@@ -47,29 +53,36 @@ def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overri
     """
     Create calculator for a specific step, choosing between Vasp and VaspInteractive
     based on step requirements:
-    
+
     - VaspInteractive: when step has 'optimizer' field (ASE optimizers)
     - Regular Vasp: for single point calculations and VASP internal optimization
     """
     if run_overrides is None:
         run_overrides = {}
-    
+
     # Check if step requires VaspInteractive
     needs_interactive = step.get('optimizer') is not None
-    
+
     # Build calculator parameters
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides
     )
-    
+
     if needs_interactive:
+        try:
+            from vasp_interactive import VaspInteractive
+        except ImportError:
+            raise ImportError(
+                "ASE optimizer requested but 'vasp_interactive' package is not installed. "
+                "Install it with: pip install vasp-interactive"
+            )
         calc = VaspInteractive(**vasp_kwargs)
         logger.info(" ** VaspInteractive calculator created for ASE optimizer")
     else:
         calc = Vasp(**vasp_kwargs)
         logger.info(" ** Regular Vasp calculator created")
-    
+
     return calc
 
 def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
@@ -157,6 +170,14 @@ def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML,
     Returns:
         bool or None: Optimizer convergence status (True/False) or None if dry_run
     """
+    try:
+        from vasp_interactive import VaspInteractive
+    except ImportError:
+        raise ImportError(
+            "ASE optimizer requested but 'vasp_interactive' package is not installed. "
+            "Install it with: pip install vasp-interactive"
+        )
+
     # Build VaspInteractive parameters
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
@@ -200,21 +221,33 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     optimizer_kwargs = step.get('optimizer_kwargs', {})
     
     logger.info(f"  • Step '{name}' overrides={overrides}")
-    
+
     # For VaspInteractive, we need to ensure proper parameter handling
-    if isinstance(atoms.calc, VaspInteractive):
+    try:
+        from vasp_interactive import VaspInteractive
+        is_vasp_interactive = isinstance(atoms.calc, VaspInteractive)
+    except ImportError:
+        is_vasp_interactive = False
+
+    if is_vasp_interactive:
         # Handle VaspInteractive-specific parameter conflicts
         overrides = _fix_vaspinteractive_params(overrides, optimizer_name is not None)
         logger.info(f"    VaspInteractive adjusted overrides: {overrides}")
-    
+
     atoms.calc.set(**overrides)
     
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")
         return
-    
+
     # Check if we should use ASE optimizer (VaspInteractive only)
-    if optimizer_name and isinstance(atoms.calc, VaspInteractive):
+    try:
+        from vasp_interactive import VaspInteractive
+        is_vasp_interactive = isinstance(atoms.calc, VaspInteractive)
+    except ImportError:
+        is_vasp_interactive = False
+
+    if optimizer_name and is_vasp_interactive:
         logger.info(f"    Using ASE optimizer: {optimizer_name}")
         _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
     else:
@@ -323,10 +356,18 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
 
     # Use the documented pattern: VaspInteractive should already be initialized
     # Just create and run the ASE optimizer with the existing calculator
-    if not isinstance(atoms.calc, VaspInteractive):
-        raise RuntimeError("Expected VaspInteractive calculator for ASE optimization")
-
     logger.info(f"    Running ASE {optimizer_name} optimization...")
+
+    # Verify VaspInteractive calculator is present
+    try:
+        from vasp_interactive import VaspInteractive
+        if not isinstance(atoms.calc, VaspInteractive):
+            raise RuntimeError("Expected VaspInteractive calculator for ASE optimization")
+    except ImportError:
+        raise ImportError(
+            "ASE optimizer requested but 'vasp_interactive' package is not installed. "
+            "Install it with: pip install vasp-interactive"
+        )
 
     # Create and run optimizer with existing VaspInteractive calculator
     opt = OptClass(atoms, **init_kwargs)
@@ -363,8 +404,15 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     logger.info(f"    Optimizer run kwargs: {optimizer_run_kwargs}")
 
     # Check for VaspInteractive calculator
-    if not isinstance(atoms.calc, VaspInteractive):
-        raise RuntimeError("Expected VaspInteractive calculator for dimer optimization")
+    try:
+        from vasp_interactive import VaspInteractive
+        if not isinstance(atoms.calc, VaspInteractive):
+            raise RuntimeError("Expected VaspInteractive calculator for dimer optimization")
+    except ImportError:
+        raise ImportError(
+            "Dimer optimizer requested but 'vasp_interactive' package is not installed. "
+            "Install it with: pip install vasp-interactive"
+        )
 
     # Handle displacement vector
     displacement_vector = None
