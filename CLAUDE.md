@@ -22,8 +22,11 @@ pytest -v  # Verbose output
 
 ### Dependencies
 Core dependencies are defined in `setup.cfg`:
-- pandas, matplotlib, numpy, scipy, ase
-- Additional: pyyaml (for workflow management)
+- **Required**: pandas, matplotlib, numpy, scipy, ase
+- **Optional**:
+  - `vasp-interactive` - Only needed for ASE optimizer support (BFGS, FIRE, etc.) and dimer method
+  - Install with: `pip install vasp-interactive`
+  - Manager workflows using standard VASP optimizers work without this package
 
 ## Code Architecture
 
