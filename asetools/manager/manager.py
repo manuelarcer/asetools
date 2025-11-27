@@ -330,7 +330,7 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     # Optimizer-specific parameter routing
     optimizer_init_params = {
         'bfgs': {'maxstep', 'alpha', 'damping'},
-        'fire': {'dt', 'maxmove', 'dtmax', 'Nmin', 'finc', 'fdec', 'astart', 'fa'},
+        'fire': {'dt', 'maxstep', 'maxmove', 'dtmax', 'Nmin', 'finc', 'fdec', 'astart', 'fa'},
         'lbfgs': {'maxstep', 'memory', 'damping', 'alpha'},
     }
 
