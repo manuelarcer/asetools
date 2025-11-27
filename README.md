@@ -18,10 +18,11 @@ ASEtools is a specialized Python package designed for computational materials sc
 - **Bond Valence Analysis**: Bond valence sum calculations using Brown's equation for structural validation
 - **Surface Science**: Automated adsorbate placement and surface analysis
 - **Electrochemistry**: Applied potential calculations with Fermi shift corrections
-- **Reaction Pathways**: NEB analysis and potential energy surface plotting
-- **Workflow Management**: YAML-based configuration system for multi-stage calculations
+- **Reaction Pathways**: NEB and dimer method support for transition state finding
+- **Constraint Management**: Hookean spring constraints for O-H bonds and PCET reactions
+- **Workflow Management**: YAML-based configuration with ASE optimizer support (FIRE, BFGS, LBFGS)
 - **Database Integration**: ASE database support with duplicate detection
-- **Command-Line Tools**: 12+ specialized scripts for various VASP tasks
+- **Command-Line Tools**: 15+ specialized scripts for various VASP tasks
 
 ## Installation
 
@@ -30,6 +31,12 @@ ASEtools is a specialized Python package designed for computational materials sc
 ```bash
 pip install pandas numpy scipy matplotlib ase pyyaml
 ```
+
+**Optional dependencies:**
+- `vasp-interactive`: Required for ASE optimizers (FIRE, BFGS) and dimer method
+  ```bash
+  pip install vasp-interactive
+  ```
 
 ### Install ASEtools
 
@@ -84,68 +91,22 @@ energy, dos_up, dos_down = extract_pdos_perstate(dos_data, atoms_of_interest, st
 ### Bond Valence Sum Analysis
 
 ```python
-from asetools.bond_valence import BondValenceSum, BondValenceParameters
+from asetools.bond_valence import BondValenceSum
+from ase.io import read
 
-# Load atomic structure
 atoms = read('POSCAR')
 
-# Calculate bond valence sums using Brown's equation
-valence_states = {'Ti': 4, 'O': -2}
-bvs_calc = BondValenceSum(atoms, valence_states=valence_states)
-
-# Get bond valence sum results
-bvs_results = bvs_calc.calculate_bvs()
-print(f"Ti BVS: {bvs_results[0]:.3f}")
-
-# Analyze structure with detailed DataFrame
-df = bvs_calc.analyze_structure()
+# Basic BVS calculation
+bvs = BondValenceSum(atoms, valence_states={'Ti': 4, 'O': -2})
+df = bvs.analyze_structure()
 print(df[['element', 'expected_valence', 'calculated_bvs', 'deviation']])
 
-# Automatic valence determination for metals (uniform per element)
-bvs_auto = BondValenceSum(atoms, valence_states={'O': -2}, 
-                         auto_determine_valence=True)
+# Automatic valence determination (per-element or per-atom)
+bvs_auto = BondValenceSum(atoms, valence_states={'O': -2},
+                         auto_determine_valence=True,
+                         per_atom_valence=True)  # Allow mixed valences
 df_auto = bvs_auto.analyze_structure()
-
-# Check optimization results
-print(f"Optimized Ti valence: {df_auto[df_auto['element'] == 'Ti']['used_valence'].iloc[0]:+d}")
-print(f"Optimization deviation: {df_auto[df_auto['element'] == 'Ti']['optimization_deviation'].iloc[0]:.3f}")
-
-# Per-atom valence optimization (allows mixed valences)
-bvs_per_atom = BondValenceSum(atoms, valence_states={'O': -2}, 
-                             auto_determine_valence=True, 
-                             per_atom_valence=True)  # Each atom gets individually optimized valence
-df_per_atom = bvs_per_atom.analyze_structure()
-
-# Check individual atom valences - now atoms can have different valences!
-ti_atoms = df_per_atom[df_per_atom['element'] == 'Ti']
-for _, row in ti_atoms.iterrows():
-    print(f"Ti atom {row['atom_index']}: valence {row['used_valence']:+d}, "
-          f"coordination {row['coordination_number']}, BVS {row['calculated_bvs']:.3f}")
-
-# Analyze valence distribution
-from collections import Counter
-valence_counts = Counter(ti_atoms['used_valence'])
-print(f"Ti valence distribution: {dict(valence_counts)}")  # e.g., {2: 3, 3: 2}
-
-# Detailed optimization summary
 bvs_auto.print_valence_optimization_summary()
-
-# Specify allowed element pairs (e.g., only Ti-O bonds)
-bvs_selective = BondValenceSum(atoms, valence_states=valence_states,
-                              allowed_pairs=[('Ti', 'O')])
-
-# Check which pairs are being considered
-bvs_selective.print_allowed_pairs()
-
-# Use custom bond valence parameters
-custom_params = {'Ti-O': {'R0': 1.9, 'B': 0.4}}
-bvs_custom = BondValenceSum(atoms, valence_states=valence_states, 
-                           custom_parameters=custom_params)
-
-# Access bond valence parameter database
-bv_params = BondValenceParameters()
-ti_o_params = bv_params.get_parameters('Ti', 4, 'O', -2)
-print(f"Ti-O: R0={ti_o_params['R0']:.3f}, B={ti_o_params['B']:.3f}")
 ```
 
 ### Surface Analysis and Adsorbate Placement
@@ -212,6 +173,13 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 - **`VASPConfigurationFromYAML`**: YAML-based configuration system
 - **`run_workflow(atoms, config, workflow_name)`**: Multi-stage calculation execution
 - **`make_calculator(config, overrides=None)`**: VASP calculator creation
+- **ASE optimizer support**: FIRE, BFGS, LBFGS with VaspInteractive
+- **Dimer method**: Transition state finding with MinModeAtoms
+
+### Constraint Management (`asetools.constraints`)
+- **`ConstraintManager`**: Hookean spring constraint system
+- **`apply_stage_constraints(atoms, config)`**: YAML-based constraint application
+- **Automatic O-H pair detection**: JSON configuration for PCET reactions
 
 ### Database Tools (`asetools.databases`)
 - **`add_config_to_db(db, outcar, idname=None)`**: Adds structures to ASE database
@@ -225,7 +193,7 @@ print(f"Adsorbate distances: {analyzer.adsneighdistances}")
 
 ## Command-Line Tools
 
-ASEtools includes 12+ specialized command-line utilities:
+ASEtools includes 15+ specialized command-line utilities:
 
 ### Core Analysis Tools
 - **`getenergy`**: Quick convergence and energy summary
@@ -236,6 +204,7 @@ ASEtools includes 12+ specialized command-line utilities:
 - **`asegui`**: Enhanced ASE GUI with error recovery
 - **`view_outcars`**: Batch structure visualization
 - **`sortposcarbyelement`**: POSCAR sorting by element and coordinates
+- **`reorder_atoms`**: Flexible atom reordering by element and z-coordinate
 
 ### Specialized Analysis
 - **`gibbsFE`**: Gibbs free energy corrections from vibrational analysis
@@ -255,8 +224,8 @@ getenergy OUTCAR
 # Batch analysis with magnetic moments
 summaryfolders -m
 
-# Sort POSCAR by elements
-sortposcarbyelement -f POSCAR -axis z
+# Reorder atoms by element and z-coordinate
+reorder_atoms POSCAR --order Cu O H --z-order top-bottom
 
 # Backup VASP files
 vaspbackup -p "OUTCAR*" -c
@@ -282,6 +251,20 @@ workflows:
       - name: "fine_opt"
         ediff: 1e-6
         nsw: 200
+
+  # Optimization with Hookean constraints
+  constrained_opt:
+    stages:
+      - name: OPT_WITH_CONSTRAINTS
+        constraints:
+          type: hookean
+          config_file: oh_pairs.json  # JSON with O-H atom pairs
+          spring_constant: 10.0
+        steps:
+          - name: optimization
+            overrides: { nsw: 800 }
+            optimizer: FIRE  # Requires vasp-interactive
+            optimizer_kwargs: { fmax: 0.02, maxstep: 0.2 }
 ```
 
 ```python
@@ -292,6 +275,8 @@ config = VASPConfigurationFromYAML('config.yaml')
 atoms = read('POSCAR')
 run_workflow(atoms, config, 'optimization')
 ```
+
+See `CONSTRAINTS_QUICKSTART.md` for detailed constraint examples.
 
 ## Advanced Features
 
