@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asetools"
+version = "0.1"
+description = "Python tools mainly utilizing ASE package"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Juan M Arce-Ramos", email = "juan.arce.ramos@gmail.com"}
+]
+maintainers = [
+    {name = "Juan M Arce-Ramos", email = "juan.arce.ramos@gmail.com"}
+]
+keywords = ["vasp", "ase", "computational-materials", "dft", "materials-science"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "numpy",
+    "scipy",
+    "ase",
+    "pyyaml",
+]
+
+[project.urls]
+Homepage = "https://github.com/manuelarcer/asetools"
+Repository = "https://github.com/manuelarcer/asetools.git"
+"Bug Tracker" = "https://github.com/manuelarcer/asetools/issues"
+
+[project.scripts]
+asegui = "asetools.bin.asegui:main"
+calculate_bader_charges = "asetools.bin.calculate_bader_charges:main"
+comparevaspparam = "asetools.bin.comparevaspparam:main"
+genpotentialdepcalc = "asetools.bin.genpotentialdepcalc:main"
+getenergy = "asetools.bin.getenergy:main"
+gibbsFE = "asetools.bin.gibbsFE:main"
+gibbsFE_2 = "asetools.bin.gibbsFE_2:main"
+inputparam_from_outcar = "asetools.bin.inputparam_from_outcar:main"
+outcar_extract = "asetools.bin.outcar_extract:main"
+remove_slashes = "asetools.bin.remove_slashes:main"
+sortposcarbyelement = "asetools.bin.sortposcarbyelement:main"
+summaryfolders = "asetools.bin.summaryfolders:main"
+vasp_2_arc = "asetools.bin.vasp_2_arc:main"
+vaspbackup = "asetools.bin.vaspbackup:main"
+view_outcars = "asetools.bin.view_outcars:main"
+
+[tool.setuptools.packages.find]
+include = ["asetools*"]
+
+[tool.setuptools.package-data]
+asetools = ["data/*", "manager/sample_yaml/*"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
