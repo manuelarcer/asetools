@@ -480,17 +480,48 @@ def _mark_done(step_name: str):
 
 
 def load_structure(pattern_initial_default: str = 'POSCAR') -> Atoms:
-    """Load the structure from CONTCAR or initial configuration."""
+    """Load the structure from OUTCAR (preferred), CONTCAR, or initial configuration.
+
+    The function attempts to load structures in the following priority order:
+    1. OUTCAR (last ionic step, index=-1) - Most reliably updated during calculations
+    2. CONTCAR - Fallback for compatibility with existing workflows
+    3. Pattern-matched file (default: POSCAR) - Initial structure for first stage
+
+    This approach ensures reliable workflow continuation even when CONTCAR is not
+    properly updated before job crashes.
+
+    Args:
+        pattern_initial_default: Glob pattern for initial structure file (default: 'POSCAR')
+
+    Returns:
+        Atoms: ASE Atoms object containing the loaded structure
+    """
+    # Try OUTCAR first (most reliable)
+    if os.path.exists('OUTCAR'):
+        try:
+            atoms = read('OUTCAR', format='vasp-out', index=-1)
+            logger.info("Loading structure from OUTCAR (last configuration)")
+            return atoms
+        except Exception as e:
+            logger.warning(f"Failed to read OUTCAR: {e}. Trying CONTCAR...")
+
+    # Fallback to CONTCAR
     if os.path.exists('CONTCAR'):
-        logger.info("Loading structure from CONTCAR")
-        atoms = read('CONTCAR', format='vasp')
-    else:
-        matches = glob.glob(pattern_initial_default)
-        if not matches:
-            logger.warning(f"NO CONTCAR and NO match for pattern: {pattern_initial_default}")
-            sys.exit(1)
-        atoms = read(matches[0])
-        logger.info(f"Loading structure from: {matches[0]}")
+        try:
+            atoms = read('CONTCAR', format='vasp')
+            logger.info("Loading structure from CONTCAR")
+            return atoms
+        except Exception as e:
+            logger.warning(f"Failed to read CONTCAR: {e}. Trying initial pattern...")
+
+    # Final fallback to initial configuration
+    matches = glob.glob(pattern_initial_default)
+    if not matches:
+        logger.error(f"No OUTCAR, CONTCAR, or match for pattern: {pattern_initial_default}")
+        sys.exit(1)
+
+    atoms = read(matches[0])
+    logger.info(f"Loading structure from initial file: {matches[0]}")
     return atoms
 
 def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = 'default') -> list:

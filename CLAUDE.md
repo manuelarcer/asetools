@@ -51,7 +51,7 @@ Core dependencies are defined in `setup.cfg`:
 ### Testing Strategy
 - Uses pytest with real VASP output files in `asetools/data/`
 - Integration tests rather than unit tests
-- Test files: `test_analysis.py`, `test_database.py`, `test_doscar.py`, `test_freq.py`, `test_bond_valence.py`
+- Test files: `test_analysis.py`, `test_database.py`, `test_doscar.py`, `test_freq.py`, `test_bond_valence.py`, `test_manager.py`
 
 ### Command-Line Tools
 Key scripts in `asetools/bin/`:
@@ -72,6 +72,23 @@ Key scripts in `asetools/bin/`:
 - YAML-based workflow configuration in `manager/`
 - Multi-stage calculation support
 - System-specific parameter overrides
+
+### Workflow Manager Structure Loading
+The workflow manager uses a robust priority-based system for loading structures between stages:
+
+1. **OUTCAR (priority 1)**: Most reliable source, loads last ionic configuration (`index=-1`)
+   - OUTCAR is updated more frequently during calculations
+   - Ensures reliable workflow continuation even when jobs crash unexpectedly
+
+2. **CONTCAR (priority 2)**: Fallback for compatibility
+   - Used when OUTCAR doesn't exist or cannot be read
+   - Maintains backward compatibility with existing workflows
+
+3. **Pattern-matched file (priority 3)**: Initial structure (default: `POSCAR`)
+   - Used for the first stage when no previous calculation exists
+   - Can be customized via `globals.initial_conf_pattern` in YAML config
+
+This fallback chain ensures workflow robustness while maintaining backward compatibility.
 
 ### Data Flow
 1. Read VASP output files
