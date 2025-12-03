@@ -138,10 +138,12 @@ Examples:
   plotdos --atoms=0 --orbitals=s,p,d --overlay --colors=blue,red,green
 
 Orbital options:
-  s, p, d              Individual orbital types
-  all-s, all-p, all-d  All orbitals of given type
+  s, p, d              All s, p, or d orbitals
   t2g                  t2g orbitals (dxy, dyz, dxz)
   eg                   eg orbitals (dz2, dx2-y2)
+  all                  All orbitals combined (s+p+d)
+
+Note: 'all-s', 'all-p', 'all-d' are also accepted (equivalent to s, p, d)
 
 Atom options:
   0                    Single atom
@@ -175,7 +177,7 @@ Spin treatment options (for --band-center):
     )
     parser.add_argument(
         '--orbitals',
-        help='Orbitals: s, p, d, t2g, eg, all-s, all-p, all-d (comma-separated for multiple)'
+        help='Orbitals: s, p, d, t2g, eg, all (comma-separated for multiple)'
     )
     parser.add_argument(
         '--total',
@@ -289,17 +291,17 @@ Spin treatment options (for --band-center):
     # Parse orbitals
     orbitals = [o.strip() for o in args.orbitals.split(',')] if args.orbitals else None
 
-    # Auto-correct common orbital names (s, p, d -> all-s, all-p, all-d)
+    # Normalize orbital names: s, p, d are the primary interface
+    # but internally DOS class needs all-s, all-p, all-d
     if orbitals:
-        corrected_orbitals = []
+        normalized_orbitals = []
         for orb in orbitals:
             if orb in ['s', 'p', 'd']:
-                corrected = f'all-{orb}'
-                print(f'  Note: Converting "{orb}" to "{corrected}"')
-                corrected_orbitals.append(corrected)
+                # Convert to internal format (silently, this is the expected behavior)
+                normalized_orbitals.append(f'all-{orb}')
             else:
-                corrected_orbitals.append(orb)
-        orbitals = corrected_orbitals
+                normalized_orbitals.append(orb)
+        orbitals = normalized_orbitals
 
     # Check if PDOS is required but not available
     if (atoms or orbitals) and not args.total:
@@ -346,14 +348,10 @@ Spin treatment options (for --band-center):
                     # Get PDOS for this orbital (sum over all atoms)
                     energy, pdos_up, pdos_down = dos.get_pdos_by_orbitals(atoms, orbital)
 
-                    # Debug: Check if DOS data is valid
-                    pdos_up_sum = pdos_up.sum()
-                    pdos_down_sum = pdos_down.sum()
-                    print(f'    {orbital}: up_sum={pdos_up_sum:.3e}, down_sum={pdos_down_sum:.3e}')
-
-                    if pdos_up_sum == 0 and pdos_down_sum == 0:
-                        print(f'    WARNING: {orbital} orbital has zero DOS - check orbital name')
-                        print(f'    Valid names: all-s, all-p, all-d, t2g, eg')
+                    # Validate DOS data
+                    if pdos_up.sum() == 0 and pdos_down.sum() == 0:
+                        print(f'    WARNING: {orbital} orbital has zero DOS')
+                        print(f'    This may indicate an invalid orbital name or atoms with no electrons in these orbitals')
 
                     # Get color for this orbital
                     color = orbital_colors[i % len(orbital_colors)]
