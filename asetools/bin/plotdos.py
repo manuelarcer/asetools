@@ -289,6 +289,18 @@ Spin treatment options (for --band-center):
     # Parse orbitals
     orbitals = [o.strip() for o in args.orbitals.split(',')] if args.orbitals else None
 
+    # Auto-correct common orbital names (s, p, d -> all-s, all-p, all-d)
+    if orbitals:
+        corrected_orbitals = []
+        for orb in orbitals:
+            if orb in ['s', 'p', 'd']:
+                corrected = f'all-{orb}'
+                print(f'  Note: Converting "{orb}" to "{corrected}"')
+                corrected_orbitals.append(corrected)
+            else:
+                corrected_orbitals.append(orb)
+        orbitals = corrected_orbitals
+
     # Check if PDOS is required but not available
     if (atoms or orbitals) and not args.total:
         if not dos.has_partial_dos:
@@ -333,6 +345,15 @@ Spin treatment options (for --band-center):
                 for i, orbital in enumerate(orbitals):
                     # Get PDOS for this orbital (sum over all atoms)
                     energy, pdos_up, pdos_down = dos.get_pdos_by_orbitals(atoms, orbital)
+
+                    # Debug: Check if DOS data is valid
+                    pdos_up_sum = pdos_up.sum()
+                    pdos_down_sum = pdos_down.sum()
+                    print(f'    {orbital}: up_sum={pdos_up_sum:.3e}, down_sum={pdos_down_sum:.3e}')
+
+                    if pdos_up_sum == 0 and pdos_down_sum == 0:
+                        print(f'    WARNING: {orbital} orbital has zero DOS - check orbital name')
+                        print(f'    Valid names: all-s, all-p, all-d, t2g, eg')
 
                     # Get color for this orbital
                     color = orbital_colors[i % len(orbital_colors)]
