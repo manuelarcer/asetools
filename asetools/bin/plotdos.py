@@ -389,19 +389,20 @@ Spin treatment options (for --band-center):
                            label=f'{display_name} (up)',
                            linestyle='-')
 
-                    # Plot spin-down (solid line by default, dashed if same_color_spins)
+                    # Plot spin-down (solid line, no alpha needed since it's on negative side)
                     if args.same_color_spins:
+                        # When same color, don't add to legend
                         ax.plot(energy, pdos_down,
                                color=color,
                                linewidth=args.linewidth,
-                               linestyle='--')
+                               linestyle='-')
                     else:
+                        # Different color, add to legend
                         ax.plot(energy, pdos_down,
                                color=color,
                                linewidth=args.linewidth,
                                label=f'{display_name} (down)',
-                               linestyle='-',
-                               alpha=0.7)
+                               linestyle='-')
 
                 # Add reference lines (no label for legend)
                 ax.axhline(y=0, color='black', linewidth=0.5)
