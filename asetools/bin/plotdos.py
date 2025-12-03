@@ -137,6 +137,10 @@ Examples:
   # Custom colors for overlay
   plotdos --atoms=0 --orbitals=s,p,d --overlay --colors=blue,red,green
 
+  # Save plot data to file
+  plotdos --atoms=all --orbitals=p,d --overlay --save-data=dos_data.csv
+  plotdos --atoms=0 --orbitals=d --output=plot.png --save-data=data.txt
+
 Orbital options:
   s, p, d              All s, p, or d orbitals
   t2g                  t2g orbitals (dxy, dyz, dxz)
@@ -168,6 +172,10 @@ Spin treatment options (for --band-center):
     parser.add_argument(
         '-o', '--output',
         help='Output file (default: show plot interactively). Format determined by extension.'
+    )
+    parser.add_argument(
+        '--save-data',
+        help='Save plot data to file (CSV or TXT). Use .csv for comma-separated, .txt for tab-separated.'
     )
 
     # What to plot
@@ -328,11 +336,20 @@ Spin treatment options (for --band-center):
     # Create figure
     fig, ax = plt.subplots(figsize=figsize)
 
+    # Data collection for saving (if requested)
+    plot_data = {'energy': None, 'columns': {}}
+
     # Plot
     if args.total or (not atoms and not orbitals):
         # Total DOS
         dos.plot_total_dos(ax=ax)
         plot_title = args.title if args.title else 'Total DOS'
+
+        # Collect data
+        plot_data['energy'] = dos.energy
+        plot_data['columns']['DOS_up'] = dos.dos_up
+        plot_data['columns']['DOS_down'] = dos.dos_down
+        plot_data['columns']['Total_DOS'] = dos.total_dos
     else:
         # Partial DOS
         try:
@@ -347,6 +364,12 @@ Spin treatment options (for --band-center):
                 for i, orbital in enumerate(orbitals):
                     # Get PDOS for this orbital (sum over all atoms)
                     energy, pdos_up, pdos_down = dos.get_pdos_by_orbitals(atoms, orbital)
+
+                    # Collect data for saving
+                    if plot_data['energy'] is None:
+                        plot_data['energy'] = energy
+                    plot_data['columns'][f'{orbital}_up'] = pdos_up
+                    plot_data['columns'][f'{orbital}_down'] = pdos_down
 
                     # Validate DOS data
                     if pdos_up.sum() == 0 and pdos_down.sum() == 0:
@@ -401,6 +424,14 @@ Spin treatment options (for --band-center):
             else:
                 # Standard mode: plot single orbital
                 primary_orbital = orbitals[0]
+
+                # Get data for this orbital
+                energy, pdos_up, pdos_down = dos.get_pdos_by_orbitals(atoms, primary_orbital)
+
+                # Collect data for saving
+                plot_data['energy'] = energy
+                plot_data['columns'][f'{primary_orbital}_up'] = pdos_up
+                plot_data['columns'][f'{primary_orbital}_down'] = pdos_down
 
                 # Plot using multi-atom plot for better handling
                 dos.plot_multi_atom_pdos(
@@ -496,6 +527,32 @@ Spin treatment options (for --band-center):
                     print(f'ERROR calculating {orbital}-band center: {e}')
 
             print('='*60 + '\n')
+
+    # Save data to file if requested
+    if args.save_data and plot_data['energy'] is not None:
+        try:
+            import pandas as pd
+
+            # Create DataFrame
+            data_dict = {'Energy_eV': plot_data['energy']}
+            data_dict.update(plot_data['columns'])
+            df = pd.DataFrame(data_dict)
+
+            # Determine separator based on file extension
+            if args.save_data.endswith('.csv'):
+                sep = ','
+            else:
+                sep = '\t'
+
+            # Save to file
+            df.to_csv(args.save_data, sep=sep, index=False, float_format='%.6e')
+
+            print(f'\nSaved data to: {args.save_data}')
+            print(f'  Columns: {", ".join(df.columns)}')
+            print(f'  Rows: {len(df)}')
+
+        except Exception as e:
+            print(f'WARNING: Failed to save data file: {e}')
 
     # Save or show
     if args.output:
