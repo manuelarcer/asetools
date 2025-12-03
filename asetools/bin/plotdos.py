@@ -379,14 +379,17 @@ Spin treatment options (for --band-center):
                     # Get color for this orbital
                     color = orbital_colors[i % len(orbital_colors)]
 
+                    # Clean up orbital name for legend (remove 'all-' prefix)
+                    display_name = orbital.replace('all-', '')
+
                     # Plot spin-up (solid line)
                     ax.plot(energy, pdos_up,
                            color=color,
                            linewidth=args.linewidth,
-                           label=f'{orbital} (up)',
+                           label=f'{display_name} (up)',
                            linestyle='-')
 
-                    # Plot spin-down (dashed line or same style)
+                    # Plot spin-down (solid line by default, dashed if same_color_spins)
                     if args.same_color_spins:
                         ax.plot(energy, pdos_down,
                                color=color,
@@ -396,13 +399,13 @@ Spin treatment options (for --band-center):
                         ax.plot(energy, pdos_down,
                                color=color,
                                linewidth=args.linewidth,
-                               label=f'{orbital} (down)',
-                               linestyle='--',
+                               label=f'{display_name} (down)',
+                               linestyle='-',
                                alpha=0.7)
 
-                # Add reference lines
+                # Add reference lines (no label for legend)
                 ax.axhline(y=0, color='black', linewidth=0.5)
-                ax.axvline(x=0, color='black', linewidth=1.5, linestyle='--', label='Fermi level')
+                ax.axvline(x=0, color='black', linewidth=1.5, linestyle='--')
 
                 # Add labels
                 ax.set_xlabel('Energy (eV)', fontsize=12)
@@ -413,7 +416,9 @@ Spin treatment options (for --band-center):
                 if args.title:
                     plot_title = args.title
                 else:
-                    orbital_str = ','.join(orbitals)
+                    # Clean up orbital names for title (remove 'all-' prefix)
+                    orbital_display = [orb.replace('all-', '') for orb in orbitals]
+                    orbital_str = ','.join(orbital_display)
                     if len(atoms) == dos.natoms:
                         atom_str = "all atoms"
                     elif len(atoms) == 1:
@@ -447,13 +452,15 @@ Spin treatment options (for --band-center):
                 if args.title:
                     plot_title = args.title
                 else:
+                    # Clean up orbital name for title
+                    orbital_display = primary_orbital.replace('all-', '')
                     if len(atoms) == dos.natoms:
                         atom_str = "all atoms"
                     elif len(atoms) == 1:
                         atom_str = f"atom {atoms[0]}"
                     else:
                         atom_str = f"atoms {','.join(map(str, atoms[:3]))}" + ("..." if len(atoms) > 3 else "")
-                    plot_title = f'{primary_orbital.upper()} PDOS - {atom_str}'
+                    plot_title = f'{orbital_display.upper()} PDOS - {atom_str}'
 
         except Exception as e:
             print(f'ERROR: Failed to plot PDOS: {e}')
