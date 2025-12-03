@@ -492,8 +492,21 @@ Spin treatment options (for --band-center):
             print(f'ERROR: Failed to save figure: {e}')
             sys.exit(1)
     else:
-        print('\nShowing interactive plot...')
-        plt.show()
+        # Check if running in a headless environment
+        import matplotlib
+        backend = matplotlib.get_backend()
+
+        # Try to show interactive plot
+        try:
+            print('\nShowing interactive plot...')
+            plt.show()
+        except Exception as e:
+            print(f'\nWARNING: Cannot display interactive plot (backend: {backend})')
+            print('This usually happens on remote machines without a display.')
+            print('Please use --output to save the plot to a file instead:')
+            print(f'  {" ".join(sys.argv)} --output=dos.png')
+            print(f'\nError details: {e}')
+            sys.exit(1)
 
 
 if __name__ == "__main__":
