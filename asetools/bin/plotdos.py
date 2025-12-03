@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from asetools.doscar_analysis import DOS
 
 
-def parse_atoms(atom_str):
+def parse_atoms(atom_str, natoms=None):
     """
     Parse atom specification string into list of integers.
 
@@ -24,15 +24,23 @@ def parse_atoms(atom_str):
         - Comma-separated: "0,2,5" -> [0, 2, 5]
         - Ranges: "0-5" -> [0, 1, 2, 3, 4, 5]
         - Mixed: "0,2-4,7" -> [0, 2, 3, 4, 7]
+        - All atoms: "all" -> [0, 1, 2, ..., natoms-1]
 
     Args:
         atom_str: String specification of atoms
+        natoms: Total number of atoms (required for "all")
 
     Returns:
-        List of atom indices
+        List of atom indices or "all" string
     """
     if not atom_str:
         return None
+
+    # Handle "all" keyword
+    if atom_str.lower() == 'all':
+        if natoms is None:
+            return 'all'  # Return as string, will be resolved later
+        return list(range(natoms))
 
     atoms = []
     for part in atom_str.split(','):
@@ -92,38 +100,54 @@ Examples:
   plotdos
 
   # d-orbitals for atom 0
-  plotdos --atoms 0 --orbitals d
+  plotdos --atoms=0 --orbitals=d
 
   # Multiple atoms and orbitals
-  plotdos --atoms 0,2,5 --orbitals d
-  plotdos --atoms 0-5 --orbitals d
+  plotdos --atoms=0,2,5 --orbitals=d
+  plotdos --atoms=0-5 --orbitals=d
+
+  # All atoms in the system
+  plotdos --atoms=all --orbitals=d
+
+  # Overlay multiple orbitals on same plot
+  plotdos --atoms=0 --orbitals=s,p,d --overlay
+  plotdos --atoms=all --orbitals=s,p,d --overlay
 
   # Crystal field orbitals
-  plotdos --atoms 0 --orbitals t2g
-  plotdos --atoms 0 --orbitals eg
+  plotdos --atoms=0 --orbitals=t2g
+  plotdos --atoms=0 --orbitals=eg
 
   # With customization
-  plotdos --atoms 0 --orbitals d --xlim -5,5 --ylim -10,10
-  plotdos --atoms 0 --orbitals d --output dos.png --dpi 600
+  plotdos --atoms=0 --orbitals=d --xlim=-5,5 --ylim=-10,10
+  plotdos --atoms=0 --orbitals=d --output=dos.png --dpi=600
 
   # Calculate d-band center
-  plotdos --atoms 0 --orbitals d --band-center
-  plotdos --atoms 0 --orbitals d --band-center --energy-range -10,0
+  plotdos --atoms=0 --orbitals=d --band-center
+  plotdos --atoms=0 --orbitals=d --band-center --energy-range=-10,0
 
   # Spin-resolved band center
-  plotdos --atoms 0 --orbitals d --band-center --spin-treatment separate
+  plotdos --atoms=0 --orbitals=d --band-center --spin-treatment=separate
 
-  # Multiple orbitals (plots first one, calculates all)
-  plotdos --atoms 0 --orbitals t2g,eg --band-center
+  # Multiple orbitals (plots first one, calculates all band centers)
+  plotdos --atoms=0 --orbitals=t2g,eg --band-center
 
-  # Custom colors
-  plotdos --atoms 0,1 --orbitals d --colors red,blue
+  # Overlay with band centers for all orbitals
+  plotdos --atoms=all --orbitals=s,p,d --overlay --band-center
+
+  # Custom colors for overlay
+  plotdos --atoms=0 --orbitals=s,p,d --overlay --colors=blue,red,green
 
 Orbital options:
   s, p, d              Individual orbital types
   all-s, all-p, all-d  All orbitals of given type
   t2g                  t2g orbitals (dxy, dyz, dxz)
   eg                   eg orbitals (dz2, dx2-y2)
+
+Atom options:
+  0                    Single atom
+  0,2,5                Comma-separated atoms
+  0-5                  Range of atoms
+  all                  All atoms in the system
 
 Spin treatment options (for --band-center):
   combined   Combine both spins (default)
@@ -147,7 +171,7 @@ Spin treatment options (for --band-center):
     # What to plot
     parser.add_argument(
         '--atoms',
-        help='Atom indices: "0", "0,2,5", or "0-5" (default: plot total DOS)'
+        help='Atom indices: "0", "0,2,5", "0-5", or "all" (default: plot total DOS)'
     )
     parser.add_argument(
         '--orbitals',
@@ -157,6 +181,11 @@ Spin treatment options (for --band-center):
         '--total',
         action='store_true',
         help='Plot total DOS (overrides --atoms/--orbitals)'
+    )
+    parser.add_argument(
+        '--overlay',
+        action='store_true',
+        help='Overlay multiple orbitals on same plot (when multiple orbitals specified)'
     )
 
     # Appearance
@@ -242,10 +271,15 @@ Spin treatment options (for --band-center):
         sys.exit(1)
 
     # Parse atoms
-    atoms = parse_atoms(args.atoms) if args.atoms else None
+    atoms = parse_atoms(args.atoms, natoms=dos.natoms) if args.atoms else None
+
+    # Handle "all" atoms
+    if atoms == 'all':
+        atoms = list(range(dos.natoms))
+        print(f'  Using all {dos.natoms} atoms')
 
     # Validate atom indices
-    if atoms:
+    if atoms and atoms != 'all':
         invalid_atoms = [a for a in atoms if a < 0 or a >= dos.natoms]
         if invalid_atoms:
             print(f'ERROR: Invalid atom indices: {invalid_atoms}')
@@ -288,28 +322,93 @@ Spin treatment options (for --band-center):
     else:
         # Partial DOS
         try:
-            # Use first orbital for plotting
-            primary_orbital = orbitals[0]
+            if args.overlay and len(orbitals) > 1:
+                # Overlay mode: plot multiple orbitals on same axes
+                print(f'  Plotting {len(orbitals)} orbitals in overlay mode')
 
-            # Plot using multi-atom plot for better handling
-            dos.plot_multi_atom_pdos(
-                atoms=atoms,
-                orbitals=primary_orbital,
-                ax=ax,
-                same_color_spins=args.same_color_spins,
-                colors=colors,
-                linewidth=args.linewidth
-            )
+                # Define default colors for overlay if not provided
+                default_overlay_colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray']
+                orbital_colors = colors if colors else default_overlay_colors
 
-            # Generate title
-            if args.title:
-                plot_title = args.title
+                for i, orbital in enumerate(orbitals):
+                    # Get PDOS for this orbital (sum over all atoms)
+                    energy, pdos_up, pdos_down = dos.get_pdos_by_orbitals(atoms, orbital)
+
+                    # Get color for this orbital
+                    color = orbital_colors[i % len(orbital_colors)]
+
+                    # Plot spin-up (solid line)
+                    ax.plot(energy, pdos_up,
+                           color=color,
+                           linewidth=args.linewidth,
+                           label=f'{orbital} (up)',
+                           linestyle='-')
+
+                    # Plot spin-down (dashed line or same style)
+                    if args.same_color_spins:
+                        ax.plot(energy, pdos_down,
+                               color=color,
+                               linewidth=args.linewidth,
+                               linestyle='--')
+                    else:
+                        ax.plot(energy, pdos_down,
+                               color=color,
+                               linewidth=args.linewidth,
+                               label=f'{orbital} (down)',
+                               linestyle='--',
+                               alpha=0.7)
+
+                # Add reference lines
+                ax.axhline(y=0, color='black', linewidth=0.5)
+                ax.axvline(x=0, color='black', linewidth=1.5, linestyle='--', label='Fermi level')
+
+                # Add labels
+                ax.set_xlabel('Energy (eV)', fontsize=12)
+                ax.set_ylabel('PDOS (states/eV)', fontsize=12)
+                ax.legend()
+
+                # Generate title
+                if args.title:
+                    plot_title = args.title
+                else:
+                    orbital_str = ','.join(orbitals)
+                    if len(atoms) == dos.natoms:
+                        atom_str = "all atoms"
+                    elif len(atoms) == 1:
+                        atom_str = f"atom {atoms[0]}"
+                    else:
+                        atom_str = f"{len(atoms)} atoms"
+                    plot_title = f'{orbital_str.upper()} PDOS - {atom_str}'
             else:
-                atom_str = f"atom {atoms[0]}" if len(atoms) == 1 else f"atoms {','.join(map(str, atoms))}"
-                plot_title = f'{primary_orbital.upper()} PDOS - {atom_str}'
+                # Standard mode: plot single orbital
+                primary_orbital = orbitals[0]
+
+                # Plot using multi-atom plot for better handling
+                dos.plot_multi_atom_pdos(
+                    atoms=atoms,
+                    orbitals=primary_orbital,
+                    ax=ax,
+                    same_color_spins=args.same_color_spins,
+                    colors=colors,
+                    linewidth=args.linewidth
+                )
+
+                # Generate title
+                if args.title:
+                    plot_title = args.title
+                else:
+                    if len(atoms) == dos.natoms:
+                        atom_str = "all atoms"
+                    elif len(atoms) == 1:
+                        atom_str = f"atom {atoms[0]}"
+                    else:
+                        atom_str = f"atoms {','.join(map(str, atoms[:3]))}" + ("..." if len(atoms) > 3 else "")
+                    plot_title = f'{primary_orbital.upper()} PDOS - {atom_str}'
 
         except Exception as e:
             print(f'ERROR: Failed to plot PDOS: {e}')
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
 
     # Set title
