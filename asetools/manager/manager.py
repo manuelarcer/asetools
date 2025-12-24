@@ -14,7 +14,69 @@ from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
 from ase.mep import MinModeTranslate
 from ..analysis import check_outcar_convergence
 
-logger = logging.getLogger(__name__)    
+logger = logging.getLogger(__name__)
+
+def _log_magmom_summary(atoms, prefix="  *"):
+    """Log summary of magnetic moments on atoms object."""
+    try:
+        magmoms = atoms.get_initial_magnetic_moments()
+
+        if len(magmoms) == 0:
+            logger.info(f"{prefix} No magnetic moments set")
+            return
+
+        min_mag = magmoms.min()
+        max_mag = magmoms.max()
+        sum_mag = magmoms.sum()
+        nonzero_count = np.sum(np.abs(magmoms) > 0.01)
+
+        logger.info(f"{prefix} Magnetic moments: min={min_mag:.3f}, max={max_mag:.3f}, "
+                   f"sum={sum_mag:.3f} μB")
+        if nonzero_count > 0:
+            logger.info(f"{prefix} Non-zero moments on {nonzero_count}/{len(magmoms)} atoms")
+            # Show distribution of non-zero values
+            nonzero_vals = magmoms[np.abs(magmoms) > 0.01]
+            unique_vals = np.unique(np.round(nonzero_vals, 2))
+            if len(unique_vals) <= 5:
+                logger.info(f"{prefix} Unique moment values: {list(unique_vals)}")
+        else:
+            logger.info(f"{prefix} All magnetic moments are zero")
+
+    except Exception as e:
+        logger.debug(f"{prefix} Could not extract magnetic moment summary: {e}")
+
+
+def _log_calculator_params(calc, prefix="  *"):
+    """Log critical VASP calculator parameters."""
+    try:
+        params = calc.parameters if hasattr(calc, 'parameters') else {}
+
+        # Critical parameters to log
+        critical_params = {
+            'ibrion': params.get('ibrion', 'default'),
+            'nsw': params.get('nsw', 'default'),
+            'ispin': params.get('ispin', 'default'),
+            'ediff': params.get('ediff', 'default'),
+            'ediffg': params.get('ediffg', 'default'),
+        }
+
+        logger.info(f"{prefix} VASP parameters: IBRION={critical_params['ibrion']}, "
+                   f"NSW={critical_params['nsw']}, ISPIN={critical_params['ispin']}")
+        logger.info(f"{prefix} Convergence: EDIFF={critical_params['ediff']}, "
+                   f"EDIFFG={critical_params['ediffg']}")
+
+        # Check for MAGMOM in calculator
+        if 'magmom' in params:
+            magmom_in_calc = params['magmom']
+            if isinstance(magmom_in_calc, (list, tuple)):
+                logger.info(f"{prefix} MAGMOM in calculator: {len(magmom_in_calc)} values")
+            else:
+                logger.info(f"{prefix} MAGMOM in calculator: {magmom_in_calc}")
+
+    except Exception as e:
+        logger.debug(f"{prefix} Could not extract calculator parameters: {e}")
+
+
 
 def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
     if run_overrides is None:
@@ -157,7 +219,9 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             # Regular Vasp calculator
             calc = _make_step_calculator(cfg, step, run_overrides)
             atoms.calc = calc
+            _log_calculator_params(calc, prefix="  *")
             atoms = setup_initial_magmom(atoms, initial_magmom)
+            _log_magmom_summary(atoms, prefix="  *")
             _run_step(atoms, step, dry_run)
 
     # Check convergence before marking as done
@@ -175,12 +239,35 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
         else:
             # No ASE optimizer used, check OUTCAR convergence (standard VASP optimization)
             convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
+
+            # Log convergence details if successful
+            if convergence:
+                try:
+                    final_atoms = read('OUTCAR', format='vasp-out', index=-1)
+                    forces = final_atoms.get_forces()
+                    max_force = np.linalg.norm(forces, axis=1).max()
+                    logger.info(f"  ✓ VASP converged: max_force={max_force:.4f} eV/Å")
+                except Exception:
+                    logger.info(f"  ✓ VASP converged")
+
             if not convergence:
                 logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
                 logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
                 raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
 
     backup_output_files(name=name)
+
+    # Stage summary including magnetic moments
+    if not dry_run:
+        try:
+            final_atoms = read('OUTCAR', format='vasp-out', index=-1)
+            final_magmoms = final_atoms.get_magnetic_moments()
+            logger.info(f" -- Stage '{name}' magnetic summary:")
+            logger.info(f"    Total magnetic moment: {final_magmoms.sum():.3f} μB")
+            logger.info(f"    Max |moment|: {np.abs(final_magmoms).max():.3f} μB")
+        except Exception:
+            logger.debug(f" -- Could not extract final magnetic moments from OUTCAR")
+
     logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
     _mark_done(name)
 
@@ -224,7 +311,9 @@ def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML,
     # Use the documented with-clause pattern
     with VaspInteractive(**vasp_kwargs) as calc:
         atoms.calc = calc
+        _log_calculator_params(calc, prefix="    ")
         atoms = setup_initial_magmom(atoms, initial_magmom)
+        _log_magmom_summary(atoms, prefix="    ")
 
         # Run ASE optimizer
         optimizer_name = step.get('optimizer')
@@ -279,10 +368,21 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
         try:
             energy = atoms.get_potential_energy()
             logger.info(f"    Calculation completed, energy: {energy:.6f} eV")
+
+            # Report final magnetic moments from VASP calculation
+            try:
+                final_magmoms = atoms.get_magnetic_moments()
+                total_mag = final_magmoms.sum()
+                max_mag = np.abs(final_magmoms).max()
+                logger.info(f"    Final magnetic moments: total={total_mag:.3f} μB, "
+                           f"max={max_mag:.3f} μB")
+            except Exception:
+                logger.debug("    Could not extract final magnetic moments")
+
         except Exception as e:
             logger.error(f"    VASP calculation failed: {e}")
             raise
-    
+
     logger.info(f"    ✔ Step '{name}' done")
 
 
