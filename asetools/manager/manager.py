@@ -157,7 +157,7 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             # Regular Vasp calculator
             calc = _make_step_calculator(cfg, step, run_overrides)
             atoms.calc = calc
-            atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
+            atoms = setup_initial_magmom(atoms, initial_magmom)
             _run_step(atoms, step, dry_run)
 
     # Check convergence before marking as done
@@ -224,7 +224,7 @@ def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML,
     # Use the documented with-clause pattern
     with VaspInteractive(**vasp_kwargs) as calc:
         atoms.calc = calc
-        atoms = setup_initial_magmom(atoms, magmom_dict=initial_magmom)
+        atoms = setup_initial_magmom(atoms, initial_magmom)
 
         # Run ASE optimizer
         optimizer_name = step.get('optimizer')
