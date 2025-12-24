@@ -85,10 +85,33 @@ def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overri
 
     return calc
 
-def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False):
-    
-    # get the initial magmom from the config to be used at each stage
-    initial_magmom = cfg.initial_magmom_data     # {} if not defined
+def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False, magmoms=None):
+    """
+    Run a multi-stage VASP workflow.
+
+    Args:
+        atoms: ASE Atoms object to optimize
+        cfg: Configuration from YAML file
+        workflow_name: Name of workflow to run (from YAML)
+        run_overrides: Dict of VASP parameters to override
+        dry_run: If True, skip actual calculations
+        magmoms: Optional list of per-atom magnetic moments.
+            - If provided, overrides YAML-based element magmoms
+            - If shorter than len(atoms), remaining atoms set to 0.0
+            - If longer, raises ValueError
+            - Example: magmoms = 32*[0] + 64*[2.0] + 16*[0]
+    """
+
+    # Determine magnetic moment source: runtime parameter overrides YAML config
+    if magmoms is not None:
+        initial_magmom = magmoms  # Use runtime list
+        logger.info(f"Using runtime magmoms parameter (list with {len(magmoms)} values)")
+    else:
+        initial_magmom = cfg.initial_magmom_data  # Use YAML dict
+        if initial_magmom:
+            logger.info(f"Using YAML-based element magmoms: {initial_magmom}")
+        else:
+            logger.info("No magnetic moments specified (YAML or runtime)")
 
     to_run = stages_to_run(cfg, workflow_name)
     stages = cfg.workflows[workflow_name]['stages']
@@ -105,7 +128,7 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
 
-def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom: dict):
+def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom):
     # run_overrides is different from the overrides in each step
     name  = stage['name']
     steps = stage['steps']
@@ -162,7 +185,7 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     _mark_done(name)
 
 
-def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict, initial_magmom: dict, dry_run: bool):
+def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict, initial_magmom, dry_run: bool):
     """
     Run a step that requires VaspInteractive using the documented with-clause pattern.
     This ensures proper process management and prevents hanging.
