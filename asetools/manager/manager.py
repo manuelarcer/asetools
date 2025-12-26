@@ -16,6 +16,82 @@ from ..analysis import check_outcar_convergence
 
 logger = logging.getLogger(__name__)
 
+def _detect_atom_reordering(atoms, reference_symbols=None):
+    """
+    Detect if atoms have been reordered compared to a reference configuration.
+
+    Args:
+        atoms: Current ASE Atoms object
+        reference_symbols: List of chemical symbols in original order
+
+    Returns:
+        tuple: (reordered, sort_indices, resort_indices)
+            - reordered: True if atoms were reordered
+            - sort_indices: Mapping from original to current order
+            - resort_indices: Mapping from current back to original order
+    """
+    current_symbols = list(atoms.get_chemical_symbols())
+
+    if reference_symbols is None or len(reference_symbols) != len(current_symbols):
+        # Cannot detect reordering without reference
+        return False, None, None
+
+    # Check if order changed
+    if current_symbols == reference_symbols:
+        return False, None, None
+
+    # Atoms were reordered - find the mapping
+    # ASE VASP calculator sorts by element, then preserves relative order within each element
+    from collections import defaultdict
+
+    # Build mapping: for each element, track original indices
+    element_indices_original = defaultdict(list)
+    for i, symbol in enumerate(reference_symbols):
+        element_indices_original[symbol].append(i)
+
+    # Build mapping: for each element, track current indices
+    element_indices_current = defaultdict(list)
+    for i, symbol in enumerate(current_symbols):
+        element_indices_current[symbol].append(i)
+
+    # Create sort_indices: original_index -> current_index
+    sort_indices = [None] * len(current_symbols)
+    for symbol in element_indices_original.keys():
+        orig_list = element_indices_original[symbol]
+        curr_list = element_indices_current[symbol]
+        for orig_pos, orig_idx in enumerate(orig_list):
+            curr_idx = curr_list[orig_pos]
+            sort_indices[orig_idx] = curr_idx
+
+    # Create resort_indices: current_index -> original_index
+    resort_indices = [None] * len(current_symbols)
+    for orig_idx, curr_idx in enumerate(sort_indices):
+        resort_indices[curr_idx] = orig_idx
+
+    return True, sort_indices, resort_indices
+
+
+def _reorder_magmom_list(magmom_list, sort_indices):
+    """
+    Reorder a magmom list to match reordered atoms.
+
+    Args:
+        magmom_list: Original magmom list
+        sort_indices: Mapping from original to current order
+
+    Returns:
+        Reordered magmom list
+    """
+    if sort_indices is None:
+        return magmom_list
+
+    reordered = [0.0] * len(magmom_list)
+    for orig_idx, curr_idx in enumerate(sort_indices):
+        reordered[curr_idx] = magmom_list[orig_idx]
+
+    return reordered
+
+
 def _log_magmom_summary(atoms, prefix="  *"):
     """Log summary of magnetic moments on atoms object."""
     try:
@@ -175,9 +251,15 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         else:
             logger.info("No magnetic moments specified (YAML or runtime)")
 
+    # Store reference atom order for reordering detection (only needed for list-based magmoms)
+    reference_symbols = None
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)):
+        reference_symbols = list(atoms.get_chemical_symbols())
+        logger.info(f"  * Storing reference atom order for magmom mapping ({len(reference_symbols)} atoms)")
+
     to_run = stages_to_run(cfg, workflow_name)
     stages = cfg.workflows[workflow_name]['stages']
-    
+
     if not to_run:
         logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
         return
@@ -186,15 +268,25 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         if stage['name'] not in to_run:
             logger.info(f"Skipping STAGE: {stage['name']}, already done")
             continue
-        _run_stage(atoms, cfg, stage, run_overrides, dry_run, initial_magmom=initial_magmom)
+        _run_stage(atoms, cfg, stage, run_overrides, dry_run,
+                   initial_magmom=initial_magmom, reference_symbols=reference_symbols)
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
 
-def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom):
+def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom, reference_symbols=None):
     # run_overrides is different from the overrides in each step
     name  = stage['name']
     steps = stage['steps']
     logger.info(f"Running STAGE: {stage['name']}")
+
+    # Detect and handle atom reordering for list-based magmoms
+    magmom_to_apply = initial_magmom
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)) and reference_symbols is not None:
+        reordered, sort_idx, _ = _detect_atom_reordering(atoms, reference_symbols)
+        if reordered:
+            logger.warning(f"  ⚠ Atoms were reordered by VASP - remapping magmom list to match current order")
+            magmom_to_apply = _reorder_magmom_list(list(initial_magmom), sort_idx)
+            logger.info(f"  * Magmom list remapped for reordered structure")
 
     # Apply constraints if specified in stage configuration
     if 'constraints' in stage:
@@ -212,7 +304,7 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
 
         # Check if step needs VaspInteractive with proper context management
         if step.get('optimizer') is not None:
-            opt_converged = _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, initial_magmom, dry_run)
+            opt_converged = _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, magmom_to_apply, dry_run)
             if opt_converged is not None:
                 ase_optimizer_converged = opt_converged
         else:
@@ -220,7 +312,7 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             calc = _make_step_calculator(cfg, step, run_overrides)
             atoms.calc = calc
             _log_calculator_params(calc, prefix="  *")
-            atoms = setup_initial_magmom(atoms, initial_magmom)
+            atoms = setup_initial_magmom(atoms, magmom_to_apply)
             _log_magmom_summary(atoms, prefix="  *")
             _run_step(atoms, step, dry_run)
 
