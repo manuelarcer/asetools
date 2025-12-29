@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import glob
+import json
 import numpy as np
 from ase.io import read
 from .calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
@@ -15,6 +16,55 @@ from ase.mep import MinModeTranslate
 from ..analysis import check_outcar_convergence
 
 logger = logging.getLogger(__name__)
+
+# Reference file for atom order tracking across workflow restarts
+MAGMOM_REFERENCE_FILE = '.asetools_magmom_reference.json'
+
+
+def _save_magmom_reference(symbols, magmoms):
+    """
+    Save reference atom order and magmoms to file for workflow restart.
+
+    Args:
+        symbols: List of chemical symbols in original order
+        magmoms: Original magmom list
+    """
+    data = {
+        'reference_symbols': symbols,
+        'original_magmoms': magmoms,
+        'version': '1.0'
+    }
+    with open(MAGMOM_REFERENCE_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+    logger.info(f"  * Saved atom order reference to {MAGMOM_REFERENCE_FILE}")
+
+
+def _load_magmom_reference():
+    """
+    Load reference atom order and magmoms from file.
+
+    Returns:
+        tuple: (reference_symbols, original_magmoms) or (None, None) if file doesn't exist
+    """
+    if not os.path.exists(MAGMOM_REFERENCE_FILE):
+        return None, None
+
+    try:
+        with open(MAGMOM_REFERENCE_FILE, 'r') as f:
+            data = json.load(f)
+        logger.info(f"  * Loaded atom order reference from {MAGMOM_REFERENCE_FILE}")
+        return data['reference_symbols'], data['original_magmoms']
+    except Exception as e:
+        logger.warning(f"  ⚠ Could not load {MAGMOM_REFERENCE_FILE}: {e}")
+        return None, None
+
+
+def _remove_magmom_reference():
+    """Remove reference file after successful workflow completion."""
+    if os.path.exists(MAGMOM_REFERENCE_FILE):
+        os.remove(MAGMOM_REFERENCE_FILE)
+        logger.debug(f"  * Removed {MAGMOM_REFERENCE_FILE}")
+
 
 def _detect_atom_reordering(atoms, reference_symbols=None):
     """
@@ -251,11 +301,28 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         else:
             logger.info("No magnetic moments specified (YAML or runtime)")
 
-    # Store reference atom order for reordering detection (only needed for list-based magmoms)
+    # Handle reference atom order for reordering detection (only needed for list-based magmoms)
     reference_symbols = None
     if isinstance(initial_magmom, (list, tuple, np.ndarray)):
-        reference_symbols = list(atoms.get_chemical_symbols())
-        logger.info(f"  * Storing reference atom order for magmom mapping ({len(reference_symbols)} atoms)")
+        # Check if reference file exists (workflow restart)
+        saved_ref, saved_magmoms = _load_magmom_reference()
+
+        if saved_ref is not None:
+            # Workflow restart: use saved reference
+            reference_symbols = saved_ref
+            # Verify saved magmoms match what user provided
+            if list(saved_magmoms) != list(initial_magmom):
+                logger.warning(
+                    f"  ⚠ Magmom list changed from previous run!\n"
+                    f"    Saved: {saved_magmoms[:5]}...\n"
+                    f"    Current: {list(initial_magmom)[:5]}...\n"
+                    f"    Using current magmoms but will remap based on saved atom order"
+                )
+        else:
+            # First run: store current atom order as reference
+            reference_symbols = list(atoms.get_chemical_symbols())
+            _save_magmom_reference(reference_symbols, list(initial_magmom))
+            logger.info(f"  * Stored reference atom order for magmom mapping ({len(reference_symbols)} atoms)")
 
     to_run = stages_to_run(cfg, workflow_name)
     stages = cfg.workflows[workflow_name]['stages']
@@ -270,6 +337,11 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
             continue
         _run_stage(atoms, cfg, stage, run_overrides, dry_run,
                    initial_magmom=initial_magmom, reference_symbols=reference_symbols)
+
+    # Workflow completed successfully - clean up reference file
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)):
+        _remove_magmom_reference()
+
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
     
 
