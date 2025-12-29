@@ -60,10 +60,16 @@ def _load_magmom_reference():
 
 
 def _remove_magmom_reference():
-    """Remove reference file after successful workflow completion."""
+    """
+    Remove reference file manually.
+
+    Note: Reference file is now kept after workflow completion as a record
+    of atom order and magmom handling. This function is available for manual
+    cleanup if needed.
+    """
     if os.path.exists(MAGMOM_REFERENCE_FILE):
         os.remove(MAGMOM_REFERENCE_FILE)
-        logger.debug(f"  * Removed {MAGMOM_REFERENCE_FILE}")
+        logger.info(f"  * Removed {MAGMOM_REFERENCE_FILE}")
 
 
 def _detect_atom_reordering(atoms, reference_symbols=None):
@@ -338,11 +344,11 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         _run_stage(atoms, cfg, stage, run_overrides, dry_run,
                    initial_magmom=initial_magmom, reference_symbols=reference_symbols)
 
-    # Workflow completed successfully - clean up reference file
-    if isinstance(initial_magmom, (list, tuple, np.ndarray)):
-        _remove_magmom_reference()
-
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
+
+    # Keep reference file as record of atom order and magmom handling
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)) and os.path.exists(MAGMOM_REFERENCE_FILE):
+        logger.info(f"  * Atom order reference preserved in {MAGMOM_REFERENCE_FILE}")
     
 
 def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom, reference_symbols=None):
