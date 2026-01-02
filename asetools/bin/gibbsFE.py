@@ -1,152 +1,155 @@
 #!/usr/bin/env python
 
-# This script can extract the relevant information to calculate the corrections
-# to the energy for GFE
-# Harmonic limit approximation. Just like it is implemented in ASE
-# https://wiki.fysik.dtu.dk/ase/ase/thermochemistry/thermochemistry.html
-
-# Also, I calculated each thermochemistry parameter manually for an example. Look at the excel:
-# Onedrive/work/ACDP/Histidine_electrocatall_freq_calc_and_gfe.xlsx  
-
-import math, sys
+import math
+import sys
+import argparse
 from ase.io import read, write
 import numpy as np
-from ase.thermochemistry import HarmonicThermo
+from ase.thermochemistry import HarmonicThermo, IdealGasThermo
 
-def determineshift(shiftarray, k=1 ):
-        newshift = []
-        for shiftat in shiftarray:
-                newshift.append( [ k * sh for sh in shiftat ] )
-        return newshift
-
-
-print()
-print('This should be a folder with a finite differences calculations (Vib Analysis)')
-print('USAGE:   gibbsFE.py   OUTCAR_FILE   WRITE_VIB   TEMP')
-print('WRITE_VIB is either y or n \nTEMP in K (298 K is the default)')
-print()
-
-outcar = sys.argv[1]
-writevib = sys.argv[2]
-
-if len(sys.argv) == 4:
-    T = float( sys.argv[3] )
-else:
-    T = 298         # K
-
-kB = 0.0000861733   # eV/K
-
-## Extracting the total energy
-e_dft = read(outcar, format='vasp-out', index=0).get_potential_energy()
-atoms = read(outcar, 'vasp-out', index=-1)
-output = open(outcar, 'r')
-lines = output.readlines()
-vib = {}
-zpe = 0 ; cpT = 0 ; S = 0
-vasp6 = False
-finished = False
-for line in lines:
-    if 'General timing and accounting informations' in line:
-        finished = True
-    if 'vasp.6' in line:
-        vasp6 = True
-
-if finished:
+def extract_vib_info(lines):
+    vib = {}
+    vasp6 = any('vasp.6' in line for line in lines)
     for line in lines:
-        if ' f  = ' in line:
+        if ' f  = ' in line or 'f/i=' in line:
             index = line.split()[0]
-            vibenergy = float( line.split()[-2] ) / 1000  # this is now in eV
-            freq = float( line.split()[-4] )
-            if freq >= 50: 
-                vib[index] = {}
-                vib[index]['e'] = vibenergy
-                vib[index]['freq'] = freq
-                zpe += vibenergy        # For ZPE energy, we need to divide by 2 at the end
-                cpT += vibenergy / ( math.exp( vibenergy / kB / T ) - 1)
-                S += kB * ( vibenergy / ( kB*T * ( math.exp(vibenergy/kB/T)-1 )  ) - math.log( 1 - math.exp(-vibenergy/kB/T
-) ) )
-        elif 'f/i=' in line:
-            print('there is an imaginary frequency')
-            index = line.split()[0]
-            vib[index+'i'] = {}
-            vibenergy = float( line.split()[-2] ) / 1000  # this is now in eV
-            freq = float( line.split()[-4] )
-            vib[index+'i']['e'] = vibenergy
-            vib[index+'i']['freq'] = freq
-else:
-    print('Finite differences did not complete!! Please check')
-    sys.exit()
+            vibenergy = float(line.split()[-2]) / 1000
+            freq = float(line.split()[-4])
+            if ' f  = ' in line:
+                vib[index] = {'e': vibenergy, 'freq': freq}
+            elif 'f/i=' in line:
+                vib[index] = {'e': vibenergy, 'freq': -freq}
+    return vib, vasp6
 
-print()
-#results = open('GFEcorrections.log', 'a')
-print ('-----------------------')
-print ('{:>3} {:>12} {:>6}'.format('#', 'Freq[cm-1]', 'E[eV]'))
-print ('-----------------------')
-for i in vib:
-    #results.write('{:.0} {:.1f} {:.3f}'.format(vib[i], vib['freq'], vib['e']))
-    print ('{:>3} {:12.1f} {:6.3f}'.format(i, vib[i]['freq'], vib[i]['e']))
-print ('-----------------------')
-#print('\n')
-print('E, eV = {:.3f}'.format( e_dft ))
-print('ZPE, eV = {:.3f}'.format( zpe / 2. ))
-print('S, eV/K = {:.6f}'.format( S ))
-print('Temperature is = {:.1f}'.format( T ) )
-print('Thermal correction (0->T), eV = {:.3f}'.format( cpT ) )
-print('Entropy correction (-S*T), eV = {:.3f}'.format( -S * T ) )
-print('\n')
-print('All values together: E_tot   E_ZPE   CpT   -S*T')
-print('{:.3f} {:.3f} {:.3f} {:.3f}'.format(e_dft, zpe / 2., cpT, -S * T))
-print('\n')
+def compute_corrections(vib, T):
+    kB = 0.0000861733
+    zpe = sum([v['e'] for v in vib.values() if v['freq'] > 0]) / 2.0
+    cpT = sum([v['e'] / (math.exp(v['e'] / kB / T) - 1) for v in vib.values() if v['freq'] >= 0])
+    S = sum([kB * (v['e'] / (kB * T * (math.exp(v['e'] / kB / T) - 1)) - math.log(1 - math.exp(-v['e'] / kB / T))) for v in vib.values() if v['freq'] >= 100])
+    return zpe, cpT, S
 
-print('*************************************************')
-print('---------------  Harmonic Limit  ----------------')
-print('*************************************************')
-print()
-energies = []
-for key in vib.keys():
-      energies.append( vib[key]['e'] )
-harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
-# The following line already gives the details of the S, CpT and G energy calculations
-harm_lim.get_helmholtz_energy(T, verbose=True)
+def write_vib_files(vib, vasp6, lines, outcar):
+    if vasp6:
+        try:
+            atoms = read('POSCAR', format='vasp')
+        except:
+            print('Could not read structure file')
+            return
+    else:
+        atoms = read(outcar, format='vasp-out')
 
-### Ideal gas Thermo
-if gas == True:
-    thermo = IdealGasThermo(vib_energies=energies,
+    nat = len(atoms)
+    for i, line in enumerate(lines):
+        if 'f  =' in line or 'f/i=' in line:
+            name1 = line.split()[0]
+            name2 = 'IMG' if 'f/i=' in line else 'f'
+            shift = [list(map(float, lines[i+count+2].split()[3:])) for count in range(nat)]
+            vib = []
+            for k in np.arange(-1, 1, 0.2):
+                atomscopy = atoms.copy()
+                newshift = determineshift(shift, k)
+                atomscopy.translate(newshift)
+                vib.append(atomscopy)
+                write(f'vib_{name1}_{name2}.traj', vib, format='traj')
+
+def determineshift(shiftarray, k=1):
+    return [[k * sh for sh in shiftat] for shiftat in shiftarray]
+
+def is_close(a, b, threshold=0.001):
+    return abs(a - b) < threshold
+
+def remove_repeated_energies(energies, atoms, geom):  # It happens that for gas-phase I found repeated vib
+    # energies, is the list of vibrational energies
+    # atoms, is the atoms object
+    # geom, is the geometry of the molecule : 'linear' or 'nonlinear'
+    if geom == 'linear':
+        numvib = 3 * len(atoms) - 5
+    elif geom == 'nonlinear':
+        numvib = 3 * len(atoms) - 6
+    
+    test = len(energies) == numvib
+    if test:
+        print('Number of energies as expected')
+        return energies
+    else:
+        print()
+        print('WARNING: The number of energies is different from the expected')
+        print('Removing similar vibrational energies')
+        diff = len(energies) - numvib
+        invertenergies = [energies[i] for i in range(len(energies)-1, -1, -1)]
+        print(invertenergies)
+        newenergies = []
+        if len(invertenergies) > numvib:
+            for i, e in enumerate(invertenergies):
+                if i == 0:
+                    newenergies.append(e)
+                if i > 0 and not is_close(e, invertenergies[i-1]):
+                    newenergies.append(e)
+        return newenergies
+
+def main():
+    parser = argparse.ArgumentParser(description='Calculate corrections to the energy for GFE.')
+    parser.add_argument('outcar', type=str, help='OUTCAR file path')
+    parser.add_argument('--writevib', type=str, choices=['y', 'n'], default='n', help='Whether to write vibrations (y/n)')
+    parser.add_argument('--temp', type=float, default=298, help='Temperature in K')
+    parser.add_argument('--gas', type=bool, default=False, help='Ideal Gas-phase Thermo')
+    parser.add_argument('--symnum', type=int, default=2, help='Symmetry Number')
+    parser.add_argument('--geom', type=str, choices=['monoatomic', 'linear', 'nonlinear'], default='linear', help='Geometry of molecule')
+    parser.add_argument('--pressure', type=float, default=1.0, help='Gas pressure (bar)')
+    args = parser.parse_args()
+
+    Pa = 100000.    # 1 bar in Pa
+
+    lines = open(args.outcar, 'r').readlines()
+    vib, vasp6 = extract_vib_info(lines)
+    zpe, cpT, S = compute_corrections(vib, args.temp)
+
+    ## Display results
+    print ('-----------------------')
+    print ('{:>3} {:>12} {:>6}'.format('#', 'Freq[cm-1]', 'E[eV]'))
+    print ('-----------------------')
+    for key, value in vib.items():
+        print ('{:>3} {:12.1f} {:6.3f}'.format(key, value['freq'], value['e']))
+    print ('-----------------------')
+
+    e_dft = read(args.outcar, format='vasp-out', index=0).get_potential_energy()
+    print('E, eV = {:.3f}'.format(e_dft))
+    print('ZPE, eV = {:.3f}'.format(zpe))
+    print('S, eV/K = {:.6f}'.format(S))
+    print('Temperature is = {:.1f}'.format(args.temp))
+    print('Thermal correction (0->T), eV = {:.3f}'.format(cpT))
+    print('Entropy correction (-S*T), eV = {:.3f}'.format(-S * args.temp))
+    print('\n')
+    print('All values together: E_tot   E_ZPE   CpT   -S*T')
+    print('{:.3f} {:.3f} {:.3f} {:.3f}'.format(e_dft, zpe, cpT, -S * args.temp))
+    print('\n')
+
+    print('*************************************************')
+    print('---------------  Harmonic Limit  ----------------')
+    print('*************************************************')
+    print()
+    energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
+    harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
+    # The following line already gives the details of the S, CpT and G energy calculations
+    harm_lim.get_helmholtz_energy(args.temp, verbose=True)
+
+
+    ##### Ideal Gas Thermo
+    if args.gas:
+        energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
+        print(energies)
+        atoms = read(args.outcar, format='vasp-out', index=0)
+        energies = remove_repeated_energies(energies, atoms, args.geom)
+        thermo = IdealGasThermo(vib_energies=energies,
                         atoms=atoms,
-                        geometry='nonlinear',      # monoatomic, linear, nonlinear
-                        symmetrynumber=2, spin=0)
-    G = thermo.get_gibbs_energy(temperature=298.15, pressure=101325.)
+                        #potentialenergy=atoms.get_potential_energy(),
+                        geometry=args.geom,      # monoatomic, linear, nonlinear
+                        symmetrynumber=args.symnum,   # CO2: 2, H2O: 2, CO: 1, H2: 2
+                        spin=0)     # Different for radicals or unpaired electrons            
+        G = thermo.get_gibbs_energy(temperature=args.temp, pressure=args.pressure * Pa)
+    
+    if args.writevib == 'y':
+        write_vib_files(vib, vasp6, lines, args.outcar)
 
-
-
-### WRITE VIB section
-if writevib == 'y' or writevib == 'Y' or writevib == 'yes':
-	print('Writing vibrational frequencies to traj files...')
-	if vasp6:
-		try:
-			atoms = read('POSCAR', format='vasp')
-		except:
-			print('Could not read structure file')
-	else:
-		atoms = read(outcar, format='vasp-out')
-	nat = len(atoms)
-	for i, line in enumerate(lines):
-		count = 0
-		if 'f  =' in line or 'f/i=' in line:
-			name1 = line.split()[0]
-			if 'f/i=' in line:
-				name2 = 'IMG'
-			else:
-				name2 = 'f'
-			shift = []
-			while count < nat:
-				#shift = np.array( [ float(sh) for sh in lines[i+count+2].split()[3:] ] )
-				shift.append( [ float(sh) for sh in lines[i+count+2].split()[3:] ] )
-				count += 1
-			vib = []
-			for k in np.arange(-1,1,0.2):
-				atomscopy = atoms.copy()
-				newshift = determineshift( shift, k )
-				atomscopy.translate(newshift)
-				vib.append(atomscopy)
-			write('vib_'+name1+'_'+name2+'.traj', vib , format='traj')
+if __name__ == "__main__":
+    main()
