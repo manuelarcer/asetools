@@ -6,6 +6,22 @@ import argparse
 from ase.io import read, write
 import numpy as np
 from ase.thermochemistry import HarmonicThermo, IdealGasThermo
+import logging
+import datetime
+
+def setup_logging():
+    """Configure logging to write to both file and console"""
+    logfile = f"FREQ_ANALYSIS_{datetime.datetime.now():%Y%m%d_%H%M}.log"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",  # Simple format for frequency analysis output
+        handlers=[
+            logging.FileHandler(logfile),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger(__name__)
 
 def extract_vib_info(lines):
     vib = {}
@@ -58,26 +74,27 @@ def determineshift(shiftarray, k=1):
 def is_close(a, b, threshold=0.001):
     return abs(a - b) < threshold
 
-def remove_repeated_energies(energies, atoms, geom):  # It happens that for gas-phase I found repeated vib
+def remove_repeated_energies(energies, atoms, geom, logger):  # It happens that for gas-phase I found repeated vib
     # energies, is the list of vibrational energies
     # atoms, is the atoms object
     # geom, is the geometry of the molecule : 'linear' or 'nonlinear'
+    # logger, is the logger object for output
     if geom == 'linear':
         numvib = 3 * len(atoms) - 5
     elif geom == 'nonlinear':
         numvib = 3 * len(atoms) - 6
-    
+
     test = len(energies) == numvib
     if test:
-        print('Number of energies as expected')
+        logger.info('Number of energies as expected')
         return energies
     else:
-        print()
-        print('WARNING: The number of energies is different from the expected')
-        print('Removing similar vibrational energies')
+        logger.info('')
+        logger.info('WARNING: The number of energies is different from the expected')
+        logger.info('Removing similar vibrational energies')
         diff = len(energies) - numvib
         invertenergies = [energies[i] for i in range(len(energies)-1, -1, -1)]
-        print(invertenergies)
+        logger.info(invertenergies)
         newenergies = []
         if len(invertenergies) > numvib:
             for i, e in enumerate(invertenergies):
@@ -98,6 +115,9 @@ def main():
     parser.add_argument('--pressure', type=float, default=1.0, help='Gas pressure (bar)')
     args = parser.parse_args()
 
+    # Setup logging
+    logger = setup_logging()
+
     Pa = 100000.    # 1 bar in Pa
 
     lines = open(args.outcar, 'r').readlines()
@@ -105,29 +125,29 @@ def main():
     zpe, cpT, S = compute_corrections(vib, args.temp)
 
     ## Display results
-    print ('-----------------------')
-    print ('{:>3} {:>12} {:>6}'.format('#', 'Freq[cm-1]', 'E[eV]'))
-    print ('-----------------------')
+    logger.info('-----------------------')
+    logger.info('{:>3} {:>12} {:>6}'.format('#', 'Freq[cm-1]', 'E[eV]'))
+    logger.info('-----------------------')
     for key, value in vib.items():
-        print ('{:>3} {:12.1f} {:6.3f}'.format(key, value['freq'], value['e']))
-    print ('-----------------------')
+        logger.info('{:>3} {:12.1f} {:6.3f}'.format(key, value['freq'], value['e']))
+    logger.info('-----------------------')
 
     e_dft = read(args.outcar, format='vasp-out', index=0).get_potential_energy()
-    print('E, eV = {:.3f}'.format(e_dft))
-    print('ZPE, eV = {:.3f}'.format(zpe))
-    print('S, eV/K = {:.6f}'.format(S))
-    print('Temperature is = {:.1f}'.format(args.temp))
-    print('Thermal correction (0->T), eV = {:.3f}'.format(cpT))
-    print('Entropy correction (-S*T), eV = {:.3f}'.format(-S * args.temp))
-    print('\n')
-    print('All values together: E_tot   E_ZPE   CpT   -S*T')
-    print('{:.3f} {:.3f} {:.3f} {:.3f}'.format(e_dft, zpe, cpT, -S * args.temp))
-    print('\n')
+    logger.info('E, eV = {:.3f}'.format(e_dft))
+    logger.info('ZPE, eV = {:.3f}'.format(zpe))
+    logger.info('S, eV/K = {:.6f}'.format(S))
+    logger.info('Temperature is = {:.1f}'.format(args.temp))
+    logger.info('Thermal correction (0->T), eV = {:.3f}'.format(cpT))
+    logger.info('Entropy correction (-S*T), eV = {:.3f}'.format(-S * args.temp))
+    logger.info('\n')
+    logger.info('All values together: E_tot   E_ZPE   CpT   -S*T')
+    logger.info('{:.3f} {:.3f} {:.3f} {:.3f}'.format(e_dft, zpe, cpT, -S * args.temp))
+    logger.info('\n')
 
-    print('*************************************************')
-    print('---------------  Harmonic Limit  ----------------')
-    print('*************************************************')
-    print()
+    logger.info('*************************************************')
+    logger.info('---------------  Harmonic Limit  ----------------')
+    logger.info('*************************************************')
+    logger.info('')
     energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
     harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
     # The following line already gives the details of the S, CpT and G energy calculations
@@ -137,17 +157,17 @@ def main():
     ##### Ideal Gas Thermo
     if args.gas:
         energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
-        print(energies)
+        logger.info(energies)
         atoms = read(args.outcar, format='vasp-out', index=0)
-        energies = remove_repeated_energies(energies, atoms, args.geom)
+        energies = remove_repeated_energies(energies, atoms, args.geom, logger)
         thermo = IdealGasThermo(vib_energies=energies,
                         atoms=atoms,
                         #potentialenergy=atoms.get_potential_energy(),
                         geometry=args.geom,      # monoatomic, linear, nonlinear
                         symmetrynumber=args.symnum,   # CO2: 2, H2O: 2, CO: 1, H2: 2
-                        spin=0)     # Different for radicals or unpaired electrons            
+                        spin=0)     # Different for radicals or unpaired electrons
         G = thermo.get_gibbs_energy(temperature=args.temp, pressure=args.pressure * Pa)
-    
+
     if args.writevib == 'y':
         write_vib_files(vib, vasp6, lines, args.outcar)
 
