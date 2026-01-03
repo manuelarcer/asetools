@@ -8,6 +8,8 @@ import numpy as np
 from ase.thermochemistry import HarmonicThermo, IdealGasThermo
 import logging
 import datetime
+from io import StringIO
+from contextlib import redirect_stdout
 
 def setup_logging():
     """Configure logging to write to both file and console"""
@@ -151,7 +153,15 @@ def main():
     energies = [value['e'] for value in vib.values() if value['freq'] >= 0]
     harm_lim = HarmonicThermo(energies, potentialenergy=0.0)
     # The following line already gives the details of the S, CpT and G energy calculations
-    harm_lim.get_helmholtz_energy(args.temp, verbose=True)
+    # Capture the verbose output from ASE and log it
+    f = StringIO()
+    with redirect_stdout(f):
+        harm_lim.get_helmholtz_energy(args.temp, verbose=True)
+    helmholtz_output = f.getvalue()
+    # Print to console and log to file
+    print(helmholtz_output, end='')
+    for line in helmholtz_output.splitlines():
+        logger.info(line)
 
 
     ##### Ideal Gas Thermo
