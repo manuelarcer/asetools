@@ -344,6 +344,13 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         _run_stage(atoms, cfg, stage, run_overrides, dry_run,
                    initial_magmom=initial_magmom, reference_symbols=reference_symbols)
 
+        # Critical: Reload structure from OUTCAR after each stage completes
+        # This ensures the next stage starts with the converged structure,
+        # not the in-memory atoms object which may have stale calculator state
+        if not dry_run:
+            atoms = load_structure(cfg.globals.get('initial_conf_pattern', 'POSCAR'))
+            logger.info(f"  * Reloaded structure from disk for next stage")
+
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
 
     # Keep reference file as record of atom order and magmom handling
@@ -376,17 +383,20 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     # Track if any step used ASE optimizer (for proper convergence checking)
     ase_optimizer_converged = None
 
-    for step in steps:
-        # Make calculator for each step based on step requirements
-        logger.info('  * Setting up calculator from config')
+    # Check if ANY step in this stage needs ASE optimizer
+    # If so, ALL steps must use VaspInteractive to avoid calculator conflicts
+    stage_needs_vaspinteractive = any(step.get('optimizer') is not None for step in steps)
 
-        # Check if step needs VaspInteractive with proper context management
-        if step.get('optimizer') is not None:
-            opt_converged = _run_step_with_vaspinteractive(atoms, cfg, step, run_overrides, magmom_to_apply, dry_run)
-            if opt_converged is not None:
-                ase_optimizer_converged = opt_converged
-        else:
-            # Regular Vasp calculator
+    if stage_needs_vaspinteractive:
+        # Run entire stage with VaspInteractive in a single context
+        logger.info('  * Stage requires VaspInteractive (ASE optimizer detected)')
+        ase_optimizer_converged = _run_stage_with_vaspinteractive(
+            atoms, cfg, steps, run_overrides, magmom_to_apply, dry_run
+        )
+    else:
+        # Run steps with regular VASP calculator
+        for step in steps:
+            logger.info('  * Setting up calculator from config')
             calc = _make_step_calculator(cfg, step, run_overrides)
             atoms.calc = calc
             _log_calculator_params(calc, prefix="  *")
@@ -442,13 +452,14 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     _mark_done(name)
 
 
-def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict, initial_magmom, dry_run: bool):
+def _run_stage_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML, steps: list, run_overrides: dict, initial_magmom, dry_run: bool):
     """
-    Run a step that requires VaspInteractive using the documented with-clause pattern.
-    This ensures proper process management and prevents hanging.
+    Run all steps in a stage with VaspInteractive using a single with-clause context.
+    This ensures proper process management and prevents hanging when mixing single point
+    and ASE optimizer steps.
 
     Returns:
-        bool or None: Optimizer convergence status (True/False) or None if dry_run
+        bool or None: Optimizer convergence status (True/False) or None if dry_run/no optimizer
     """
     try:
         from vasp_interactive import VaspInteractive
@@ -458,42 +469,61 @@ def _run_step_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML,
             "Install it with: pip install vasp-interactive"
         )
 
-    # Build VaspInteractive parameters
+    # Build base VaspInteractive parameters (will be updated per step)
     vasp_kwargs = deep_update(
         deep_update(cfg.basic_config.copy(), cfg.system_config),
         run_overrides or {}
     )
 
-    # Apply step overrides and VaspInteractive parameter fixes
-    overrides = step.get('overrides', {})
-    overrides = _fix_vaspinteractive_params(overrides, using_ase_optimizer=True)
-
-    # Merge overrides into vasp_kwargs
-    vasp_kwargs.update(overrides)
-
-    logger.info(f" ** Creating VaspInteractive with parameters for ASE optimizer")
-    logger.info(f"    VaspInteractive parameters: {overrides}")
+    logger.info(f" ** Creating VaspInteractive context for stage with {len(steps)} steps")
 
     if dry_run:
         logger.info("    (dry-run, skipping VaspInteractive calculation)")
         return None
 
-    # Use the documented with-clause pattern
+    # Track convergence from ASE optimizer step
+    ase_optimizer_converged = None
+
+    # Use the documented with-clause pattern - keep VaspInteractive alive for all steps
     with VaspInteractive(**vasp_kwargs) as calc:
         atoms.calc = calc
-        _log_calculator_params(calc, prefix="    ")
         atoms = setup_initial_magmom(atoms, initial_magmom)
         _log_magmom_summary(atoms, prefix="    ")
 
-        # Run ASE optimizer
-        optimizer_name = step.get('optimizer')
-        optimizer_kwargs = step.get('optimizer_kwargs', {})
+        # Run each step within the same VaspInteractive context
+        for step in steps:
+            step_name = step.get('name', 'unnamed')
+            logger.info(f"  • Step '{step_name}' (within VaspInteractive context)")
 
-        logger.info(f"    Running ASE optimizer {optimizer_name} with VaspInteractive")
-        converged = _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
+            # Get step-specific overrides
+            overrides = step.get('overrides', {})
+            optimizer_name = step.get('optimizer', None)
+            optimizer_kwargs = step.get('optimizer_kwargs', {})
 
-    logger.info(f"    ✔ VaspInteractive step '{step['name']}' completed and finalized")
-    return converged
+            # Fix VaspInteractive parameters based on whether this step uses ASE optimizer
+            overrides = _fix_vaspinteractive_params(overrides, using_ase_optimizer=(optimizer_name is not None))
+
+            # Apply overrides to calculator
+            logger.info(f"    Applying overrides: {overrides}")
+            calc.set(**overrides)
+            _log_calculator_params(calc, prefix="    ")
+
+            # Run step: either ASE optimizer or single point
+            if optimizer_name:
+                logger.info(f"    Running ASE optimizer {optimizer_name}")
+                converged = _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
+                ase_optimizer_converged = converged
+            else:
+                logger.info(f"    Running single point calculation")
+                energy = atoms.get_potential_energy()
+                logger.info(f"    Energy: {energy:.6f} eV")
+
+            logger.info(f"    ✔ Step '{step_name}' completed")
+
+    # Clear the calculator reference after VaspInteractive context closes
+    atoms.calc = None
+    logger.info(f"    ✔ VaspInteractive stage completed and finalized")
+    return ase_optimizer_converged
 
 
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
