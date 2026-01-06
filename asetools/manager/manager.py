@@ -503,9 +503,18 @@ def _run_stage_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML
             # Fix VaspInteractive parameters based on whether this step uses ASE optimizer
             overrides = _fix_vaspinteractive_params(overrides, using_ase_optimizer=(optimizer_name is not None))
 
-            # Apply overrides to calculator
+            # CRITICAL: Build complete parameter set for this step from base config
+            # This ensures parameters from previous steps don't persist
+            # calc.set() only updates provided parameters, doesn't reset others
+            step_params = deep_update(
+                deep_update(cfg.basic_config.copy(), cfg.system_config),
+                run_overrides or {}
+            )
+            step_params.update(overrides)
+
+            # Apply full parameter set to calculator
             logger.info(f"    Applying overrides: {overrides}")
-            calc.set(**overrides)
+            calc.set(**step_params)
             _log_calculator_params(calc, prefix="    ")
 
             # Run step: either ASE optimizer or single point
