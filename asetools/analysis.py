@@ -118,6 +118,233 @@ def get_parameter_from_run(outcar, check_converg=True, parameter='ISIF'):
     return None, convergence
 
 
+def classify_calculation_type(outcar_path, calc_dir):
+    """
+    Classify VASP calculation type based on OUTCAR parameters and auxiliary files.
+
+    Args:
+        outcar_path: Path to OUTCAR file
+        calc_dir: Directory containing calculation files
+
+    Returns:
+        str: Calculation type - one of:
+            'dimer', 'neb', 'ase-optimizer', 'finite-diff', 'md',
+            'single-point', 'cell-relax', 'optimization', 'unknown'
+    """
+    import os
+    import glob
+
+    # Check for special files first (highest priority)
+    # DIMER calculation
+    if os.path.exists(os.path.join(calc_dir, 'DIMER.log')):
+        return 'dimer'
+
+    # ASE optimizer logs
+    ase_optimizer_logs = ['BFGS.log', 'FIRE.log', 'LBFGS.log', 'GPMIN.log',
+                          'MDMIN.log', 'QUASINEWTON.log']
+    for log_name in ase_optimizer_logs:
+        if os.path.exists(os.path.join(calc_dir, log_name)):
+            return 'ase-optimizer'
+
+    # Check OUTCAR for IMAGES tag (NEB calculation)
+    try:
+        with open(outcar_path, 'r') as f:
+            for line in f:
+                if 'IMAGES' in line and '=' in line:
+                    # Extract IMAGES value to confirm it's not just a comment
+                    parts = line.split('=')
+                    if len(parts) > 1:
+                        try:
+                            images = int(parts[1].split()[0])
+                            if images > 0:
+                                return 'neb'
+                        except (ValueError, IndexError):
+                            pass
+    except (OSError, IOError):
+        pass
+
+    # Extract VASP parameters
+    try:
+        ibrion, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter='IBRION')
+        nsw, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter='NSW')
+        isif, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter='ISIF')
+        nfree, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter='NFREE')
+    except Exception:
+        return 'unknown'
+
+    # Convert None to defaults
+    if ibrion is None:
+        ibrion = -1
+    if nsw is None:
+        nsw = 0
+    if isif is None:
+        isif = 0
+    if nfree is None:
+        nfree = 0
+
+    # Apply classification rules (priority order)
+    # Frequency/phonon calculation
+    if nfree > 0:
+        return 'finite-diff'
+
+    # Molecular dynamics
+    if ibrion == 0:
+        return 'md'
+
+    # Single-point calculation
+    if nsw <= 1:
+        return 'single-point'
+
+    # Cell relaxation (ISIF allows cell shape/volume changes)
+    if ibrion in [1, 2, 3] and isif in [3, 4, 5, 6, 7]:
+        return 'cell-relax'
+
+    # Geometry optimization (ISIF only allows atomic positions)
+    if ibrion in [1, 2, 3, 5, 6]:
+        return 'optimization'
+
+    return 'unknown'
+
+
+def find_initial_structure(calc_dir, pattern='*.vasp'):
+    """
+    Find initial structure file in calculation directory using pattern matching.
+
+    Args:
+        calc_dir: Directory to search for initial structure
+        pattern: Glob pattern for initial structure file (default: '*.vasp')
+
+    Returns:
+        str: Absolute path to initial structure file
+
+    Raises:
+        FileNotFoundError: If no structure file matching pattern or POSCAR fallback found
+    """
+    import os
+    import glob
+
+    # Try pattern matching first
+    search_pattern = os.path.join(calc_dir, pattern)
+    matches = sorted(glob.glob(search_pattern))
+
+    if matches:
+        return os.path.abspath(matches[0])
+
+    # Fallback to POSCAR
+    poscar_path = os.path.join(calc_dir, 'POSCAR')
+    if os.path.exists(poscar_path):
+        return os.path.abspath(poscar_path)
+
+    # No structure file found
+    raise FileNotFoundError(
+        f"No initial structure found in {calc_dir} "
+        f"(searched for pattern '{pattern}' and fallback 'POSCAR')"
+    )
+
+
+def extract_comprehensive_metadata(outcar_path, incar_path=None, potcar_path=None):
+    """
+    Extract comprehensive metadata from VASP calculation files.
+
+    Extracts VASP parameters, energies, forces, convergence status, INCAR content,
+    and POTCAR information from OUTCAR and related files.
+
+    Args:
+        outcar_path: Path to OUTCAR file
+        incar_path: Path to INCAR file (default: auto-detect from OUTCAR directory)
+        potcar_path: Path to POTCAR file (optional, TITEL extracted from OUTCAR)
+
+    Returns:
+        dict: Dictionary containing:
+            - CalcType (str): Calculation type classification
+            - Formula (str): Chemical formula
+            - ENCUT, KSPACING, EDIFF, EDIFFG (float): VASP parameters
+            - GGA (str): Exchange-correlation functional
+            - IBRION, ISPIN, NSW, ISIF, NFREE (int): VASP parameters
+            - Energy (float): Final energy in eV
+            - TotMagMom (float): Total magnetic moment
+            - MaxForce (float): Maximum force in eV/Å
+            - Converged (bool): Convergence status
+            - VASPVersion (str): VASP version (vasp5/vasp6)
+            - INCAR_full (str or None): Complete INCAR file content
+            - POTCAR_info (list): List of POTCAR TITEL lines
+    """
+    import os
+
+    calc_dir = os.path.dirname(outcar_path)
+    metadata = {}
+
+    # Extract basic VASP parameters
+    param_names = ['ENCUT', 'KSPACING', 'EDIFF', 'EDIFFG', 'GGA',
+                   'IBRION', 'ISPIN', 'NSW', 'ISIF', 'NFREE']
+
+    for param in param_names:
+        try:
+            value, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter=param)
+            metadata[param] = value
+        except Exception:
+            metadata[param] = None
+
+    # Extract energy, forces, and magnetic moment
+    try:
+        energy, maxforce, magmom = check_energy_and_maxforce(outcar_path, magmom=True, verbose=False)
+        metadata['Energy'] = energy
+        metadata['MaxForce'] = maxforce
+        metadata['TotMagMom'] = magmom
+    except Exception:
+        metadata['Energy'] = None
+        metadata['MaxForce'] = None
+        metadata['TotMagMom'] = None
+
+    # Check convergence and get VASP version
+    try:
+        converged, vasp_version = check_outcar_convergence(outcar_path, verbose=False)
+        metadata['Converged'] = converged
+        metadata['VASPVersion'] = vasp_version
+    except Exception:
+        metadata['Converged'] = None
+        metadata['VASPVersion'] = None
+
+    # Extract chemical formula from final structure
+    try:
+        atoms = read(outcar_path, format='vasp-out', index=-1)
+        metadata['Formula'] = atoms.get_chemical_formula()
+    except Exception:
+        metadata['Formula'] = None
+
+    # Classify calculation type
+    try:
+        metadata['CalcType'] = classify_calculation_type(outcar_path, calc_dir)
+    except Exception:
+        metadata['CalcType'] = 'unknown'
+
+    # Read full INCAR content
+    if incar_path is None:
+        incar_path = os.path.join(calc_dir, 'INCAR')
+
+    try:
+        with open(incar_path, 'r') as f:
+            metadata['INCAR_full'] = f.read()
+    except (OSError, IOError):
+        metadata['INCAR_full'] = None
+
+    # Extract POTCAR TITEL lines from OUTCAR
+    potcar_info = []
+    try:
+        with open(outcar_path, 'r') as f:
+            for line in f:
+                if 'TITEL' in line and '=' in line:
+                    # Extract TITEL line format: "   TITEL  = PAW_PBE Zn 06Sep2000"
+                    parts = line.split('=', 1)
+                    if len(parts) > 1:
+                        titel = parts[1].strip()
+                        potcar_info.append(titel)
+    except (OSError, IOError):
+        pass
+
+    metadata['POTCAR_info'] = potcar_info
+
+    return metadata
 
 
 
