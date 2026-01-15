@@ -2,12 +2,22 @@
 Analysis package for ASEtools.
 
 Provides analysis functionality for atomic structures including:
+- VASP output analysis (convergence, energy, forces, parameters)
 - Symmetry analysis (requires optional spglib dependency)
-
-Modules are lazily imported when accessed.
 """
 
-# Lazy imports to avoid loading optional dependencies at package import time
+# Import VASP analysis functions directly for backward compatibility
+from .vasp import (
+    check_outcar_convergence,
+    check_energy_and_maxforce,
+    extract_magnetic_moments,
+    get_parameter_from_run,
+    classify_calculation_type,
+    find_initial_structure,
+    extract_comprehensive_metadata,
+)
+
+# Lazy imports for optional dependencies
 _SYMMETRY_AVAILABLE = None
 
 
@@ -40,4 +50,16 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ['SymmetryAnalyzer', 'symmetry_available']
+__all__ = [
+    # VASP analysis
+    'check_outcar_convergence',
+    'check_energy_and_maxforce',
+    'extract_magnetic_moments',
+    'get_parameter_from_run',
+    'classify_calculation_type',
+    'find_initial_structure',
+    'extract_comprehensive_metadata',
+    # Symmetry analysis
+    'SymmetryAnalyzer',
+    'symmetry_available',
+]

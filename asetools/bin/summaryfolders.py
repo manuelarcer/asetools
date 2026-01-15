@@ -7,6 +7,229 @@ import numpy as np
 import glob, os
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence, get_parameter_from_run
 
+
+# Parameters to extract for pyatoms mode
+PYATOMS_PARAMS = ['GGA', 'ENCUT', 'EDIFF', 'EDIFFG', 'ISPIN', 'ISMEAR', 'SIGMA', 'IVDW']
+
+
+def get_pyatoms_steps(folder):
+    """Get sorted list of step folders in a pyatoms calculation folder.
+
+    Args:
+        folder: Path to pyatoms calculation folder (e.g., 'H2O/')
+
+    Returns:
+        list: Sorted list of step folder paths (e.g., ['H2O/step_00/', 'H2O/step_01/'])
+    """
+    step_folders = sorted(glob.glob(os.path.join(folder, 'step_*/')))
+    return step_folders
+
+
+def extract_step_parameters(step_folder):
+    """Extract VASP parameters from a pyatoms step OUTCAR.
+
+    Args:
+        step_folder: Path to step folder containing OUTCAR
+
+    Returns:
+        dict: Dictionary with parameter names as keys and values
+    """
+    outcar_path = os.path.join(step_folder, 'OUTCAR')
+    params = {}
+
+    if not os.path.exists(outcar_path):
+        return {p: 'N/A' for p in PYATOMS_PARAMS}
+
+    for param in PYATOMS_PARAMS:
+        try:
+            value, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter=param)
+            params[param] = value if value is not None else 'N/A'
+        except Exception:
+            params[param] = 'N/A'
+
+    return params
+
+
+def extract_step_energy(step_folder):
+    """Extract final energy from a pyatoms step OUTCAR.
+
+    Args:
+        step_folder: Path to step folder containing OUTCAR
+
+    Returns:
+        float or str: Energy value or 'N/A' if not found
+    """
+    outcar_path = os.path.join(step_folder, 'OUTCAR')
+
+    if not os.path.exists(outcar_path):
+        return 'N/A'
+
+    try:
+        energy, _ = check_energy_and_maxforce(outcar_path, magmom=False, verbose=False)
+        return round(energy, 4)
+    except Exception:
+        return 'N/A'
+
+
+def check_pyatoms_finished(folder):
+    """Check if a pyatoms calculation has finished successfully.
+
+    Args:
+        folder: Path to pyatoms calculation folder
+
+    Returns:
+        tuple: (finished: bool, final_energy: float or None, final_fmax: float or None)
+    """
+    loginfo_path = os.path.join(folder, 'log.info')
+
+    if not os.path.exists(loginfo_path):
+        return False, None, None
+
+    finished = False
+    final_energy = None
+    final_fmax = None
+
+    with open(loginfo_path, 'r') as f:
+        lines = f.readlines()
+
+    process_completed = False
+    for line in lines:
+        # Check for procedure or job completion
+        if ('VaspGeomOptProcedure' in line or 'VaspGeomOptJob' in line) and 'completed successfully' in line:
+            process_completed = True
+
+        # Check for global processes closing (final confirmation)
+        if process_completed and 'Closing global processes' in line:
+            finished = True
+
+        # Extract energy and force
+        if 'energy' in line and 'force' in line:
+            try:
+                final_energy = float(line.split()[-3].split(',')[0])
+                final_fmax = float(line.split()[-1].rstrip('.'))
+            except (ValueError, IndexError):
+                pass
+
+    return finished, final_energy, final_fmax
+
+
+def run_pyatoms_mode():
+    """Run summary in pyatoms mode - analyze multi-step pyatoms calculations."""
+    folders = sorted(glob.glob('*/'))
+
+    # Filter to only folders containing pyatoms calculations (have log.info)
+    pyatoms_folders = [f for f in folders if os.path.exists(os.path.join(f, 'log.info'))]
+
+    if not pyatoms_folders:
+        print("No pyatoms calculations found (no folders with log.info)")
+        return
+
+    # Get step count from first folder to establish expected structure
+    first_steps = get_pyatoms_steps(pyatoms_folders[0])
+    n_steps = len(first_steps)
+
+    if n_steps == 0:
+        print(f"No step folders found in {pyatoms_folders[0]}")
+        return
+
+    # Verify all folders have the same number of steps
+    for folder in pyatoms_folders:
+        folder_steps = get_pyatoms_steps(folder)
+        if len(folder_steps) != n_steps:
+            print(f"Error: {folder} has {len(folder_steps)} steps, expected {n_steps}")
+            print("All pyatoms calculations must have the same number of steps.")
+            return
+
+    # === Print Parameters Table ===
+    print("=" * 80)
+    print("STEP PARAMETERS (from first calculation)")
+    print("=" * 80)
+
+    params_data = {'Step': []}
+    for param in PYATOMS_PARAMS:
+        params_data[param] = []
+
+    for i, step_folder in enumerate(first_steps):
+        params = extract_step_parameters(step_folder)
+        params_data['Step'].append(i)
+        for param in PYATOMS_PARAMS:
+            params_data[param].append(params.get(param, 'N/A'))
+
+    params_df = pd.DataFrame(params_data)
+    print(params_df.to_string(index=False))
+    print()
+
+    # === Print Energy Summary Table ===
+    print("=" * 80)
+    print("ENERGY SUMMARY")
+    print("=" * 80)
+
+    energy_data = {'Config': []}
+    for i in range(n_steps):
+        energy_data[f'E_step{i}'] = []
+    energy_data['Converged'] = []
+
+    not_converged = []
+
+    for folder in pyatoms_folders:
+        folder_name = folder.rstrip('/')
+        step_folders = get_pyatoms_steps(folder)
+
+        # Check if calculation finished
+        finished, _, _ = check_pyatoms_finished(folder)
+
+        if not finished:
+            print(f"{folder_name}: Not finished")
+            not_converged.append(folder_name)
+            continue
+
+        energy_data['Config'].append(folder_name)
+        energy_data['Converged'].append(True)
+
+        # Extract energy from each step
+        for i, step_folder in enumerate(step_folders):
+            energy = extract_step_energy(step_folder)
+            energy_data[f'E_step{i}'].append(energy)
+
+    # Calculate relative energies based on final step
+    if energy_data['Config']:
+        final_step_col = f'E_step{n_steps - 1}'
+        final_energies = [e for e in energy_data[final_step_col] if e != 'N/A']
+
+        if final_energies:
+            min_energy = min(final_energies)
+            energy_data['Rel.E'] = []
+            for e in energy_data[final_step_col]:
+                if e == 'N/A':
+                    energy_data['Rel.E'].append('N/A')
+                else:
+                    energy_data['Rel.E'].append(round(e - min_energy, 4))
+        else:
+            energy_data['Rel.E'] = ['N/A'] * len(energy_data['Config'])
+
+    energy_df = pd.DataFrame(energy_data)
+    print(energy_df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
+    print()
+
+    print("Not converged/finished:")
+    print(' '.join(not_converged) if not_converged else "(none)")
+
+    # Write to summary_pyatoms.log
+    with open('summary_pyatoms.log', 'w') as f:
+        f.write("STEP PARAMETERS (from first calculation)\n")
+        f.write("=" * 80 + "\n")
+        f.write(params_df.to_string(index=False))
+        f.write("\n\n")
+        f.write("ENERGY SUMMARY\n")
+        f.write("=" * 80 + "\n")
+        f.write(energy_df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
+        f.write("\n\n")
+        f.write("Not converged/finished:\n")
+        f.write(' '.join(not_converged) if not_converged else "(none)")
+        f.write("\n")
+
+    print(f"\nOutput saved to summary_pyatoms.log")
+
 def is_summary_up_to_date(magmom_requested=False):
     """Check if summary.log exists and is newer than all folders, and if magmom flag status matches"""
     if not os.path.exists('summary.log'):
@@ -46,8 +269,15 @@ def main():
                         help='extract and present magnetic moments')
     parser.add_argument('-f', '--fast', action='store_true',
                         help='fast mode (reading out file)')
+    parser.add_argument('-p', '--pyatoms', action='store_true',
+                        help='pyatoms mode: analyze multi-step pyatoms calculations')
     args = parser.parse_args()
     ##
+
+    # Handle pyatoms mode separately
+    if args.pyatoms:
+        run_pyatoms_mode()
+        return
 
     # Check if summary.log is up to date
     if is_summary_up_to_date(magmom_requested=args.magmom):
