@@ -9,7 +9,7 @@ from asetools.analysis import check_energy_and_maxforce, check_outcar_convergenc
 
 
 # Parameters to extract for pyatoms mode
-PYATOMS_PARAMS = ['GGA', 'ENCUT', 'EDIFF', 'EDIFFG', 'ISPIN', 'ISMEAR', 'SIGMA', 'IVDW']
+PYATOMS_PARAMS = ['GGA', 'ENCUT', 'EDIFF', 'EDIFFG', 'ISPIN', 'ISMEAR', 'SIGMA', 'IVDW', 'LDAU']
 
 
 def get_pyatoms_steps(folder):
@@ -68,6 +68,29 @@ def extract_step_energy(step_folder):
         energy, _ = check_energy_and_maxforce(outcar_path, magmom=False, verbose=False)
         return round(energy, 4)
     except Exception:
+        return 'N/A'
+
+
+def extract_step_magmom(step_folder):
+    """Extract total magnetic moment from a pyatoms step OUTCAR.
+
+    Args:
+        step_folder: Path to step folder containing OUTCAR
+
+    Returns:
+        float or str: Magnetic moment or 'N/A' if not found/not spin-polarized
+    """
+    outcar_path = os.path.join(step_folder, 'OUTCAR')
+
+    if not os.path.exists(outcar_path):
+        return 'N/A'
+
+    try:
+        atoms = read(outcar_path, format='vasp-out', index=-1)
+        magmom = atoms.get_magnetic_moment()
+        return round(magmom, 2)
+    except Exception:
+        # Non-spin-polarized or error reading
         return 'N/A'
 
 
@@ -167,6 +190,7 @@ def run_pyatoms_mode():
     energy_data = {'Config': []}
     for i in range(n_steps):
         energy_data[f'E_step{i}'] = []
+    energy_data['MagMom'] = []
     energy_data['Converged'] = []
 
     not_converged = []
@@ -190,6 +214,11 @@ def run_pyatoms_mode():
         for i, step_folder in enumerate(step_folders):
             energy = extract_step_energy(step_folder)
             energy_data[f'E_step{i}'].append(energy)
+
+        # Extract magnetic moment from final step
+        final_step = step_folders[-1]
+        magmom = extract_step_magmom(final_step)
+        energy_data['MagMom'].append(magmom)
 
     # Calculate relative energies based on final step
     if energy_data['Config']:
