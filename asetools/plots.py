@@ -222,7 +222,8 @@ def _add_line_step_style(ax, data, energy_col, type_col, c, label, indexes, lw=N
 
 def beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=False, fs=12,
                       data=None, label_col=None, type_col=None, npcet_col=None,
-                      show_labels=False, show_npcet=False, indexes=None, frame=True):
+                      show_labels=False, show_npcet=False, indexes=None, frame=True,
+                      y_decimals=None):
     """
     Beautify a PES plot by removing unnecessary spines and adding optional labels.
 
@@ -257,6 +258,9 @@ def beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=False, fs=12,
     frame : bool, optional
         Keep plot frame/spines visible (default: True). If False, removes
         top, right, and bottom spines.
+    y_decimals : int, optional
+        Number of decimal places to show on y-axis tick labels. If None,
+        matplotlib's default formatting is used.
 
     Returns
     -------
@@ -279,6 +283,11 @@ def beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=False, fs=12,
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.tick_params(axis='both', labelsize=fs)
+
+    # Set y-axis decimal formatting
+    if y_decimals is not None:
+        from matplotlib.ticker import FormatStrFormatter
+        ax.yaxis.set_major_formatter(FormatStrFormatter(f'%.{y_decimals}f'))
 
     if zero:
         ax.plot(ax.get_xlim(), [0, 0], '--', color='lightgray', linewidth=1)
