@@ -11,116 +11,92 @@ ASEtools is a Python package for computational materials science, specifically d
 ### Installation
 ```bash
 pip install -e .  # Editable install for development
+pip install -e ".[dev]"  # With test dependencies
 ```
 
 ### Testing
 ```bash
-pytest  # Run all tests (configured in pytest.ini)
-pytest asetools/tests/test_analysis.py  # Run specific test file
+pytest  # Run all tests (configured in pyproject.toml)
+pytest tests/test_analysis.py  # Run specific test file
 pytest -v  # Verbose output
 ```
 
 ### Dependencies
-Core dependencies are defined in `setup.cfg`:
-- **Required**: pandas, matplotlib, numpy, scipy, ase
+Core dependencies are defined in `pyproject.toml`:
+- **Required**: pandas, matplotlib, numpy, scipy, ase, pyyaml
 - **Optional**:
-  - `vasp-interactive` - Only needed for ASE optimizer support (BFGS, FIRE, etc.) and dimer method
-  - Install with: `pip install vasp-interactive`
-  - Manager workflows using standard VASP optimizers work without this package
+  - `symmetry` - spglib for symmetry analysis
+  - `interactive` - vasp-interactive for ASE optimizer support
+  - `dev` - pytest for testing
 
 ## Code Architecture
 
-### Core Module Structure
-- **`analysis.py`**: VASP output analysis (convergence, energy, forces, magnetic moments)
-- **`doscar_analysis.py`**: Electronic structure analysis (DOS, PDOS, orbital projections)
-- **`bond_valence.py`**: Bond valence sum analysis using Brown's equation with automatic valence determination
-- **`adsorbate.py`**: Surface science toolkit with `SurfaceAnalyzer` class
-- **`appliedpotential.py`**: Electrochemistry support with potential-dependent calculations
-- **`databases.py`**: ASE database integration and DataFrame conversion
-- **`manager/`**: YAML-based workflow management system for multi-stage calculations
-- **`bin/`**: Command-line tools (14+ scripts for various VASP tasks)
+### Package Structure
+```
+asetools/
+├── analysis/          # VASP output analysis (convergence, energy, forces, symmetry)
+│   ├── vasp.py        # Core VASP analysis functions
+│   └── symmetry.py    # Symmetry analysis (requires spglib)
+├── electronic/        # Electronic structure analysis
+│   └── doscar.py      # DOS, PDOS, orbital projections, band center
+├── structure/         # Structure analysis
+│   ├── adsorbate.py   # SurfaceAnalyzer for adsorbate placement
+│   └── bond_valence.py # Bond valence sum analysis
+├── electrochemistry/  # Electrochemistry support
+│   ├── appliedpotential.py  # Potential-dependent calculations
+│   └── copy_appliedpotential.py
+├── pathways/          # Reaction pathway analysis
+│   ├── neb.py         # NEB calculations
+│   └── dimer.py       # Dimer method
+├── thermodynamics/    # Thermodynamics calculations
+│   └── ab_initio.py   # Ab initio thermodynamics
+├── workflow/          # Workflow management
+│   ├── manager.py     # YAML-based multi-stage workflow runner
+│   ├── calculatorsetuptools.py  # VASP calculator configuration
+│   ├── constraints.py # Constraint management
+│   ├── logger.py      # Workflow logging
+│   └── sample_yaml/   # Example YAML configurations
+├── database/          # Database tools
+│   └── databases.py   # ASE database integration
+├── plotting/          # Visualization
+│   └── plots.py       # PES and energy profile plotting
+├── cli/               # Command-line scripts
+│   ├── getenergy.py   # Quick energy/convergence summary
+│   ├── summaryfolders.py  # Batch analysis
+│   ├── plotdos.py     # DOS plotting
+│   ├── vasp2db.py     # VASP to database conversion
+│   └── ...            # 17 CLI tools total
+├── parsers/           # File parsers
+│   └── vasp_outcar.py # OUTCAR parser
+└── data/              # Runtime data files
+    ├── bvparm2020.cif
+    └── surface_properties.json
+```
 
 ### Key Classes and Patterns
-- **`SurfaceAnalyzer`**: Main class for surface analysis and adsorbate placement
-- **`BondValenceSum`**: Bond valence sum calculator with automatic valence optimization
-- **`BondValenceParameters`**: Bond valence parameter database from Brown's accumulated table
+- **`SurfaceAnalyzer`**: Surface analysis and adsorbate placement
+- **`BondValenceSum`**: Bond valence sum calculator
 - **`VASPConfigurationFromYAML`**: Workflow configuration management
+- **`ConstraintManager`**: Constraint application from JSON configs
+- **`ThermodynamicsCalculator`**: Ab initio thermodynamics
+- **`DOS`**: Electronic density of states analysis
 - **Integration-first design**: All modules work with ASE Atoms objects
-- **VASP-centric**: Functions expect standard VASP output files (OUTCAR, DOSCAR, POSCAR)
+- **VASP-centric**: Functions expect standard VASP output files
 
 ### Testing Strategy
-- Uses pytest with real VASP output files in `asetools/data/`
-- Integration tests rather than unit tests
-- Test files: `test_analysis.py`, `test_database.py`, `test_doscar.py`, `test_freq.py`, `test_bond_valence.py`, `test_manager.py`
-
-### Command-Line Tools
-Key scripts in `asetools/bin/`:
-- **`getenergy.py`**: Quick energy/convergence summary
-- **`summaryfolders.py`**: Batch analysis with DataFrame output
-- **`asegui.py`**: Enhanced ASE GUI
-- **`vaspbackup.py`**: VASP file backup system
-- **`gibbsFE.py`**: Gibbs free energy corrections
-
-## Common File Patterns
-
-### VASP Integration
-- Functions expect standard VASP filenames: `OUTCAR`, `DOSCAR`, `POSCAR`
-- Supports both VASP 5 and VASP 6 formats
-- Magnetic moment analysis throughout
-
-### Configuration
-- YAML-based workflow configuration in `manager/`
-- Multi-stage calculation support
-- System-specific parameter overrides
-
-### Workflow Manager Structure Loading
-The workflow manager uses a robust priority-based system for loading structures between stages:
-
-1. **OUTCAR (priority 1)**: Most reliable source, loads last ionic configuration (`index=-1`)
-   - OUTCAR is updated more frequently during calculations
-   - Ensures reliable workflow continuation even when jobs crash unexpectedly
-
-2. **CONTCAR (priority 2)**: Fallback for compatibility
-   - Used when OUTCAR doesn't exist or cannot be read
-   - Maintains backward compatibility with existing workflows
-
-3. **Pattern-matched file (priority 3)**: Initial structure (default: `POSCAR`)
-   - Used for the first stage when no previous calculation exists
-   - Can be customized via `globals.initial_conf_pattern` in YAML config
-
-This fallback chain ensures workflow robustness while maintaining backward compatibility.
-
-### Data Flow
-1. Read VASP output files
-2. Extract/analyze using core modules
-3. Store in ASE database or export to pandas DataFrame
-4. Visualize using `plots.py` module
-
-## Development Notes
-
-### Package Configuration
-- Uses `setup.cfg` for metadata and dependencies
-- Minimal `setup.py` for setuptools compatibility
-- Scripts in `bin/` directory are NOT installed via pip - run directly from source
-- `bin/` contains 15+ command-line tools that should be accessed via PATH or direct invocation
-
-### Materials Science Focus
-- Designed for surface science, electrochemistry, and catalysis
-- Extensive DOS and electronic structure analysis
-- Bond valence analysis for structural validation and valence state determination (with per-atom optimization)
-- Reaction pathway analysis (NEB) support
-- Applied potential calculations for electrochemistry
+- Uses pytest with config in `pyproject.toml`
+- Test files in `tests/`, test data in `tests/data/`
+- Runtime data (bvparm2020.cif, surface_properties.json) stays in `asetools/data/`
+- Integration tests using real VASP output files
 
 ### Documentation
-- Comprehensive README.md with API documentation and examples
-- Inline docstrings in modules
-- Command-line help available for all scripts
-
-## Environment Notes
-- You should run within python with /Users/juar/venv/workgeneric/bin/python
+- `docs/` directory contains guides:
+  - `vasp_calculation_guide.md` - VASP calculation setup
+  - `constraints_migration.md` - Constraint system migration
+  - `constraints_quickstart.md` - Quick start for constraints
+  - `ab_initio_thermodynamics.md` - Thermodynamics module guide
 
 ## Git Workflow
-- Stage and commit changes (ask first) after making changes to the code. The commit message should be concise but descriptive (Max 5 lines)
-
-## Memory for Code Interactions
-- When prompted to alter the code in a significant way, ask if I want to create a new branch for the project and provide a name for it
+- Stage and commit changes (ask first) after making changes to the code
+- Commit messages should be concise but descriptive (max 5 lines)
+- When prompted to alter the code significantly, ask about creating a new branch

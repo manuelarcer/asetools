@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asetools"
+version = "0.2.0"
+description = "Python tools for computational materials science using ASE"
+authors = [
+    {name = "Juan M Arce-Ramos"},
+]
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "numpy",
+    "scipy",
+    "ase",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+symmetry = ["spglib"]
+interactive = ["vasp-interactive"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["asetools*"]
+
+[tool.setuptools.package-data]
+"asetools" = ["data/*.cif", "data/*.json", "workflow/sample_yaml/*.yaml"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]

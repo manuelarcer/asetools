@@ -25,6 +25,15 @@ Thumbs.db
 *.temp
 *.log
 
+# VASP large files
+WAVECAR
+
+# Generated documentation
+*.html
+
+# Scratch directory
+scratch/
+
 # Python egg info
 *.egg-info/
 dist/

@@ -1,7 +1,6 @@
-# ASEtools - Tools for computational materials science
+"""Ab initio thermodynamics."""
 
-# Backward-compatible imports from new locations
-from .thermodynamics.ab_initio import (
+from .ab_initio import (
     ThermodynamicsCalculator,
     AdsorbateSpecies,
     SurfaceProperties,
