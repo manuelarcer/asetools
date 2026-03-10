@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asetools"
+version = "0.2.0"
+description = "Python tools for computational materials science using ASE"
+authors = [
+    {name = "Juan M Arce-Ramos"},
+]
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "numpy",
+    "scipy",
+    "ase",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+symmetry = ["spglib"]
+interactive = ["vasp-interactive"]
+dev = ["pytest"]
+
+[project.scripts]
+asegui = "asetools.cli.asegui:main"
+calculate-bader-charges = "asetools.cli.calculate_bader_charges:main"
+comparevaspparam = "asetools.cli.comparevaspparam:main"
+genpotentialdepcalc = "asetools.cli.genpotentialdepcalc:main"
+getenergy = "asetools.cli.getenergy:main"
+gibbsFE = "asetools.cli.gibbsFE:main"
+inputparam-from-outcar = "asetools.cli.inputparam_from_outcar:main"
+outcar-extract = "asetools.cli.outcar_extract:main"
+plotdos = "asetools.cli.plotdos:main"
+remove-slashes = "asetools.cli.remove_slashes:main"
+reorder-atoms = "asetools.cli.reorder_atoms:main"
+summaryfolders = "asetools.cli.summaryfolders:main"
+thermochem = "asetools.cli.thermochem:main"
+vasp2arc = "asetools.cli.vasp_2_arc:main"
+vasp2db = "asetools.cli.vasp2db:main"
+vaspbackup = "asetools.cli.vaspbackup:main"
+view-outcars = "asetools.cli.view_outcars:main"
+
+[tool.setuptools.packages.find]
+include = ["asetools*"]
+
+[tool.setuptools.package-data]
+"asetools" = ["data/*.cif", "data/*.json", "workflow/sample_yaml/*.yaml"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
