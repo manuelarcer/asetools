@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from pathlib import Path
 import logging
+import pytest
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -194,6 +195,7 @@ globals:
 
     logger.info("Created dimer_test_config.yaml")
 
+@pytest.mark.skipif(not os.path.exists('POSCAR'), reason="Requires POSCAR file in working directory")
 def test_dimer_utilities():
     """Test dimer utility functions."""
     logger.info("=== Testing Dimer Utilities ===")
@@ -245,6 +247,7 @@ def test_dimer_utilities():
 
     logger.info("✓ All dimer utility tests passed")
 
+@pytest.mark.skipif(not os.path.exists('POSCAR'), reason="Requires POSCAR file in working directory")
 def test_emt_dimer():
     """Test dimer with EMT calculator (no VASP required)."""
     logger.info("=== Testing Dimer with EMT Calculator ===")

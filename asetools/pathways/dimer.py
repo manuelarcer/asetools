@@ -11,14 +11,17 @@ This module provides utilities for dimer calculations including:
 """
 
 import os
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
+from ase import Atoms
 from ase.io import read, write
 from ase.mep import DimerControl, MinModeAtoms
 import logging
 
 logger = logging.getLogger(__name__)
 
-def read_modecar(filename='MODECAR'):
+def read_modecar(filename: str = 'MODECAR') -> np.ndarray:
     """
     Read displacement vector from MODECAR file.
 
@@ -63,7 +66,7 @@ def read_modecar(filename='MODECAR'):
         raise
 
 
-def write_modecar(displacement_vector, atoms, filename='MODECAR'):
+def write_modecar(displacement_vector: np.ndarray, atoms: Atoms, filename: str = 'MODECAR') -> None:
     """
     Write displacement vector to MODECAR file.
 
@@ -90,7 +93,7 @@ def write_modecar(displacement_vector, atoms, filename='MODECAR'):
         raise
 
 
-def generate_displacement_vector(atoms, method='random', direction=None, magnitude=0.01):
+def generate_displacement_vector(atoms: Atoms, method: str = 'random', direction: Optional[np.ndarray] = None, magnitude: float = 0.01) -> np.ndarray:
     """
     Generate initial displacement vector for dimer calculation.
 
@@ -143,7 +146,7 @@ def generate_displacement_vector(atoms, method='random', direction=None, magnitu
     return displacement_vector
 
 
-def setup_dimer_atoms(atoms, displacement_vector=None, dimer_control_kwargs=None):
+def setup_dimer_atoms(atoms: Atoms, displacement_vector: Optional[np.ndarray] = None, dimer_control_kwargs: Optional[Dict[str, Any]] = None) -> MinModeAtoms:
     """
     Set up MinModeAtoms object for dimer calculation.
 
@@ -198,7 +201,7 @@ def setup_dimer_atoms(atoms, displacement_vector=None, dimer_control_kwargs=None
     return d_atoms
 
 
-def check_dimer_convergence(d_atoms, force_threshold=0.01, eigenvalue_threshold=-0.01):
+def check_dimer_convergence(d_atoms: MinModeAtoms, force_threshold: float = 0.01, eigenvalue_threshold: float = -0.01) -> Dict[str, Any]:
     """
     Check convergence criteria for dimer calculation.
 
@@ -247,7 +250,7 @@ def check_dimer_convergence(d_atoms, force_threshold=0.01, eigenvalue_threshold=
         return {'converged': False, 'error': str(e)}
 
 
-def extract_saddle_point_info(d_atoms):
+def extract_saddle_point_info(d_atoms: MinModeAtoms) -> Dict[str, Any]:
     """
     Extract information about the saddle point from converged dimer calculation.
 
@@ -290,7 +293,7 @@ def extract_saddle_point_info(d_atoms):
         return {'error': str(e)}
 
 
-def save_dimer_trajectory(d_atoms, filename='dimer_trajectory.traj'):
+def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = 'dimer_trajectory.traj') -> None:
     """
     Save dimer calculation trajectory.
 
@@ -322,7 +325,7 @@ def save_dimer_trajectory(d_atoms, filename='dimer_trajectory.traj'):
 
 # Utility functions for integration with workflow manager
 
-def validate_dimer_kwargs(optimizer_kwargs):
+def validate_dimer_kwargs(optimizer_kwargs: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
     Validate and process dimer-specific optimizer kwargs.
 

@@ -1,5 +1,7 @@
 # Module for analysis of potential-dependent calculations
 
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
 from asetools.electronic.doscar import extract_fermi_e
 from scipy.interpolate import UnivariateSpline
@@ -12,19 +14,20 @@ import os
 U_SHE = 4.43  # U(SHE) constant
 VALANCES = {'Cu': 11, 'Zn': 12, 'C': 4, 'O': 6, 'H': 1}
 
-def get_sum_electrons(poscar):
+def get_sum_electrons(poscar: str) -> int:
     atoms = read(poscar)
     symbols = atoms.get_chemical_symbols()
     elecpersymb = [VALANCES[symb] for symb in symbols]
     return sum(elecpersymb)
 
-def get_num_elect(outcar):
+def get_num_elect(outcar: str) -> Optional[float]:
     with open(outcar, 'r') as file:
         for line in file:
             if 'NELECT' in line:
                 return float(line.split()[-1])  # Float since it may be fractional
+    return None
 
-def extract_fermi_shift(folder):
+def extract_fermi_shift(folder: str) -> Optional[float]:
     try:
         with open(os.path.join(folder, 'vasp.out'), 'r') as file:
             for line in file.readlines()[-40:]:
@@ -33,8 +36,9 @@ def extract_fermi_shift(folder):
     except:
         print('WARNING ! Error while reading "vasp.out", no FERMI_SHIFT stored')
         return None
+    return None
     
-def correct_energy_fermishift(folder):
+def correct_energy_fermishift(folder: str) -> float:
     fshift = extract_fermi_shift(folder)
     e, maxf = check_energy_and_maxforce(folder+'OUTCAR', magmom=False, verbose=False)
     numelec_neutral = get_sum_electrons(folder+'POSCAR')
@@ -42,7 +46,7 @@ def correct_energy_fermishift(folder):
     charge = numelec - numelec_neutral
     return e + charge * fshift
 
-def extract_corrected_energy_fermie(listfolders, calc_zero):
+def extract_corrected_energy_fermie(listfolders: List[str], calc_zero: str) -> Dict[str, np.ndarray]:
     results = {'nelect': [], 'e': [], 'fe': [], 'U': []}
     ref_nelect = get_num_elect(os.path.join(calc_zero, 'OUTCAR'))
 
@@ -73,13 +77,13 @@ def extract_corrected_energy_fermie(listfolders, calc_zero):
     return results
 
 # defining a function with a fix constant value. This should be the value at 0 added electrons
-def custom_polynomial(beta, x, fixed_constant=0):
+def custom_polynomial(beta: np.ndarray, x: np.ndarray, fixed_constant: float = 0) -> np.ndarray:
     y = fixed_constant
     for i in range(1, len(beta) + 1):
         y += beta[i-1] * np.power(x, i)
     return y
 
-def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=False):
+def fitenergy_polynomial(results: Dict[str, np.ndarray], order: int = 3, energy_ref: float = 0, plot: bool = False, ploterrors: bool = False) -> odr.Output:
     poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, energy_ref))
     data = odr.Data(results['nelect'], results['e'])
     odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
@@ -100,7 +104,7 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
         plt.show()
     return output
 
-def fit_data(X, Y, fit_type='polynomial', order=2, ref_value=None, plot=False, ploterrors=False):
+def fit_data(X: np.ndarray, Y: np.ndarray, fit_type: str = 'polynomial', order: int = 2, ref_value: Optional[float] = None, plot: bool = False, ploterrors: bool = False) -> Union[odr.Output, UnivariateSpline]:
     
     if fit_type == 'polynomial':
         data = odr.Data(X, Y)
@@ -159,7 +163,7 @@ def fit_data(X, Y, fit_type='polynomial', order=2, ref_value=None, plot=False, p
     
     return fit_result
 
-def interpolate_new_x(fit_result, new_X, fit_type, ref_value=None):
+def interpolate_new_x(fit_result: Union[odr.Output, UnivariateSpline], new_X: np.ndarray, fit_type: str, ref_value: Optional[float] = None) -> np.ndarray:
     if fit_type == 'polynomial':
         if ref_value is not None:
             # Using custom polynomial if a reference value was provided
@@ -173,7 +177,7 @@ def interpolate_new_x(fit_result, new_X, fit_type, ref_value=None):
     else:
         raise ValueError("Invalid fit_type. Choose either 'polynomial' or 'spline'.")
 
-def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, order=2, desiredU=0.):
+def get_energy_at_givenpotential(results: Dict[str, np.ndarray], fit_type: str = 'polynomial', e_ref: Optional[float] = None, order: int = 2, desiredU: float = 0.) -> float:
     # e_ref, is the energy of the neutral system (reference)
 
     # Fit Nelec to U
@@ -209,7 +213,7 @@ def get_energy_at_givenpotential(results, fit_type='polynomial', e_ref=None, ord
     #print(f'at U = {desiredU:0.3f}; Nelect = {nelec:0.2f}; Energy = {e_pred:.3f}')
     return e_pred
 
-def plot_errors(X, Y, fit_result, energy_ref, ax):
+def plot_errors(X: np.ndarray, Y: np.ndarray, fit_result: Union[odr.Output, UnivariateSpline], energy_ref: Optional[float], ax: plt.Axes) -> plt.Axes:
     # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
     # energy_ref is the energy of the neutral system
     # ax is the axis pyplot object
@@ -237,7 +241,7 @@ def plot_errors(X, Y, fit_result, energy_ref, ax):
     ax.set_ylabel(r'Y$_{fit}$ - Y$_{DFT}$, eV')
     return ax
 
-def plot_fit(X, Y, fit_result, energy_ref, ax):
+def plot_fit(X: np.ndarray, Y: np.ndarray, fit_result: Union[odr.Output, UnivariateSpline], energy_ref: Optional[float], ax: plt.Axes) -> plt.Axes:
     x = np.linspace(min(X), max(X), 100)
     if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
         #parameters = np.append(fit_result.beta[::-1], energy_ref)
@@ -258,7 +262,7 @@ def plot_fit(X, Y, fit_result, energy_ref, ax):
     ax.set_ylabel(r'Y')
     return ax
 
-def print_results(results):
+def print_results(results: Dict[str, np.ndarray]) -> None:
     # Input is the dictionary from "extract_corrected_energy_fermie"
     for i, nelec in enumerate(results['nelect']):
         print(nelec, results['e'][i], results['fe'][i], results['U'][i])

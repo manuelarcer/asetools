@@ -1,18 +1,20 @@
 
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
-from ase import Atom
+from ase import Atom, Atoms
 from ase.io import read, write
 from ase.visualize import view
 
 
 class SurfaceAnalyzer:
-    def __init__(self, atoms):
+    def __init__(self, atoms: Atoms) -> None:
         self.atoms = atoms
         self.surface_indices = self.find_surface_atoms()
         self.surface_neighbors = self.find_surface_neighbors()
         self.symbols = np.unique( self.atoms.get_chemical_symbols() )
     
-    def find_surface_atoms(self):
+    def find_surface_atoms(self) -> List[int]:
         z_max = self.atoms.positions[:, 2].max()  # Maximum z-coordinate
         surface_indices = []
         for i, atom in enumerate(self.atoms):
@@ -20,7 +22,7 @@ class SurfaceAnalyzer:
                 surface_indices.append(i)
         return surface_indices
     
-    def find_surface_neighbors(self, thr=3.0):
+    def find_surface_neighbors(self, thr: float = 3.0) -> List[Tuple[int, int, int]]:
         surface_indices = sorted(self.surface_indices)
         surface_neighbors = []
         for i in range(len(surface_indices)):
@@ -34,7 +36,7 @@ class SurfaceAnalyzer:
                             surface_neighbors.append((surface_indices[i], surface_indices[j], surface_indices[k]))
         return surface_neighbors
 
-    def midpoint_three_atoms(self, three):
+    def midpoint_three_atoms(self, three: Tuple[int, int, int]) -> np.ndarray:
         # threeat is in (i, j, k) form detailing the indexes of atoms
         v_ij = self.atoms.get_distance(three[0], three[1],mic=True, vector=True)
         v_ik = self.atoms.get_distance(three[0], three[2],mic=True, vector=True)
@@ -47,7 +49,7 @@ class SurfaceAnalyzer:
         # http://www.treenshop.com/Treenshop/ArticlesPages/FiguresOfInterest_Article/The%20Equilateral%20Triangle.htm 
         return self.atoms.get_positions()[three[0]] + midpoint * 2 / 3
 
-    def add_adsorbate_to_mid(self, three, adsorbate='H', z_off=1., thr=4.4):
+    def add_adsorbate_to_mid(self, three: Tuple[int, int, int], adsorbate: str = 'H', z_off: float = 1., thr: float = 4.4) -> None:
         # three is in (i, j, k) form detailing the indexes of atoms
         # adsorbate, The Symbol of the atom to add as adsorbate
         # z_off, the shift in Z for the adsorbate. for H use 1.0, bigger atoms require higher numbers
@@ -60,7 +62,7 @@ class SurfaceAnalyzer:
         self.adsorbatecluster = self.get_cluster_around_adsorbate(thr=thr)
         self.adsneighdistances = self.adsorbate_to_cluster_neighbors(thr=thr)
 
-    def get_cluster_around_adsorbate(self, thr=4.4):
+    def get_cluster_around_adsorbate(self, thr: float = 4.4) -> Optional[Atoms]:
         try:
             dist_mtx = self.atoms.get_distances(self.adsorbateindex, indices=range(len(self.atoms)), mic=True)
             cluster = self.atoms[ (dist_mtx < thr) ]
@@ -68,7 +70,7 @@ class SurfaceAnalyzer:
         except:
             print('Possibly no adsorbate defined. Use SurfaceAnalizer.add_adsorbate_to_mid')
 
-    def adsorbate_to_cluster_neighbors(self, thr=4.4, prec=3):
+    def adsorbate_to_cluster_neighbors(self, thr: float = 4.4, prec: int = 3) -> Dict[str, List[float]]:
         dist_dic = {}
         for s in self.symbols:
             dist_neigh = self.adsorbatecluster.get_distances( len(self.adsorbatecluster)-1, range( len(self.adsorbatecluster) ), mic=True)

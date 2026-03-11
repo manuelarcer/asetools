@@ -1,11 +1,13 @@
 # File containing the functions to analyze OUTCARs and VASP runs
 
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 from ase.io import read
 import pandas as pd
 import numpy as np
 import re
     
-def check_outcar_convergence(outcar, verbose=False):
+def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, str]:
     try:
         out = open(outcar, 'r')
     except:
@@ -64,7 +66,7 @@ def check_outcar_convergence(outcar, verbose=False):
 
     return convergence, vasp
 
-def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
+def check_energy_and_maxforce(outcar: str, magmom: bool = False, verbose: bool = False) -> Union[Tuple[float, float], Tuple[float, float, float]]:
 
     convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
@@ -82,7 +84,7 @@ def check_energy_and_maxforce(outcar, magmom=False, verbose=False):
         print('Missing or damaged OUTCAR file')
         return 9999.99, 9.99
 
-def extract_magnetic_moments(outcar, listatoms, verbose=False):
+def extract_magnetic_moments(outcar: str, listatoms: List[int], verbose: bool = False) -> List[float]:
     # listatoms: is a list with the indexes of atoms of interest
     convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
@@ -94,7 +96,7 @@ def extract_magnetic_moments(outcar, listatoms, verbose=False):
         print('Missing or damaged OUTCAR file')
         return []
 
-def get_parameter_from_run(outcar, check_converg=True, parameter='ISIF'):
+def get_parameter_from_run(outcar: str, check_converg: bool = True, parameter: str = 'ISIF') -> Tuple[Union[int, float, str, None], Union[bool, str]]:
     # First check convergence
     convergence = 'Convergence-not-Checked'
     if check_converg:
@@ -118,7 +120,7 @@ def get_parameter_from_run(outcar, check_converg=True, parameter='ISIF'):
     return None, convergence
 
 
-def classify_calculation_type(outcar_path, calc_dir):
+def classify_calculation_type(outcar_path: str, calc_dir: str) -> str:
     """
     Classify VASP calculation type based on OUTCAR parameters and auxiliary files.
 
@@ -206,7 +208,7 @@ def classify_calculation_type(outcar_path, calc_dir):
     return 'unknown'
 
 
-def find_initial_structure(calc_dir, pattern='*.vasp'):
+def find_initial_structure(calc_dir: str, pattern: str = '*.vasp') -> str:
     """
     Find initial structure file in calculation directory using pattern matching.
 
@@ -242,7 +244,7 @@ def find_initial_structure(calc_dir, pattern='*.vasp'):
     )
 
 
-def extract_comprehensive_metadata(outcar_path, incar_path=None, potcar_path=None):
+def extract_comprehensive_metadata(outcar_path: str, incar_path: Optional[str] = None, potcar_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Extract comprehensive metadata from VASP calculation files.
 

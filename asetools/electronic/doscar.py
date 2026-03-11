@@ -586,10 +586,11 @@ class DOS:
         dos = np.abs(dos)
         
         # Calculate numerator: ∫ E × n(E) dE
-        numerator = np.trapz(energy * dos, energy)
+        _trapz = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+        numerator = _trapz(energy * dos, energy)
         
         # Calculate denominator: ∫ n(E) dE
-        denominator = np.trapz(dos, energy)
+        denominator = _trapz(dos, energy)
         
         # Avoid division by zero
         if denominator == 0:

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from typing import Dict, List, Optional, Tuple
+
+from ase import Atoms
 from ase.io import read, write
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,7 +13,7 @@ from ase.neb import NEB
 from ase.mep import idpp_interpolate
 from ase.data import atomic_numbers, covalent_radii
 
-def extract_neb_data(folder_path, final):
+def extract_neb_data(folder_path: str, final: int) -> pd.DataFrame:
     ## Extracts the energy of each image in the NEB calculation
     ## folder_path: path to the folder containing the NEB calculation
     ## final: the final image number, e.g. 5 for 00 to 05
@@ -29,7 +32,9 @@ def extract_neb_data(folder_path, final):
     nebdf = pd.DataFrame.from_dict(res, orient='columns')
     return nebdf
 
-def plot_nebs(list_dfs=[], font='large'):
+def plot_nebs(list_dfs: Optional[List[pd.DataFrame]] = None, font: str = 'large') -> None:
+    if list_dfs is None:
+        list_dfs = []
     # list_dfs: list of pandas DataFrames with the NEB data
     # font: font size for the labels and ticks
     
@@ -76,7 +81,7 @@ def plot_nebs(list_dfs=[], font='large'):
     plt.tight_layout()
     plt.show()
 
-def redistribute_images_evenly(images, mic=True):
+def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[Atoms]:
     """
     Redistribute images along the path to be more evenly spaced.
     Uses cumulative distance along the path to achieve equal spacing.
@@ -156,7 +161,7 @@ def redistribute_images_evenly(images, mic=True):
     redistributed_images.append(images[-1].copy())  # Keep final image
     return redistributed_images
 
-def interpolate_neb_images(initial_atoms, final_atoms, n_images, method='idpp', mic=True):
+def interpolate_neb_images(initial_atoms: Atoms, final_atoms: Atoms, n_images: int, method: str = 'idpp', mic: bool = True) -> List[Atoms]:
     """
     Generate intermediate images between initial and final structures.
     
@@ -223,7 +228,7 @@ def interpolate_neb_images(initial_atoms, final_atoms, n_images, method='idpp', 
     
     return images
 
-def check_atomic_distances(atoms, shrink_factor=0.8, mic=True):
+def check_atomic_distances(atoms: Atoms, shrink_factor: float = 0.8, mic: bool = True) -> List[Tuple[int, int, float, float]]:
     """
     Check for atoms that are too close to each other based on covalent radii.
     
@@ -274,7 +279,7 @@ def check_atomic_distances(atoms, shrink_factor=0.8, mic=True):
     
     return close_pairs
 
-def check_neb_images_sanity(output_dir, shrink_factor=0.8, mic=True):
+def check_neb_images_sanity(output_dir: str, shrink_factor: float = 0.8, mic: bool = True) -> Dict[str, List[Tuple[int, int, float, float]]]:
     """
     Check all NEB images for atoms that are too close to each other.
     
@@ -314,7 +319,10 @@ def check_neb_images_sanity(output_dir, shrink_factor=0.8, mic=True):
     
     return problems
 
-def setup_neb_calculation(initial_file='IS/CONTCAR', final_file='FS/CONTCAR', output_dir='.', n_images=5, use_even_spacing=True, mic=True, check_distances=True, shrink_factor=0.8):
+def setup_neb_calculation(initial_file: str = 'IS/CONTCAR', final_file: str = 'FS/CONTCAR',
+                         output_dir: str = '.', n_images: int = 5, use_even_spacing: bool = True,
+                         mic: bool = True, check_distances: bool = True,
+                         shrink_factor: float = 0.8) -> bool:
     """
     Set up a complete NEB calculation folder structure.
     

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from typing import List, Optional, Tuple
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
@@ -12,7 +14,7 @@ DEFAULT_ENERGY_COL = 'E'
 DEFAULT_NPCET_COL = 'nPCET'
 
 
-def validate_columns(data, required_cols, optional_cols=None):
+def validate_columns(data: pd.DataFrame, required_cols: List[str], optional_cols: Optional[List[str]] = None) -> bool:
     """
     Validate that required columns exist in the DataFrame.
 
@@ -49,8 +51,11 @@ def validate_columns(data, required_cols, optional_cols=None):
     return True
 
 
-def add_line_to_pes(ax, data, energy_col=None, type_col=None, c='k', label=None,
-                   indexes=None, col=None, style='default', lw=None, lw_connector=None):
+def add_line_to_pes(ax: plt.Axes, data: pd.DataFrame, energy_col: Optional[str] = None,
+                   type_col: Optional[str] = None, c: str = 'k', label: Optional[str] = None,
+                   indexes: Optional[List[int]] = None, col: Optional[str] = None,
+                   style: str = 'default', lw: Optional[float] = None,
+                   lw_connector: Optional[float] = None) -> plt.Axes:
     """
     Add a potential energy surface line to a matplotlib axis.
 
@@ -112,7 +117,9 @@ def add_line_to_pes(ax, data, energy_col=None, type_col=None, c='k', label=None,
         return _add_line_default_style(ax, data, energy_col, type_col, c, label, indexes, lw, lw_connector)
 
 
-def _add_line_default_style(ax, data, energy_col, type_col, c, label, indexes, lw=None, lw_connector=None):
+def _add_line_default_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type_col: str,
+                           c: str, label: Optional[str], indexes: Optional[List[int]],
+                           lw: Optional[float] = None, lw_connector: Optional[float] = None) -> plt.Axes:
     """Default style: thick horizontal lines with diagonal connectors."""
     # Set default line widths
     if lw is None:
@@ -160,7 +167,9 @@ def _add_line_default_style(ax, data, energy_col, type_col, c, label, indexes, l
     return ax
 
 
-def _add_line_step_style(ax, data, energy_col, type_col, c, label, indexes, lw=None):
+def _add_line_step_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type_col: str,
+                        c: str, label: Optional[str], indexes: Optional[List[int]],
+                        lw: Optional[float] = None) -> plt.Axes:
     """Step style: horizontal and vertical lines only (no diagonal connectors)."""
     # Set default line width
     if lw is None:
@@ -220,10 +229,14 @@ def _add_line_step_style(ax, data, energy_col, type_col, c, label, indexes, lw=N
 
     return ax
 
-def beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=False, fs=12,
-                      data=None, label_col=None, type_col=None, npcet_col=None,
-                      show_labels=False, show_npcet=False, indexes=None, frame=True,
-                      y_decimals=None):
+def beautify_pes_plot(ax: plt.Axes, xlim: Optional[Tuple[float, float]] = None,
+                      ylim: Optional[Tuple[float, float]] = None, zero: bool = True,
+                      leg: bool = False, fs: int = 12,
+                      data: Optional[pd.DataFrame] = None, label_col: Optional[str] = None,
+                      type_col: Optional[str] = None, npcet_col: Optional[str] = None,
+                      show_labels: bool = False, show_npcet: bool = False,
+                      indexes: Optional[List[int]] = None, frame: bool = True,
+                      y_decimals: Optional[int] = None) -> plt.Axes:
     """
     Beautify a PES plot by removing unnecessary spines and adding optional labels.
 

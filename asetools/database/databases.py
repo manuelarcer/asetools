@@ -1,8 +1,11 @@
+from typing import Any, List, Optional, Tuple
+
 from asetools.analysis import check_outcar_convergence
+from ase import Atoms
 from ase.io import read
 import pandas as pd
     
-def check_if_exists_in_db(db, atoms):
+def check_if_exists_in_db(db: Any, atoms: Atoms) -> Tuple[bool, Optional[int]]:
     
     forces = atoms.get_forces(apply_constraint=False)
     indb = False ; index = None
@@ -15,7 +18,7 @@ def check_if_exists_in_db(db, atoms):
                     index = row.id
     return indb, index
 
-def add_config_to_db(db, outcar, idname=None, update=False):
+def add_config_to_db(db: Any, outcar: str, idname: Optional[str] = None, update: bool = False) -> Optional[int]:
     # db: database file, existent or new
     # outcar: path/to/outcar/OUTCAR
     # idname: Assigned name to the config
@@ -36,7 +39,9 @@ def add_config_to_db(db, outcar, idname=None, update=False):
         else:
             return print('Config ALREADY in DB, skipped....')
         
-def db_to_pandas(db, columns=['name', 'id', 'energy', 'free_energy', 'magmom']):
+def db_to_pandas(db: Any, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    if columns is None:
+        columns = ['name', 'id', 'energy', 'free_energy', 'magmom']
     # db: must be a loaded ASE-DB
     # columns; columns to extract from the DB to the DataFrame
     
