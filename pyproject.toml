@@ -22,7 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 symmetry = ["spglib"]
 interactive = ["vasp-interactive"]
-dev = ["pytest"]
+dev = ["pytest", "ruff"]
 
 [project.scripts]
 asegui = "asetools.cli.asegui:main"
@@ -48,6 +48,46 @@ include = ["asetools*"]
 
 [tool.setuptools.package-data]
 "asetools" = ["data/*.cif", "data/*.json", "workflow/sample_yaml/*.yaml"]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E702",   # multiple statements on one line (legacy style, low risk)
+    "E711",   # none-comparison (legacy == None patterns)
+    "E722",   # bare except (legacy error handling, fix incrementally)
+    "E741",   # ambiguous variable name (common in scientific code: l, I, O)
+    "B006",   # mutable default in function arg (too many in legacy code)
+    "B904",   # raise-without-from (fix incrementally)
+    "UP015",  # unnecessary open mode 'r'
+    "SIM108", # ternary operator (readability preference)
+    "SIM115", # open-file-with-context-handler (legacy patterns, fix incrementally)
+    "RUF001", # ambiguous unicode in string (× used intentionally in scientific output)
+    "RUF002", # ambiguous unicode in docstring (mathematical notation)
+    "RUF003", # ambiguous unicode in comment (mathematical notation)
+    "RUF005", # collection literal concatenation
+    "RUF012", # mutable class default (class-level constants, not mutated)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports in __init__ are intentional re-exports
+"tests/*" = ["B", "SIM"]  # relax rules in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["asetools"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

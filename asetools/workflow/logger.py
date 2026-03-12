@@ -1,7 +1,8 @@
 # Logger
 
-import logging
 import datetime
+import logging
+
 
 def configure_logging(
     *,

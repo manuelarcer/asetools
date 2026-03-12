@@ -1,15 +1,16 @@
 # Module for analysis of potential-dependent calculations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
-
-from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
-from asetools.electronic.doscar import extract_fermi_e
-from scipy.interpolate import UnivariateSpline
-from scipy import odr
-from ase.io import read
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+from typing import Dict, List, Optional, Union
+
+import matplotlib.pyplot as plt
+import numpy as np
+from ase.io import read
+from scipy import odr
+from scipy.interpolate import UnivariateSpline
+
+from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
+from asetools.electronic.doscar import extract_fermi_e
 
 U_SHE = 4.43  # U(SHE) constant
 VALANCES = {'Cu': 11, 'Zn': 12, 'C': 4, 'O': 6, 'H': 1}
@@ -37,10 +38,10 @@ def extract_fermi_shift(folder: str) -> Optional[float]:
         print('WARNING ! Error while reading "vasp.out", no FERMI_SHIFT stored')
         return None
     return None
-    
+
 def correct_energy_fermishift(folder: str) -> float:
     fshift = extract_fermi_shift(folder)
-    e, maxf = check_energy_and_maxforce(folder+'OUTCAR', magmom=False, verbose=False)
+    e, _maxf = check_energy_and_maxforce(folder+'OUTCAR', magmom=False, verbose=False)
     numelec_neutral = get_sum_electrons(folder+'POSCAR')
     numelec = get_num_elect(folder+'OUTCAR')
     charge = numelec - numelec_neutral
@@ -56,10 +57,10 @@ def extract_corrected_energy_fermie(listfolders: List[str], calc_zero: str) -> D
             atoms = read(os.path.join(folder, 'OUTCAR'), format='vasp-out', index=-1)
             energy_original = atoms.get_potential_energy()
             nelect = get_num_elect(os.path.join(folder, 'OUTCAR'))
-            
+
             fermie_original = extract_fermi_e(os.path.join(folder, 'DOSCAR'))
             fermi_shift = extract_fermi_shift(folder)
-            
+
             fermie_corr = fermie_original + (fermi_shift if fermi_shift else 0)
             energy_corr = energy_original - (nelect - ref_nelect) * (fermi_shift if fermi_shift else 0)
 
@@ -69,7 +70,7 @@ def extract_corrected_energy_fermie(listfolders: List[str], calc_zero: str) -> D
             results['U'].append(-fermie_corr - U_SHE)
         else:
             print(f'Oh NOOOO!, something wrong with calculation at {folder}')
-    
+
     # Convert lists to numpy arrays
     for key in results:
         results[key] = np.array(results[key])
@@ -89,13 +90,13 @@ def fitenergy_polynomial(results: Dict[str, np.ndarray], order: int = 3, energy_
     odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
     output = odr_obj.run()
     if sum([plot, ploterrors]) == 2:
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        _fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
         plot_fit(results, output, energy_ref, ax1)
         plot_errors(results, output, energy_ref, ax2)
         plt.tight_layout()
         plt.show()
     elif sum([plot, ploterrors]) == 1:
-        fig, ax = plt.subplots(figsize=(5,5))
+        _fig, ax = plt.subplots(figsize=(5,5))
         if plot:
             plot_fit(results, output, energy_ref, ax)
         elif ploterrors:
@@ -105,31 +106,31 @@ def fitenergy_polynomial(results: Dict[str, np.ndarray], order: int = 3, energy_
     return output
 
 def fit_data(X: np.ndarray, Y: np.ndarray, fit_type: str = 'polynomial', order: int = 2, ref_value: Optional[float] = None, plot: bool = False, ploterrors: bool = False) -> Union[odr.Output, UnivariateSpline]:
-    
+
     if fit_type == 'polynomial':
         data = odr.Data(X, Y)
-        
-        if ref_value != None:
+
+        if ref_value is not None:
             poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, fixed_constant=ref_value))
             odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
             output = odr_obj.run()
-            Y_fit = custom_polynomial(output.beta, X, ref_value)
-        elif ref_value == None:
+            custom_polynomial(output.beta, X, ref_value)
+        elif ref_value is None:
             poly_model = odr.polynomial(order)
             odr_obj = odr.ODR(data, poly_model)
             output = odr_obj.run()
-            Y_fit = np.polyval(output.beta, X)    
-        
+            np.polyval(output.beta, X)
+
         fit_result = output
 
     elif fit_type == 'spline':
         spline = UnivariateSpline(X, Y, k=order)
-        Y_fit = spline(X)
+        spline(X)
         fit_result = spline
 
     else:
         raise ValueError("Invalid fit_type. Choose either 'polynomial' or 'spline'.")
-    
+
     if ref_value is not None:
         parameters = np.append(fit_result.beta[::-1], ref_value)
     else:
@@ -146,21 +147,21 @@ def fit_data(X: np.ndarray, Y: np.ndarray, fit_type: str = 'polynomial', order: 
 
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        _fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
         plot_fit(X, Y, fit_result, ref_value, ax1)
         plot_errors(X, Y, fit_result, ref_value, ax2)
         plt.tight_layout()
         plt.show()
     elif sum([plot, ploterrors]) == 1:
-        fig, ax = plt.subplots(figsize=(5,5))
+        _fig, ax = plt.subplots(figsize=(5,5))
         if plot:
             plot_fit(X, Y, fit_result, ref_value, ax)
         elif ploterrors:
             plot_errors(X, Y, fit_result, ref_value, ax)
-        
+
         plt.tight_layout()
         plt.show()
-    
+
     return fit_result
 
 def interpolate_new_x(fit_result: Union[odr.Output, UnivariateSpline], new_X: np.ndarray, fit_type: str, ref_value: Optional[float] = None) -> np.ndarray:
@@ -209,7 +210,7 @@ def get_energy_at_givenpotential(results: Dict[str, np.ndarray], fit_type: str =
         e_pred = potential_fit( nelec )
     else:
         raise ValueError("Unknown fit type. The fit_result object type is not recognized.")
-    
+
     #print(f'at U = {desiredU:0.3f}; Nelect = {nelec:0.2f}; Energy = {e_pred:.3f}')
     return e_pred
 

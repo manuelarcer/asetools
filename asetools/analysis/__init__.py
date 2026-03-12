@@ -8,13 +8,13 @@ Provides analysis functionality for atomic structures including:
 
 # Import VASP analysis functions directly for backward compatibility
 from .vasp import (
-    check_outcar_convergence,
     check_energy_and_maxforce,
-    extract_magnetic_moments,
-    get_parameter_from_run,
+    check_outcar_convergence,
     classify_calculation_type,
-    find_initial_structure,
     extract_comprehensive_metadata,
+    extract_magnetic_moments,
+    find_initial_structure,
+    get_parameter_from_run,
 )
 
 # Lazy imports for optional dependencies
@@ -51,15 +51,15 @@ def __getattr__(name):
 
 
 __all__ = [
-    # VASP analysis
-    'check_outcar_convergence',
-    'check_energy_and_maxforce',
-    'extract_magnetic_moments',
-    'get_parameter_from_run',
-    'classify_calculation_type',
-    'find_initial_structure',
-    'extract_comprehensive_metadata',
     # Symmetry analysis
     'SymmetryAnalyzer',
+    'check_energy_and_maxforce',
+    # VASP analysis
+    'check_outcar_convergence',
+    'classify_calculation_type',
+    'extract_comprehensive_metadata',
+    'extract_magnetic_moments',
+    'find_initial_structure',
+    'get_parameter_from_run',
     'symmetry_available',
 ]

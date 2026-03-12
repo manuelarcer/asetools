@@ -13,20 +13,16 @@ Usage:
 
 import argparse
 import os
-import sys
 import pickle
+import sys
+
 import pandas as pd
-from pathlib import Path
 from ase.io import read
 
 # Add parent directory to path to import asetools
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from asetools.analysis import (
-    extract_comprehensive_metadata,
-    find_initial_structure,
-    classify_calculation_type
-)
+from asetools.analysis import extract_comprehensive_metadata, find_initial_structure
 
 
 def process_single_calc(path, initial_pattern, verbose):
@@ -55,7 +51,7 @@ def process_single_calc(path, initial_pattern, verbose):
 
     # Extract comprehensive metadata
     if verbose:
-        print(f"  Extracting metadata from OUTCAR...")
+        print("  Extracting metadata from OUTCAR...")
     metadata = extract_comprehensive_metadata(outcar_path)
 
     # Find and load initial structure
@@ -79,7 +75,7 @@ def process_single_calc(path, initial_pattern, verbose):
         if verbose and metadata.get('Energy') is not None:
             print(f"  Final: OUTCAR (E={metadata['Energy']:.3f} eV)")
         elif verbose:
-            print(f"  Final: OUTCAR")
+            print("  Final: OUTCAR")
     except Exception as e:
         if verbose:
             print(f"  WARNING: Could not read final structure: {e}")
@@ -192,20 +188,20 @@ def print_summary(df):
         df: DataFrame to summarize
     """
     print(f"\n{'='*60}")
-    print(f"Database Summary")
+    print("Database Summary")
     print(f"{'='*60}")
     print(f"Total calculations: {len(df)}")
 
     # Calculation types
     if 'CalcType' in df.columns:
-        print(f"\nCalculation types:")
+        print("\nCalculation types:")
         calc_types = df['CalcType'].value_counts()
         for calc_type, count in calc_types.items():
             print(f"  {calc_type}: {count}")
 
     # Convergence status
     if 'Converged' in df.columns:
-        print(f"\nConvergence status:")
+        print("\nConvergence status:")
         conv_counts = df['Converged'].value_counts()
         for status, count in conv_counts.items():
             print(f"  {status}: {count}")
@@ -214,7 +210,7 @@ def print_summary(df):
     if 'Energy' in df.columns:
         valid_energies = df['Energy'].dropna()
         if len(valid_energies) > 0:
-            print(f"\nEnergy range:")
+            print("\nEnergy range:")
             print(f"  Min: {valid_energies.min():.3f} eV")
             print(f"  Max: {valid_energies.max():.3f} eV")
             print(f"  Range: {valid_energies.max() - valid_energies.min():.3f} eV")
@@ -223,7 +219,7 @@ def print_summary(df):
     if 'Rel.E' in df.columns:
         valid_rel_e = df['Rel.E'].dropna()
         if len(valid_rel_e) > 0:
-            print(f"\nRelative energy range:")
+            print("\nRelative energy range:")
             print(f"  Max: {valid_rel_e.max():.3f} eV")
 
     print(f"{'='*60}\n")

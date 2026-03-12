@@ -1,12 +1,14 @@
 # Module for analysis of potential-dependent calculations
 
-from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
-from asetools.electronic.doscar import extract_fermi_e
-from scipy import odr
-from ase.io import read
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+from ase.io import read
+from scipy import odr
+
+from asetools.analysis import check_outcar_convergence
+from asetools.electronic.doscar import extract_fermi_e
 
 U_SHE = 4.43  # U(SHE) constant
 
@@ -36,10 +38,10 @@ def extract_corrected_energy_fermie(listfolders, calc_zero):
             atoms = read(os.path.join(folder, 'OUTCAR'), format='vasp-out', index=-1)
             energy_original = atoms.get_potential_energy()
             nelect = get_num_elect(os.path.join(folder, 'OUTCAR'))
-            
+
             fermie_original = extract_fermi_e(os.path.join(folder, 'DOSCAR'))
             fermi_shift = extract_fermi_shift(folder)
-            
+
             fermie_corr = fermie_original + (fermi_shift if fermi_shift else 0)
             energy_corr = energy_original - (nelect - ref_nelect) * (fermi_shift if fermi_shift else 0)
 
@@ -49,7 +51,7 @@ def extract_corrected_energy_fermie(listfolders, calc_zero):
             results['U'].append(-fermie_corr - U_SHE)
         else:
             print(f'Oh NOOOO!, something wrong with calculation at {folder}')
-    
+
     return results
 
 # defining a function with a fix constant value. This should be the value at 0 added electrons
@@ -65,13 +67,13 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
     odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
     output = odr_obj.run()
     if sum([plot, ploterrors]) == 2:
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        _fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
         plot_fit(results, output, energy_ref, ax1)
         plot_errors(results, output, energy_ref, ax2)
         plt.tight_layout()
         plt.show()
     elif sum([plot, ploterrors]) == 1:
-        fig, ax = plt.subplots(figsize=(5,5))
+        _fig, ax = plt.subplots(figsize=(5,5))
         if plot:
             plot_fit(results, output, energy_ref, ax)
         elif ploterrors:
@@ -81,28 +83,28 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
     return output
 
 def fit_to_polynomial(X, Y, ref_value=None, order=2, plot=False, ploterrors=False):
-    
+
     data = odr.Data(X, Y)
-    
-    if ref_value != None:
-        ### POLY fit 
+
+    if ref_value is not None:
+        ### POLY fit
         poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, ref_value))
         odr_obj = odr.ODR(data, poly_model, beta0=[1.0]*(order))
         output = odr_obj.run()
-    elif ref_value == None:
+    elif ref_value is None:
         poly_model = odr.polynomial(order)
         odr_obj = odr.ODR(data, poly_model)
         output = odr_obj.run()
 
     ### Plotting section
     if sum([plot, ploterrors]) == 2:
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        _fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
         plot_fit(X, Y, output, ref_value, ax1)
         plot_errors(X, Y, output, ref_value, ax2)
         plt.tight_layout()
         plt.show()
     elif sum([plot, ploterrors]) == 1:
-        fig, ax = plt.subplots(figsize=(5,5))
+        _fig, ax = plt.subplots(figsize=(5,5))
         if plot:
             plot_fit(X, Y, output, ref_value, ax)
         elif ploterrors:
@@ -134,7 +136,7 @@ def plot_errors(X, Y, polyfit, energy_ref, ax):
     # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
     # energy_ref is the energy of the neutral system
     # ax is the axis pyplot object
-     
+
     parameters = np.append(polyfit.beta[::-1], energy_ref)
     poly = np.poly1d( parameters )
     poly_y = poly( X )
@@ -149,7 +151,7 @@ def plot_errors(X, Y, polyfit, energy_ref, ax):
     return ax
 
 def plot_fit(X, Y, polyfit, energy_ref, ax):
-    
+
     parameters = np.append(polyfit.beta[::-1], energy_ref)
     poly = np.poly1d(parameters)
     x = np.linspace(min(X), max(X), 100)

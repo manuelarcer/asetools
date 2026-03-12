@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
-from ase.io import read, write
-import sys
 import os
+import sys
+
+from ase.io import read, write
+
 
 def main():
     if len(sys.argv) < 2:

@@ -9,9 +9,10 @@ the atoms according to user-specified chemical symbol ordering and/or z-coordina
 
 import argparse
 import sys
-from ase.io import read, write
+
 from ase import Atoms
 from ase.constraints import FixAtoms
+from ase.io import read, write
 
 
 def get_fixed_indices(atoms):
@@ -182,7 +183,7 @@ Examples:
         print(f"Reordered structure written to '{args.output}'")
 
         # Print summary
-        print(f"\nAtom ordering summary:")
+        print("\nAtom ordering summary:")
         element_order = args.order if args.order else sorted(set(atoms.get_chemical_symbols()))
         for element in element_order:
             count = sum(1 for atom in reordered_atoms if atom.symbol == element)

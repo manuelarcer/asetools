@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+import argparse
 import os
 import shutil
-import argparse
+
 import numpy as np
 from ase.io import read
 

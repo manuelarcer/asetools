@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
-import sys
 import argparse
+import sys
+
 from ase.io import read, write
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Convert VASP output files to ARC format.')
@@ -17,10 +19,10 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    
+
     input_file = args.input_file
     output_file = args.output_file
-    
+
     try:
         atoms = read(input_file)
         write(output_file, atoms, format='dmol-arc')

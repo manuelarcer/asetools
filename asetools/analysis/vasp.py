@@ -1,12 +1,12 @@
 # File containing the functions to analyze OUTCARs and VASP runs
 
+import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ase.io import read
-import pandas as pd
 import numpy as np
-import re
-    
+from ase.io import read
+
+
 def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, str]:
     try:
         out = open(outcar, 'r')
@@ -32,7 +32,7 @@ def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, 
             if ibrion == 1 or ibrion == 2 or ibrion == 3:
                 opt = True
             elif verbose:
-                print(f'Not an OPTIMIZATION job')
+                print('Not an OPTIMIZATION job')
                 opt = False
             else:
                 opt = False
@@ -68,7 +68,7 @@ def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, 
 
 def check_energy_and_maxforce(outcar: str, magmom: bool = False, verbose: bool = False) -> Union[Tuple[float, float], Tuple[float, float, float]]:
 
-    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
+    _convergence, _vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
         energy = atoms.get_potential_energy()
@@ -76,7 +76,7 @@ def check_energy_and_maxforce(outcar: str, magmom: bool = False, verbose: bool =
         forces = [np.linalg.norm(f) for f in vecforces]
         maxforce = max( forces )
         if magmom:
-            mm = atoms.get_magnetic_moment() 
+            mm = atoms.get_magnetic_moment()
             return energy, maxforce, mm
         else:
             return energy, maxforce
@@ -86,11 +86,11 @@ def check_energy_and_maxforce(outcar: str, magmom: bool = False, verbose: bool =
 
 def extract_magnetic_moments(outcar: str, listatoms: List[int], verbose: bool = False) -> List[float]:
     # listatoms: is a list with the indexes of atoms of interest
-    convergence, vasp = check_outcar_convergence(outcar, verbose=verbose)
+    _convergence, _vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
         atoms = read(outcar, format='vasp-out', index=-1)
         #energy = atoms.get_potential_energy()
-        mm = atoms.get_magnetic_moment()
+        atoms.get_magnetic_moment()
         return [round(atoms.get_magnetic_moments()[i],2) for i in listatoms]
     except:
         print('Missing or damaged OUTCAR file')
@@ -100,7 +100,7 @@ def get_parameter_from_run(outcar: str, check_converg: bool = True, parameter: s
     # First check convergence
     convergence = 'Convergence-not-Checked'
     if check_converg:
-        convergence, vasp = check_outcar_convergence(outcar, verbose=False)
+        convergence, _vasp = check_outcar_convergence(outcar, verbose=False)
 
     pattern = rf'^\s*{re.escape(parameter)}\s*=\s*(\S+)'
     with open(outcar, 'r') as f:
@@ -134,7 +134,6 @@ def classify_calculation_type(outcar_path: str, calc_dir: str) -> str:
             'single-point', 'cell-relax', 'optimization', 'unknown'
     """
     import os
-    import glob
 
     # Check for special files first (highest priority)
     # DIMER calculation
@@ -162,7 +161,7 @@ def classify_calculation_type(outcar_path: str, calc_dir: str) -> str:
                                 return 'neb'
                         except (ValueError, IndexError):
                             pass
-    except (OSError, IOError):
+    except OSError:
         pass
 
     # Extract VASP parameters
@@ -222,8 +221,8 @@ def find_initial_structure(calc_dir: str, pattern: str = '*.vasp') -> str:
     Raises:
         FileNotFoundError: If no structure file matching pattern or POSCAR fallback found
     """
-    import os
     import glob
+    import os
 
     # Try pattern matching first
     search_pattern = os.path.join(calc_dir, pattern)
@@ -327,7 +326,7 @@ def extract_comprehensive_metadata(outcar_path: str, incar_path: Optional[str] =
     try:
         with open(incar_path, 'r') as f:
             metadata['INCAR_full'] = f.read()
-    except (OSError, IOError):
+    except OSError:
         metadata['INCAR_full'] = None
 
     # Extract POTCAR TITEL lines from OUTCAR
@@ -341,7 +340,7 @@ def extract_comprehensive_metadata(outcar_path: str, incar_path: Optional[str] =
                     if len(parts) > 1:
                         titel = parts[1].strip()
                         potcar_info.append(titel)
-    except (OSError, IOError):
+    except OSError:
         pass
 
     metadata['POTCAR_info'] = potcar_info
@@ -351,4 +350,3 @@ def extract_comprehensive_metadata(outcar_path: str, incar_path: Optional[str] =
 
 
 
-    

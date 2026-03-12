@@ -1,8 +1,9 @@
 # ASE/calculator setup utilities
 
 import logging
-import yaml
+
 import numpy as np
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -13,14 +14,14 @@ class VASPConfigurationFromYAML:
         self.basic_config = self.config['basic']
         self.workflows = self.config['workflows']
         self.globals = self.config['globals']
-        
+
         self.initial_magmom_data = self.initial_magmom()
-        
+
         # Remove the magmom shorthand so it won't sneak into system_config
         systems = self.config.get('systems', {})
         if system in systems and systems[system] is not None:
             systems[system].pop('magmom', None)
-            
+
 
     @property
     def system_config(self) -> dict:

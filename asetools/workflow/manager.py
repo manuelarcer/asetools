@@ -1,19 +1,26 @@
 # Description of the script:
 
+import glob
+import json
 import logging
 import os
 import shutil
 import sys
-import glob
-import json
+from typing import Optional
+
 import numpy as np
-from ase.io import read
-from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML, deep_update, setup_initial_magmom
-from ase.calculators.vasp import Vasp
 from ase import Atoms
-from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
+from ase.calculators.vasp import Vasp
+from ase.io import read
 from ase.mep import MinModeTranslate
+from ase.optimize import BFGS, FIRE, LBFGS, GPMin, MDMin, QuasiNewton
+
 from asetools.analysis import check_outcar_convergence
+from asetools.workflow.calculatorsetuptools import (
+    VASPConfigurationFromYAML,
+    deep_update,
+    setup_initial_magmom,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +119,7 @@ def _detect_atom_reordering(atoms, reference_symbols=None):
 
     # Create sort_indices: original_index -> current_index
     sort_indices = [None] * len(current_symbols)
-    for symbol in element_indices_original.keys():
+    for symbol in element_indices_original:
         orig_list = element_indices_original[symbol]
         curr_list = element_indices_current[symbol]
         for orig_pos, orig_idx in enumerate(orig_list):
@@ -210,7 +217,7 @@ def _log_calculator_params(calc, prefix="  *"):
 
 
 
-def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
+def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: Optional[dict] = None):
     if run_overrides is None:
         run_overrides = {}
     else:
@@ -243,7 +250,7 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: dict = None):
     return calc
 
 
-def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overrides: dict = None):
+def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overrides: Optional[dict] = None):
     """
     Create calculator for a specific step, choosing between Vasp and VaspInteractive
     based on step requirements:
@@ -279,7 +286,7 @@ def _make_step_calculator(cfg: VASPConfigurationFromYAML, step: dict, run_overri
 
     return calc
 
-def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: dict = None, dry_run: bool = False, magmoms=None):
+def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: str, run_overrides: Optional[dict] = None, dry_run: bool = False, magmoms=None):
     """
     Run a multi-stage VASP workflow.
 
@@ -349,14 +356,14 @@ def run_workflow(atoms: Atoms, cfg: VASPConfigurationFromYAML, workflow_name: st
         # not the in-memory atoms object which may have stale calculator state
         if not dry_run:
             atoms = load_structure(cfg.globals.get('initial_conf_pattern', 'POSCAR'))
-            logger.info(f"  * Reloaded structure from disk for next stage")
+            logger.info("  * Reloaded structure from disk for next stage")
 
     logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
 
     # Keep reference file as record of atom order and magmom handling
     if isinstance(initial_magmom, (list, tuple, np.ndarray)) and os.path.exists(MAGMOM_REFERENCE_FILE):
         logger.info(f"  * Atom order reference preserved in {MAGMOM_REFERENCE_FILE}")
-    
+
 
 def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_overrides: dict, dry_run: bool, initial_magmom, reference_symbols=None):
     # run_overrides is different from the overrides in each step
@@ -369,14 +376,14 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
     if isinstance(initial_magmom, (list, tuple, np.ndarray)) and reference_symbols is not None:
         reordered, sort_idx, _ = _detect_atom_reordering(atoms, reference_symbols)
         if reordered:
-            logger.warning(f"  ⚠ Atoms were reordered by VASP - remapping magmom list to match current order")
+            logger.warning("  ⚠ Atoms were reordered by VASP - remapping magmom list to match current order")
             magmom_to_apply = _reorder_magmom_list(list(initial_magmom), sort_idx)
-            logger.info(f"  * Magmom list remapped for reordered structure")
+            logger.info("  * Magmom list remapped for reordered structure")
 
     # Apply constraints if specified in stage configuration
     if 'constraints' in stage:
         from asetools.workflow.constraints import ConstraintManager
-        logger.info(f"  * Applying constraints from stage configuration")
+        logger.info("  * Applying constraints from stage configuration")
         cm = ConstraintManager()
         cm.apply_stage_constraints(atoms, stage['constraints'])
 
@@ -411,14 +418,14 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
         if ase_optimizer_converged is not None:
             convergence = ase_optimizer_converged
             if convergence:
-                logger.info(f"  ✓ ASE optimizer converged successfully")
+                logger.info("  ✓ ASE optimizer converged successfully")
             else:
                 logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
-                logger.error(f"    ASE optimizer did not reach convergence criteria")
+                logger.error("    ASE optimizer did not reach convergence criteria")
                 raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
         else:
             # No ASE optimizer used, check OUTCAR convergence (standard VASP optimization)
-            convergence, vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
+            convergence, _vasp_version = check_outcar_convergence('OUTCAR', verbose=False)
 
             # Log convergence details if successful
             if convergence:
@@ -428,11 +435,11 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
                     max_force = np.linalg.norm(forces, axis=1).max()
                     logger.info(f"  ✓ VASP converged: max_force={max_force:.4f} eV/Å")
                 except Exception:
-                    logger.info(f"  ✓ VASP converged")
+                    logger.info("  ✓ VASP converged")
 
             if not convergence:
                 logger.error(f" ❌ Stage '{name}' did NOT converge - STAGE_*_DONE file will NOT be created")
-                logger.error(f"    The calculation likely hit NSW limit or failed to meet convergence criteria")
+                logger.error("    The calculation likely hit NSW limit or failed to meet convergence criteria")
                 raise RuntimeError(f"Stage '{name}' did not converge. Fix the issue and re-run.")
 
     backup_output_files(name=name)
@@ -446,7 +453,7 @@ def _run_stage(atoms: Atoms, cfg: VASPConfigurationFromYAML, stage: dict, run_ov
             logger.info(f"    Total magnetic moment: {final_magmoms.sum():.3f} μB")
             logger.info(f"    Max |moment|: {np.abs(final_magmoms).max():.3f} μB")
         except Exception:
-            logger.debug(f" -- Could not extract final magnetic moments from OUTCAR")
+            logger.debug(" -- Could not extract final magnetic moments from OUTCAR")
 
     logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
     _mark_done(name)
@@ -523,7 +530,7 @@ def _run_stage_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML
                 converged = _run_with_ase_optimizer(atoms, optimizer_name, optimizer_kwargs)
                 ase_optimizer_converged = converged
             else:
-                logger.info(f"    Running single point calculation")
+                logger.info("    Running single point calculation")
                 energy = atoms.get_potential_energy()
                 logger.info(f"    Energy: {energy:.6f} eV")
 
@@ -531,16 +538,16 @@ def _run_stage_with_vaspinteractive(atoms: Atoms, cfg: VASPConfigurationFromYAML
 
     # Clear the calculator reference after VaspInteractive context closes
     atoms.calc = None
-    logger.info(f"    ✔ VaspInteractive stage completed and finalized")
+    logger.info("    ✔ VaspInteractive stage completed and finalized")
     return ase_optimizer_converged
 
 
 def _run_step(atoms: Atoms, step: dict, dry_run: bool):
     name      = step['name']
     overrides = step.get('overrides', {})
-    optimizer_name = step.get('optimizer', None)
+    optimizer_name = step.get('optimizer')
     optimizer_kwargs = step.get('optimizer_kwargs', {})
-    
+
     logger.info(f"  • Step '{name}' overrides={overrides}")
 
     # For VaspInteractive, we need to ensure proper parameter handling
@@ -556,7 +563,7 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
         logger.info(f"    VaspInteractive adjusted overrides: {overrides}")
 
     atoms.calc.set(**overrides)
-    
+
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")
         return
@@ -598,19 +605,19 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
 def _fix_vaspinteractive_params(overrides: dict, using_ase_optimizer: bool = False) -> dict:
     """
     Fix parameter conflicts for VaspInteractive calculator based on documentation:
-    
+
     1. IBRION doesn't enable VASP's internal optimizer - VaspInteractive handles this
-    2. NSW should be >= max steps for ASE optimizers (default 2000) 
+    2. NSW should be >= max steps for ASE optimizers (default 2000)
     3. For single point (NSW=0): disable interactive mode to avoid stdin hang
     """
     fixed_overrides = overrides.copy()
-    
+
     # Critical fix for single point calculations hanging at stdin
     if overrides.get('nsw', 0) == 0:
         # Single point - disable interactive mode to avoid "reading from stdin" hang
         fixed_overrides['ibrion'] = -1  # No ionic optimization
         logger.debug("    Single point: set IBRION=-1 to avoid VaspInteractive stdin hang")
-    
+
     # For ASE optimizers, ensure proper NSW and IBRION settings
     if using_ase_optimizer:
         # Ensure NSW is high enough for ASE optimizer steps (VaspInteractive requirement)
@@ -618,7 +625,7 @@ def _fix_vaspinteractive_params(overrides: dict, using_ase_optimizer: bool = Fal
             fixed_overrides['nsw'] = 1000  # VaspInteractive default
         fixed_overrides['ibrion'] = -1   # VaspInteractive handles optimization externally
         logger.debug(f"    ASE optimizer: NSW={fixed_overrides['nsw']}, IBRION=-1")
-    
+
     return fixed_overrides
 
 
@@ -712,7 +719,7 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     if converged:
         logger.info(f"    ✓ Optimizer converged to fmax={run_kwargs['fmax']} eV/Å")
     else:
-        logger.warning(f"    ⚠ Optimizer did not converge (hit step limit)")
+        logger.warning("    ⚠ Optimizer did not converge (hit step limit)")
 
     return converged
 
@@ -730,7 +737,7 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     # Validate and separate dimer-specific kwargs
     dimer_control_kwargs, optimizer_init_kwargs, optimizer_run_kwargs = validate_dimer_kwargs(optimizer_kwargs)
 
-    logger.info(f"    Setting up dimer calculation")
+    logger.info("    Setting up dimer calculation")
     logger.info(f"    Dimer control kwargs: {dimer_control_kwargs}")
     logger.info(f"    Optimizer init kwargs: {optimizer_init_kwargs}")
     logger.info(f"    Optimizer run kwargs: {optimizer_run_kwargs}")
@@ -765,14 +772,14 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     if 'logfile' not in optimizer_init_kwargs:
         optimizer_init_kwargs['logfile'] = 'DIMER.log'
 
-    logger.info(f"    Running dimer optimization...")
+    logger.info("    Running dimer optimization...")
 
     # Create and run dimer optimizer
     from ase.mep import MinModeTranslate
     dimer_opt = MinModeTranslate(d_atoms, **optimizer_init_kwargs)
     converged = dimer_opt.run(**optimizer_run_kwargs)
 
-    logger.info(f"    Dimer optimization completed")
+    logger.info("    Dimer optimization completed")
 
     # Save final MODECAR file with converged eigenvector
     try:
@@ -794,7 +801,7 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
             logger.info(f"    ✓ Converged to saddle point: E={saddle_info.get('energy', 'N/A'):.6f} eV")
             logger.info(f"    Final eigenvalue: {saddle_info.get('eigenvalue', 'N/A')}")
         else:
-            logger.warning(f"    Dimer may not have converged properly")
+            logger.warning("    Dimer may not have converged properly")
             logger.warning(f"    Final max force: {conv_info.get('max_force', 'N/A'):.4f} eV/Å")
     except Exception as e:
         logger.warning(f"    Could not check convergence: {e}")
@@ -869,7 +876,7 @@ def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = 'default'
             logger.info(f"Stage {stage_name} is NOT DONE, adding to run list.")
             to_run.append(stage_name)
     return to_run
-        
+
 def backup_output_files(name='backup'):
     for fname in ('POSCAR','INCAR','CONTCAR','OUTCAR','OSZICAR'):
         dst = f"{fname}_{name}"

@@ -44,12 +44,12 @@ _SUBPACKAGES = {
 
 # Backward-compatible direct imports from thermodynamics
 # (these were previously the only top-level exports)
-from .thermodynamics.ab_initio import (
-    ThermodynamicsCalculator,
+from .thermodynamics.ab_initio import (  # noqa: E402
     AdsorbateSpecies,
-    SurfaceProperties,
     InterpolationModel,
     LatticeGasModel,
+    SurfaceProperties,
+    ThermodynamicsCalculator,
 )
 
 
@@ -61,24 +61,24 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    # Subpackages
-    "analysis",
-    "electronic",
-    "structure",
-    "electrochemistry",
-    "pathways",
-    "thermodynamics",
-    "workflow",
-    "database",
-    "plotting",
-    "parsers",
-    "cli",
-    # Backward-compatible top-level classes
-    "ThermodynamicsCalculator",
     "AdsorbateSpecies",
-    "SurfaceProperties",
     "InterpolationModel",
     "LatticeGasModel",
+    "SurfaceProperties",
+    # Backward-compatible top-level classes
+    "ThermodynamicsCalculator",
     # Metadata
     "__version__",
+    # Subpackages
+    "analysis",
+    "cli",
+    "database",
+    "electrochemistry",
+    "electronic",
+    "parsers",
+    "pathways",
+    "plotting",
+    "structure",
+    "thermodynamics",
+    "workflow",
 ]

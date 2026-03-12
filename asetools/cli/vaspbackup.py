@@ -2,16 +2,16 @@
 
 # This script creates a backup folder with user provided name and copies the CONTCAR, OUTCAR, and vasprun.xml files to the backup folder.
 
-import os
-import shutil
 import argparse
 import glob
 import gzip
+import os
+import shutil
+
 
 def compress_file(original_file):
-    with open(original_file, 'rb') as f_in:
-        with gzip.open(original_file + '.gz', 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    with open(original_file, 'rb') as f_in, gzip.open(original_file + '.gz', 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
     os.remove(original_file)  # Remove the original file after compression
 
 def main():

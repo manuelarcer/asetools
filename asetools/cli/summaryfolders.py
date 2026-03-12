@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 
 import argparse
-from ase.io import read
-import pandas as pd
-import numpy as np
-import glob, os
-from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence, get_parameter_from_run
+import glob
+import os
 
+import pandas as pd
+from ase.io import read
+
+from asetools.analysis import (
+    check_energy_and_maxforce,
+    check_outcar_convergence,
+    get_parameter_from_run,
+)
 
 # Parameters to extract for pyatoms mode
 PYATOMS_PARAMS = ['GGA', 'ENCUT', 'EDIFF', 'EDIFFG', 'ISPIN', 'ISMEAR', 'SIGMA', 'IVDW', 'LDAU']
@@ -257,7 +262,7 @@ def run_pyatoms_mode():
         f.write(' '.join(not_converged) if not_converged else "(none)")
         f.write("\n")
 
-    print(f"\nOutput saved to summary_pyatoms.log")
+    print("\nOutput saved to summary_pyatoms.log")
 
 def is_summary_up_to_date(magmom_requested=False):
     """Check if summary.log exists and is newer than all folders, and if magmom flag status matches"""
@@ -280,14 +285,12 @@ def is_summary_up_to_date(magmom_requested=False):
     for folder in folders:
         # Check if any OUTCAR in folders is newer than summary.log
         outcar_path = os.path.join(folder, 'OUTCAR')
-        if os.path.exists(outcar_path):
-            if os.path.getmtime(outcar_path) > summary_mtime:
-                return False
+        if os.path.exists(outcar_path) and os.path.getmtime(outcar_path) > summary_mtime:
+            return False
         # Also check for log.info files (pyatoms)
         loginfo_path = os.path.join(folder, 'log.info')
-        if os.path.exists(loginfo_path):
-            if os.path.getmtime(loginfo_path) > summary_mtime:
-                return False
+        if os.path.exists(loginfo_path) and os.path.getmtime(loginfo_path) > summary_mtime:
+            return False
 
     return True
 
@@ -342,15 +345,12 @@ def main():
                 #    optsteps = 1
                 # I think if multistep Opt there will be multiple 'VaspGeomOptProcedure' and 'VaspGeomOptJob' in log.info
                 # for a single step procedure, there will be only one 'VaspGeomOptJob'
-                if 'VaspGeomOptProcedure' in line and 'completed successfully' in line:      # this work for GeomOpt only
-                    finishedprocess = True
-                elif 'VaspGeomOptJob' in line and 'completed successfully' in line:           # this work for GeomOpt only
+                if ('VaspGeomOptProcedure' in line and 'completed successfully' in line) or ('VaspGeomOptJob' in line and 'completed successfully' in line):      # this work for GeomOpt only
                     finishedprocess = True
 
-                if finishedprocess:
-                    if 'Closing global processes' in line:
-                        finishedpyatoms = True
-                
+                if finishedprocess and 'Closing global processes' in line:
+                    finishedpyatoms = True
+
                 if 'energy' in line:
                     e.append( float(line.split()[-3].split(',')[0]) )   # example: energy -481.276399, force 0.013.
                     fmax.append( float(line.split()[-1][:-1]) )
@@ -456,7 +456,7 @@ def main():
     not_converged = [f.split('/')[0] for f in not_converged]
     print('Not converged:')
     print(' '.join(not_converged))
-    
+
     # Write output to summary.log
     with open('summary.log', 'w') as f:
         f.write(df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
@@ -511,7 +511,7 @@ def check_ase_optimizer_convergence(folder, fmax_threshold=0.02):
                     converged = final_fmax <= fmax_threshold
                     return (converged, final_fmax, optimizer_type)
 
-            except (OSError, IOError) as e:
+            except OSError:
                 continue
 
     # No ASE optimizer log found
@@ -543,7 +543,7 @@ def fast_mode_check(f, alternative_filenames):
                     vaspout.seek(0)  # Reset to beginning
                     foundout = True
                     break
-                except (OSError, TimeoutError, IOError) as e:
+                except (OSError, TimeoutError):
                     if vaspout:
                         vaspout.close()
                     continue
@@ -564,7 +564,7 @@ def fast_mode_check(f, alternative_filenames):
                         if 'IBRION' in line:
                             ibrion = int(line.split()[2])
                             break
-            except (OSError, TimeoutError, IOError) as e:
+            except (OSError, TimeoutError):
                 print(f'Warning: Cannot read INCAR in {f} (file may not be downloaded)')
                 if vaspout:
                     vaspout.close()
@@ -574,7 +574,7 @@ def fast_mode_check(f, alternative_filenames):
         try:
             lines = vaspout.readlines()[-5:]
             vaspout.close()
-        except (OSError, TimeoutError, IOError) as e:
+        except (OSError, TimeoutError):
             print(f'Warning: Cannot read output file in {f} (file may not be downloaded)')
             if vaspout:
                 vaspout.close()
@@ -582,17 +582,11 @@ def fast_mode_check(f, alternative_filenames):
 
         # Check convergence based on IBRION
         if ibrion in [1, 2, 3]:
-            for line in lines:
-                if 'reached required accuracy' in line:
-                    return True
-            return False
+            return any('reached required accuracy' in line for line in lines)
         else:
-            for line in lines:
-                if 'E0=' in line:
-                    return True
-            return False
+            return any('E0=' in line for line in lines)
 
-    except TimeoutError as e:
+    except TimeoutError:
         print(f'Timeout reading files in {f} (OneDrive files may not be downloaded)')
         return None
     except Exception as e:

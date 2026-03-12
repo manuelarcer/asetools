@@ -2,10 +2,10 @@
 
 from typing import List, Optional, Tuple
 
-import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_interp_spline
 import numpy as np
+import pandas as pd
+from scipy.interpolate import make_interp_spline
 
 # Default column names
 DEFAULT_LABEL_COL = 'Label'
@@ -46,7 +46,7 @@ def validate_columns(data: pd.DataFrame, required_cols: List[str], optional_cols
         missing_optional = [col for col in optional_cols if col not in data.columns]
         if missing_optional:
             import warnings
-            warnings.warn(f"Optional columns not found: {missing_optional}")
+            warnings.warn(f"Optional columns not found: {missing_optional}", stacklevel=2)
 
     return True
 
@@ -94,7 +94,7 @@ def add_line_to_pes(ax: plt.Axes, data: pd.DataFrame, energy_col: Optional[str] 
     if col is not None:
         import warnings
         warnings.warn("Parameter 'col' is deprecated, use 'energy_col' instead",
-                     DeprecationWarning)
+                     DeprecationWarning, stacklevel=2)
         if energy_col is None:
             energy_col = col
 

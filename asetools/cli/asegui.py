@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import sys
+
 from ase.io import read
 from ase.visualize import view
-from ase.gui.gui import GUI
-import io
+
 
 def preprocess_file_content(filename):
     """

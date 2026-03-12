@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
-import math
-import sys
 import argparse
-from ase.io import read, write
-import numpy as np
-from ase.thermochemistry import HarmonicThermo, IdealGasThermo
-import logging
 import datetime
-from io import StringIO
+import logging
+import math
 from contextlib import redirect_stdout
+from io import StringIO
+
+import numpy as np
+from ase.io import read, write
+from ase.thermochemistry import HarmonicThermo, IdealGasThermo
+
 
 def setup_logging():
     """Configure logging to write to both file and console"""
@@ -219,7 +220,7 @@ def remove_repeated_energies(energies, atoms, geom, logger):  # It happens that 
         logger.info('')
         logger.info('WARNING: The number of energies is different from the expected')
         logger.info('Removing similar vibrational energies')
-        diff = len(energies) - numvib
+        len(energies) - numvib
         invertenergies = [energies[i] for i in range(len(energies)-1, -1, -1)]
         logger.info(invertenergies)
         newenergies = []
@@ -270,10 +271,9 @@ Examples:
     # Parse selected atoms and filter modes if requested
     selected_atoms = parse_atom_indices(args.select_atoms)
     if selected_atoms is not None:
-        vib, mode_analysis = filter_modes_by_character(vib_all, selected_atoms, args.threshold, logger)
+        vib, _mode_analysis = filter_modes_by_character(vib_all, selected_atoms, args.threshold, logger)
     else:
         vib = vib_all
-        mode_analysis = {}
 
     zpe, cpT, S = compute_corrections(vib, args.temp)
 
@@ -286,15 +286,15 @@ Examples:
     logger.info('-----------------------')
 
     e_dft = read(args.outcar, format='vasp-out', index=0).get_potential_energy()
-    logger.info('E, eV = {:.3f}'.format(e_dft))
-    logger.info('ZPE, eV = {:.3f}'.format(zpe))
-    logger.info('S, eV/K = {:.6f}'.format(S))
-    logger.info('Temperature is = {:.1f}'.format(args.temp))
-    logger.info('Thermal correction (0->T), eV = {:.3f}'.format(cpT))
-    logger.info('Entropy correction (-S*T), eV = {:.3f}'.format(-S * args.temp))
+    logger.info(f'E, eV = {e_dft:.3f}')
+    logger.info(f'ZPE, eV = {zpe:.3f}')
+    logger.info(f'S, eV/K = {S:.6f}')
+    logger.info(f'Temperature is = {args.temp:.1f}')
+    logger.info(f'Thermal correction (0->T), eV = {cpT:.3f}')
+    logger.info(f'Entropy correction (-S*T), eV = {-S * args.temp:.3f}')
     logger.info('\n')
     logger.info('All values together: E_tot   E_ZPE   CpT   -S*T')
-    logger.info('{:.3f} {:.3f} {:.3f} {:.3f}'.format(e_dft, zpe, cpT, -S * args.temp))
+    logger.info(f'{e_dft:.3f} {zpe:.3f} {cpT:.3f} {-S * args.temp:.3f}')
     logger.info('\n')
 
     logger.info('*************************************************')
@@ -327,7 +327,7 @@ Examples:
                         geometry=args.geom,      # monoatomic, linear, nonlinear
                         symmetrynumber=args.symnum,   # CO2: 2, H2O: 2, CO: 1, H2: 2
                         spin=0)     # Different for radicals or unpaired electrons
-        G = thermo.get_gibbs_energy(temperature=args.temp, pressure=args.pressure * Pa)
+        thermo.get_gibbs_energy(temperature=args.temp, pressure=args.pressure * Pa)
 
     if args.writevib == 'y':
         write_vib_files(vib, vasp6, lines, args.outcar)

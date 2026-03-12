@@ -10,14 +10,14 @@ This module provides utilities for dimer calculations including:
 - ASE constraints compatibility
 """
 
+import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from ase import Atoms
 from ase.io import read, write
 from ase.mep import DimerControl, MinModeAtoms
-import logging
 
 logger = logging.getLogger(__name__)
 

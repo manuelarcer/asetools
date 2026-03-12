@@ -13,8 +13,8 @@ Example usage:
 
 import json
 import logging
-from typing import List, Tuple, Optional, Dict, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from ase import Atoms
 from ase.constraints import FixAtoms, Hookean
@@ -354,6 +354,6 @@ class ConstraintManager:
             raise ValueError("Missing 'config_file' in constraint configuration")
 
         k = constraint_config.get('spring_constant', 20.0)
-        distance_factor = constraint_config.get('distance_factor', None)
+        distance_factor = constraint_config.get('distance_factor')
 
         self.apply_from_json(atoms, config_file, k=k, distance_factor=distance_factor)

@@ -12,9 +12,9 @@ Classes:
 """
 
 import logging
-import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 from ase import Atoms
 
 logger = logging.getLogger(__name__)
@@ -276,7 +276,7 @@ class SymmetryAnalyzer:
 
         # Renumber groups to use smallest index as key
         renumbered = {}
-        for rep, members in groups.items():
+        for _rep, members in groups.items():
             min_idx = min(members)
             renumbered[min_idx] = sorted(members)
 

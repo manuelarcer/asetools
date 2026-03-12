@@ -9,9 +9,11 @@ partial DOS (PDOS), and band center calculations.
 """
 
 import argparse
-import sys
 import os
+import sys
+
 import matplotlib.pyplot as plt
+
 from asetools.electronic.doscar import DOS
 
 
@@ -312,11 +314,10 @@ Spin treatment options (for --band-center):
         orbitals = normalized_orbitals
 
     # Check if PDOS is required but not available
-    if (atoms or orbitals) and not args.total:
-        if not dos.has_partial_dos:
-            print('ERROR: Partial DOS requested but not available in DOSCAR')
-            print('Please run VASP with LORBIT >= 10 to generate partial DOS')
-            sys.exit(1)
+    if (atoms or orbitals) and not args.total and not dos.has_partial_dos:
+        print('ERROR: Partial DOS requested but not available in DOSCAR')
+        print('Please run VASP with LORBIT >= 10 to generate partial DOS')
+        sys.exit(1)
 
     # Validate requirements for PDOS
     if not args.total and (atoms or orbitals):
@@ -334,7 +335,7 @@ Spin treatment options (for --band-center):
     colors = parse_colors(args.colors)
 
     # Create figure
-    fig, ax = plt.subplots(figsize=figsize)
+    _fig, ax = plt.subplots(figsize=figsize)
 
     # Data collection for saving (if requested)
     plot_data = {'energy': None, 'columns': {}}
@@ -374,7 +375,7 @@ Spin treatment options (for --band-center):
                     # Validate DOS data
                     if pdos_up.sum() == 0 and pdos_down.sum() == 0:
                         print(f'    WARNING: {orbital} orbital has zero DOS')
-                        print(f'    This may indicate an invalid orbital name or atoms with no electrons in these orbitals')
+                        print('    This may indicate an invalid orbital name or atoms with no electrons in these orbitals')
 
                     # Get color for this orbital
                     color = orbital_colors[i % len(orbital_colors)]

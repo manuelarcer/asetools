@@ -1,10 +1,10 @@
 """Structure analysis tools."""
 
 from .adsorbate import SurfaceAnalyzer
-from .bond_valence import BondValenceSum, BondValenceParameters
+from .bond_valence import BondValenceParameters, BondValenceSum
 
 __all__ = [
-    'SurfaceAnalyzer',
-    'BondValenceSum',
     'BondValenceParameters',
+    'BondValenceSum',
+    'SurfaceAnalyzer',
 ]
