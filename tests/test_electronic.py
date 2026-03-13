@@ -12,6 +12,7 @@ class TestDOSImport:
 
     def test_import_dos_class(self):
         from asetools.electronic.doscar import DOS
+
         assert DOS is not None
 
     def test_import_legacy_functions(self):
@@ -19,6 +20,7 @@ class TestDOSImport:
             calculate_band_center,
             extract_fermi_e,
         )
+
         assert callable(calculate_band_center)
         assert callable(extract_fermi_e)
 
@@ -36,6 +38,7 @@ class TestDOSWithData:
     @pytest.fixture
     def dos(self, doscar_path):
         from asetools.electronic.doscar import DOS
+
         return DOS(doscar_path)
 
     def test_dos_init(self, dos):
@@ -48,10 +51,12 @@ class TestDOSWithData:
         # Fermi energy should be a finite number
         assert isinstance(fe, float)
         import math
+
         assert math.isfinite(fe)
 
     def test_extract_fermi_e(self, doscar_path):
         from asetools.electronic.doscar import extract_fermi_e
+
         fe = extract_fermi_e(doscar_path)
         assert isinstance(fe, float)
 

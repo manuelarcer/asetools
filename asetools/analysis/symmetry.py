@@ -24,6 +24,7 @@ def _get_spglib():
     """Import and return spglib, raising helpful error if not installed."""
     try:
         import spglib
+
         return spglib
     except ImportError:
         raise ImportError(
@@ -85,7 +86,7 @@ class SymmetryAnalyzer:
         symprec: float = 1e-5,
         angle_tolerance: float = -1.0,
         is_surface: bool = False,
-        surface_threshold: float = 2.0
+        surface_threshold: float = 2.0,
     ):
         """Initialize SymmetryAnalyzer."""
         self.spglib = _get_spglib()
@@ -116,30 +117,32 @@ class SymmetryAnalyzer:
         if self._symmetry_dataset is None:
             cell = self._get_spglib_cell()
             dataset = self.spglib.get_symmetry_dataset(
-                cell,
-                symprec=self.symprec,
-                angle_tolerance=self.angle_tolerance
+                cell, symprec=self.symprec, angle_tolerance=self.angle_tolerance
             )
             if dataset is None:
                 logger.warning("spglib could not determine symmetry, using P1")
                 self._symmetry_dataset = {
-                    'number': 1,
-                    'international': 'P1',
-                    'equivalent_atoms': np.arange(len(self.atoms)),
-                    'rotations': np.array([np.eye(3, dtype=int)]),
-                    'translations': np.array([[0, 0, 0]])
+                    "number": 1,
+                    "international": "P1",
+                    "equivalent_atoms": np.arange(len(self.atoms)),
+                    "rotations": np.array([np.eye(3, dtype=int)]),
+                    "translations": np.array([[0, 0, 0]]),
                 }
             else:
                 # Use attribute access for modern spglib, fall back to dict for older versions
                 self._symmetry_dataset = {
-                    'number': getattr(dataset, 'number', None) or dataset['number'],
-                    'international': getattr(dataset, 'international', None) or dataset['international'],
-                    'equivalent_atoms': getattr(dataset, 'equivalent_atoms', None)
-                                        if hasattr(dataset, 'equivalent_atoms') else dataset['equivalent_atoms'],
-                    'rotations': getattr(dataset, 'rotations', None)
-                                 if hasattr(dataset, 'rotations') else dataset['rotations'],
-                    'translations': getattr(dataset, 'translations', None)
-                                    if hasattr(dataset, 'translations') else dataset['translations'],
+                    "number": getattr(dataset, "number", None) or dataset["number"],
+                    "international": getattr(dataset, "international", None)
+                    or dataset["international"],
+                    "equivalent_atoms": getattr(dataset, "equivalent_atoms", None)
+                    if hasattr(dataset, "equivalent_atoms")
+                    else dataset["equivalent_atoms"],
+                    "rotations": getattr(dataset, "rotations", None)
+                    if hasattr(dataset, "rotations")
+                    else dataset["rotations"],
+                    "translations": getattr(dataset, "translations", None)
+                    if hasattr(dataset, "translations")
+                    else dataset["translations"],
                 }
         return self._symmetry_dataset
 
@@ -165,7 +168,7 @@ class SymmetryAnalyzer:
             Space group number (1-230)
         """
         dataset = self._get_symmetry_dataset()
-        return dataset['number']
+        return dataset["number"]
 
     def get_equivalent_atoms(self) -> np.ndarray:
         """
@@ -178,7 +181,7 @@ class SymmetryAnalyzer:
             for atom i. Atoms with the same value are symmetrically equivalent.
         """
         dataset = self._get_symmetry_dataset()
-        return dataset['equivalent_atoms']
+        return dataset["equivalent_atoms"]
 
     def get_symmetry_operations(self) -> List[Tuple[np.ndarray, np.ndarray]]:
         """
@@ -192,8 +195,8 @@ class SymmetryAnalyzer:
             a length-3 fractional coordinate vector.
         """
         dataset = self._get_symmetry_dataset()
-        rotations = dataset['rotations']
-        translations = dataset['translations']
+        rotations = dataset["rotations"]
+        translations = dataset["translations"]
         return [(rotations[i], translations[i]) for i in range(len(rotations))]
 
     def are_equivalent(self, index1: int, index2: int) -> bool:
@@ -220,17 +223,14 @@ class SymmetryAnalyzer:
         n_atoms = len(self.atoms)
         if not (0 <= index1 < n_atoms and 0 <= index2 < n_atoms):
             raise IndexError(
-                f"Atom indices must be in range [0, {n_atoms}), "
-                f"got {index1} and {index2}"
+                f"Atom indices must be in range [0, {n_atoms}), got {index1} and {index2}"
             )
 
         equiv = self.get_equivalent_atoms()
         return equiv[index1] == equiv[index2]
 
     def get_equivalent_groups(
-        self,
-        element: Optional[str] = None,
-        indices: Optional[List[int]] = None
+        self, element: Optional[str] = None, indices: Optional[List[int]] = None
     ) -> Dict[int, List[int]]:
         """
         Group atoms by symmetry equivalence.
@@ -282,10 +282,7 @@ class SymmetryAnalyzer:
 
         return dict(sorted(renumbered.items()))
 
-    def get_unique_sites(
-        self,
-        element: Optional[str] = None
-    ) -> List[int]:
+    def get_unique_sites(self, element: Optional[str] = None) -> List[int]:
         """
         Get one representative atom from each equivalence class.
 
@@ -334,15 +331,11 @@ class SymmetryAnalyzer:
             positions = self.atoms.get_positions()
             z_max = positions[:, 2].max()
             self._surface_indices = [
-                i for i, pos in enumerate(positions)
-                if pos[2] > z_max - self.surface_threshold
+                i for i, pos in enumerate(positions) if pos[2] > z_max - self.surface_threshold
             ]
         return self._surface_indices
 
-    def get_surface_equivalent_groups(
-        self,
-        element: Optional[str] = None
-    ) -> Dict[int, List[int]]:
+    def get_surface_equivalent_groups(self, element: Optional[str] = None) -> Dict[int, List[int]]:
         """
         Get equivalence groups for surface atoms only.
 
@@ -363,10 +356,7 @@ class SymmetryAnalyzer:
         surface_indices = self.get_surface_indices()
         return self.get_equivalent_groups(element=element, indices=surface_indices)
 
-    def get_unique_adsorption_sites(
-        self,
-        element: Optional[str] = None
-    ) -> List[int]:
+    def get_unique_adsorption_sites(self, element: Optional[str] = None) -> List[int]:
         """
         Get unique surface sites for adsorption studies.
 
@@ -404,20 +394,22 @@ class SymmetryAnalyzer:
             - unique_sites: List of unique site indices
         """
         results = {
-            'spacegroup': self.get_spacegroup(),
-            'spacegroup_number': self.get_spacegroup_number(),
-            'n_operations': len(self.get_symmetry_operations()),
-            'n_equivalent_groups': len(self.get_equivalent_groups()),
-            'equivalent_groups': self.get_equivalent_groups(),
-            'unique_sites': self.get_unique_sites(),
+            "spacegroup": self.get_spacegroup(),
+            "spacegroup_number": self.get_spacegroup_number(),
+            "n_operations": len(self.get_symmetry_operations()),
+            "n_equivalent_groups": len(self.get_equivalent_groups()),
+            "equivalent_groups": self.get_equivalent_groups(),
+            "unique_sites": self.get_unique_sites(),
         }
 
         if self.is_surface:
-            results.update({
-                'surface_indices': self.get_surface_indices(),
-                'surface_equivalent_groups': self.get_surface_equivalent_groups(),
-                'unique_adsorption_sites': self.get_unique_adsorption_sites(),
-            })
+            results.update(
+                {
+                    "surface_indices": self.get_surface_indices(),
+                    "surface_equivalent_groups": self.get_surface_equivalent_groups(),
+                    "unique_adsorption_sites": self.get_unique_adsorption_sites(),
+                }
+            )
 
         return results
 

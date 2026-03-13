@@ -10,14 +10,12 @@ import numpy as np
 # Check if spglib is available for test skipping
 try:
     import spglib
+
     HAS_SPGLIB = True
 except ImportError:
     HAS_SPGLIB = False
 
-pytestmark = pytest.mark.skipif(
-    not HAS_SPGLIB,
-    reason="spglib not installed"
-)
+pytestmark = pytest.mark.skipif(not HAS_SPGLIB, reason="spglib not installed")
 
 
 class TestSymmetryAnalyzer:
@@ -29,12 +27,12 @@ class TestSymmetryAnalyzer:
         from asetools.analysis import SymmetryAnalyzer
 
         # Create FCC Cu bulk
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
         analyzer = SymmetryAnalyzer(atoms)
 
         # FCC should have high symmetry (Fm-3m, #225)
         assert analyzer.get_spacegroup_number() == 225
-        assert 'Fm-3m' in analyzer.get_spacegroup()
+        assert "Fm-3m" in analyzer.get_spacegroup()
 
         # All atoms in primitive cell are equivalent
         groups = analyzer.get_equivalent_groups()
@@ -45,7 +43,7 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6) * (2, 2, 2)
+        atoms = bulk("Cu", "fcc", a=3.6) * (2, 2, 2)
         analyzer = SymmetryAnalyzer(atoms)
 
         # All Cu atoms should be equivalent
@@ -58,7 +56,7 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('NaCl', 'rocksalt', a=5.64)
+        atoms = bulk("NaCl", "rocksalt", a=5.64)
         analyzer = SymmetryAnalyzer(atoms)
 
         # Rocksalt should be Fm-3m (#225)
@@ -69,8 +67,8 @@ class TestSymmetryAnalyzer:
         assert len(unique) == 2
 
         # Filter by element
-        na_sites = analyzer.get_unique_sites(element='Na')
-        cl_sites = analyzer.get_unique_sites(element='Cl')
+        na_sites = analyzer.get_unique_sites(element="Na")
+        cl_sites = analyzer.get_unique_sites(element="Cl")
         assert len(na_sites) == 1
         assert len(cl_sites) == 1
 
@@ -79,7 +77,7 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6) * (2, 2, 2)
+        atoms = bulk("Cu", "fcc", a=3.6) * (2, 2, 2)
         analyzer = SymmetryAnalyzer(atoms)
 
         # All Cu atoms should be equivalent to each other
@@ -96,13 +94,13 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('NaCl', 'rocksalt', a=5.64)
+        atoms = bulk("NaCl", "rocksalt", a=5.64)
         analyzer = SymmetryAnalyzer(atoms)
 
         # Find Na and Cl indices
         symbols = atoms.get_chemical_symbols()
-        na_idx = symbols.index('Na')
-        cl_idx = symbols.index('Cl')
+        na_idx = symbols.index("Na")
+        cl_idx = symbols.index("Cl")
 
         # Na and Cl should not be equivalent
         assert analyzer.are_equivalent(na_idx, cl_idx) == False
@@ -112,7 +110,7 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
         analyzer = SymmetryAnalyzer(atoms)
 
         # In primitive cell, only one atom
@@ -130,20 +128,20 @@ class TestSymmetryAnalyzer:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('NaCl', 'rocksalt', a=5.64) * (2, 2, 2)
+        atoms = bulk("NaCl", "rocksalt", a=5.64) * (2, 2, 2)
         analyzer = SymmetryAnalyzer(atoms)
 
         # Get only Na groups
-        na_groups = analyzer.get_equivalent_groups(element='Na')
+        na_groups = analyzer.get_equivalent_groups(element="Na")
         for members in na_groups.values():
             for idx in members:
-                assert atoms[idx].symbol == 'Na'
+                assert atoms[idx].symbol == "Na"
 
         # Get only Cl groups
-        cl_groups = analyzer.get_equivalent_groups(element='Cl')
+        cl_groups = analyzer.get_equivalent_groups(element="Cl")
         for members in cl_groups.values():
             for idx in members:
-                assert atoms[idx].symbol == 'Cl'
+                assert atoms[idx].symbol == "Cl"
 
 
 class TestSurfaceSymmetry:
@@ -155,7 +153,7 @@ class TestSurfaceSymmetry:
         from asetools.analysis import SymmetryAnalyzer
 
         # Create Pt(111) slab
-        slab = fcc111('Pt', size=(3, 3, 4), vacuum=10.0)
+        slab = fcc111("Pt", size=(3, 3, 4), vacuum=10.0)
         analyzer = SymmetryAnalyzer(slab, is_surface=True, surface_threshold=2.5)
 
         surface_indices = analyzer.get_surface_indices()
@@ -174,7 +172,7 @@ class TestSurfaceSymmetry:
         from ase.build import fcc111
         from asetools.analysis import SymmetryAnalyzer
 
-        slab = fcc111('Pt', size=(3, 3, 4), vacuum=10.0)
+        slab = fcc111("Pt", size=(3, 3, 4), vacuum=10.0)
         analyzer = SymmetryAnalyzer(slab, is_surface=True)
 
         groups = analyzer.get_surface_equivalent_groups()
@@ -193,7 +191,7 @@ class TestSurfaceSymmetry:
         from ase.build import fcc111
         from asetools.analysis import SymmetryAnalyzer
 
-        slab = fcc111('Pt', size=(3, 3, 4), vacuum=10.0)
+        slab = fcc111("Pt", size=(3, 3, 4), vacuum=10.0)
         analyzer = SymmetryAnalyzer(slab, is_surface=True)
 
         unique = analyzer.get_unique_adsorption_sites()
@@ -215,7 +213,7 @@ class TestToleranceSettings:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
 
         # Add small perturbation
         atoms.positions[0] += [0.001, 0.001, 0.001]
@@ -240,7 +238,7 @@ class TestEdgeCases:
         from ase import Atoms
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = Atoms('H', positions=[[0, 0, 0]], cell=[10, 10, 10], pbc=True)
+        atoms = Atoms("H", positions=[[0, 0, 0]], cell=[10, 10, 10], pbc=True)
         analyzer = SymmetryAnalyzer(atoms)
 
         # Single atom has trivial equivalence
@@ -254,7 +252,7 @@ class TestEdgeCases:
         from asetools.analysis import SymmetryAnalyzer
 
         # Water molecule
-        h2o = molecule('H2O')
+        h2o = molecule("H2O")
         h2o.set_cell([10, 10, 10])
         h2o.pbc = True
 
@@ -265,7 +263,7 @@ class TestEdgeCases:
         assert len(groups) >= 1
 
         # Two H atoms should be equivalent
-        h_groups = analyzer.get_equivalent_groups(element='H')
+        h_groups = analyzer.get_equivalent_groups(element="H")
         assert len(h_groups) == 1  # Both H atoms equivalent
         assert len(list(h_groups.values())[0]) == 2
 
@@ -274,38 +272,38 @@ class TestEdgeCases:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
         analyzer = SymmetryAnalyzer(atoms)
 
         results = analyzer.analyze()
 
-        assert 'spacegroup' in results
-        assert 'spacegroup_number' in results
-        assert 'n_operations' in results
-        assert 'equivalent_groups' in results
-        assert 'unique_sites' in results
+        assert "spacegroup" in results
+        assert "spacegroup_number" in results
+        assert "n_operations" in results
+        assert "equivalent_groups" in results
+        assert "unique_sites" in results
 
     def test_analyze_surface_mode(self):
         """Test analysis in surface mode."""
         from ase.build import fcc111
         from asetools.analysis import SymmetryAnalyzer
 
-        slab = fcc111('Pt', size=(2, 2, 3), vacuum=10.0)
+        slab = fcc111("Pt", size=(2, 2, 3), vacuum=10.0)
         analyzer = SymmetryAnalyzer(slab, is_surface=True)
 
         results = analyzer.analyze()
 
         # Should have surface-specific results
-        assert 'surface_indices' in results
-        assert 'surface_equivalent_groups' in results
-        assert 'unique_adsorption_sites' in results
+        assert "surface_indices" in results
+        assert "surface_equivalent_groups" in results
+        assert "unique_adsorption_sites" in results
 
     def test_print_summary_no_error(self):
         """Test that print_summary runs without error."""
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
         analyzer = SymmetryAnalyzer(atoms)
 
         # Should not raise
@@ -316,7 +314,7 @@ class TestEdgeCases:
         from ase.build import bulk
         from asetools.analysis import SymmetryAnalyzer
 
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
         analyzer = SymmetryAnalyzer(atoms)
 
         operations = analyzer.get_symmetry_operations()

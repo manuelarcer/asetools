@@ -41,7 +41,7 @@ class BondValenceParameters:
         if parameter_file is None:
             # Default to the included parameter file
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            parameter_file = os.path.join(current_dir, '..', 'data', 'bvparm2020.cif')
+            parameter_file = os.path.join(current_dir, "..", "data", "bvparm2020.cif")
 
         self.parameter_file = parameter_file
         self.parameters = {}
@@ -51,7 +51,7 @@ class BondValenceParameters:
     def _load_parameters(self):
         """Load bond valence parameters from the CIF file."""
         try:
-            with open(self.parameter_file, 'r') as f:
+            with open(self.parameter_file, "r") as f:
                 lines = f.readlines()
         except FileNotFoundError:
             raise FileNotFoundError(f"Bond valence parameter file not found: {self.parameter_file}")
@@ -70,16 +70,24 @@ class BondValenceParameters:
             line = line.strip()
 
             # Check if we're entering the reference section
-            if line.startswith('loop_') and i + 1 < len(lines) and '_valence_ref_id' in lines[i + 1]:
+            if (
+                line.startswith("loop_")
+                and i + 1 < len(lines)
+                and "_valence_ref_id" in lines[i + 1]
+            ):
                 in_ref_section = True
                 continue
 
             if in_ref_section:
                 # Check if we're entering the parameter section
-                if line.startswith('loop_') and i + 1 < len(lines) and '_valence_param_' in lines[i + 1]:
+                if (
+                    line.startswith("loop_")
+                    and i + 1 < len(lines)
+                    and "_valence_param_" in lines[i + 1]
+                ):
                     break
 
-                if line and not line.startswith('_'):
+                if line and not line.startswith("_"):
                     # Parse reference line: "a 'Brown and Altermatt, (1985)...'"
                     parts = line.split("'", 1)
                     if len(parts) >= 2:
@@ -95,11 +103,15 @@ class BondValenceParameters:
             line = line.strip()
 
             # Check if we're entering the parameter section
-            if line.startswith('loop_') and i + 1 < len(lines) and '_valence_param_' in lines[i + 1]:
+            if (
+                line.startswith("loop_")
+                and i + 1 < len(lines)
+                and "_valence_param_" in lines[i + 1]
+            ):
                 in_param_section = True
                 continue
 
-            if in_param_section and line and not line.startswith('_'):
+            if in_param_section and line and not line.startswith("_"):
                 # Parse parameter line format:
                 # Element1 Valence1 Element2 Valence2 R0 B Reference Details
                 parts = line.split()
@@ -123,7 +135,7 @@ class BondValenceParameters:
                         continue
 
                     reference = parts[6]
-                    details = ' '.join(parts[7:]) if len(parts) > 7 else ''
+                    details = " ".join(parts[7:]) if len(parts) > 7 else ""
 
                     # Create key for parameter lookup
                     key = (element1, valence1, element2, valence2)
@@ -132,16 +144,25 @@ class BondValenceParameters:
                     if key not in self.parameters:
                         self.parameters[key] = []
 
-                    self.parameters[key].append({
-                        'R0': R0,
-                        'B': B,
-                        'reference': reference,
-                        'details': details,
-                        'reference_text': self.references.get(reference, 'Unknown reference')
-                    })
+                    self.parameters[key].append(
+                        {
+                            "R0": R0,
+                            "B": B,
+                            "reference": reference,
+                            "details": details,
+                            "reference_text": self.references.get(reference, "Unknown reference"),
+                        }
+                    )
 
-    def get_parameters(self, element1: str, valence1: int, element2: str, valence2: int,
-                      most_reliable: bool = True, exclude_unchecked: bool = True) -> Union[Dict, List[Dict]]:
+    def get_parameters(
+        self,
+        element1: str,
+        valence1: int,
+        element2: str,
+        valence2: int,
+        most_reliable: bool = True,
+        exclude_unchecked: bool = True,
+    ) -> Union[Dict, List[Dict]]:
         """
         Get bond valence parameters for a given element pair.
 
@@ -170,14 +191,18 @@ class BondValenceParameters:
             params = self.parameters[key2]
 
         if params is None:
-            raise ValueError(f"No bond valence parameters found for {element1}({valence1})-{element2}({valence2})")
+            raise ValueError(
+                f"No bond valence parameters found for {element1}({valence1})-{element2}({valence2})"
+            )
 
         # Filter out unchecked parameters if requested
         if exclude_unchecked:
-            params = [p for p in params if 'unchecked' not in p['details'].lower()]
+            params = [p for p in params if "unchecked" not in p["details"].lower()]
 
         if not params:
-            raise ValueError(f"No reliable bond valence parameters found for {element1}({valence1})-{element2}({valence2})")
+            raise ValueError(
+                f"No reliable bond valence parameters found for {element1}({valence1})-{element2}({valence2})"
+            )
 
         if most_reliable:
             return params[0]  # Most reliable is first in the list
@@ -233,13 +258,17 @@ class BondValenceSum:
     where R is the bond length, R0 and B are bond valence parameters.
     """
 
-    def __init__(self, atoms: Atoms, valence_states: Optional[Dict[str, int]] = None,
-                 custom_parameters: Optional[Dict[str, Dict[str, float]]] = None,
-                 distance_cutoff: float = 3.5,
-                 allowed_pairs: Optional[List[Tuple[str, str]]] = None,
-                 exclude_same_element: bool = True,
-                 auto_determine_valence: bool = False,
-                 per_atom_valence: bool = False):
+    def __init__(
+        self,
+        atoms: Atoms,
+        valence_states: Optional[Dict[str, int]] = None,
+        custom_parameters: Optional[Dict[str, Dict[str, float]]] = None,
+        distance_cutoff: float = 3.5,
+        allowed_pairs: Optional[List[Tuple[str, str]]] = None,
+        exclude_same_element: bool = True,
+        auto_determine_valence: bool = False,
+        per_atom_valence: bool = False,
+    ):
         """
         Initialize BondValenceSum calculator.
 
@@ -266,20 +295,104 @@ class BondValenceSum:
 
         # Set default valence states (most common oxidation states)
         self.default_valences = {
-            'H': 1, 'Li': 1, 'Be': 2, 'B': 3, 'C': 4, 'N': -3, 'O': -2, 'F': -1,
-            'Na': 1, 'Mg': 2, 'Al': 3, 'Si': 4, 'P': 5, 'S': -2, 'Cl': -1,
-            'K': 1, 'Ca': 2, 'Sc': 3, 'Ti': 4, 'V': 5, 'Cr': 3, 'Mn': 2,
-            'Fe': 3, 'Co': 2, 'Ni': 2, 'Cu': 2, 'Zn': 2, 'Ga': 3, 'Ge': 4,
-            'As': 3, 'Se': -2, 'Br': -1, 'Rb': 1, 'Sr': 2, 'Y': 3, 'Zr': 4,
-            'Nb': 5, 'Mo': 6, 'Tc': 7, 'Ru': 4, 'Rh': 3, 'Pd': 2, 'Ag': 1,
-            'Cd': 2, 'In': 3, 'Sn': 4, 'Sb': 3, 'Te': -2, 'I': -1, 'Cs': 1,
-            'Ba': 2, 'La': 3, 'Ce': 3, 'Pr': 3, 'Nd': 3, 'Pm': 3, 'Sm': 3,
-            'Eu': 3, 'Gd': 3, 'Tb': 3, 'Dy': 3, 'Ho': 3, 'Er': 3, 'Tm': 3,
-            'Yb': 3, 'Lu': 3, 'Hf': 4, 'Ta': 5, 'W': 6, 'Re': 7, 'Os': 4,
-            'Ir': 3, 'Pt': 2, 'Au': 1, 'Hg': 2, 'Tl': 3, 'Pb': 2, 'Bi': 3,
-            'Po': 4, 'At': -1, 'Rn': 0, 'Fr': 1, 'Ra': 2, 'Ac': 3, 'Th': 4,
-            'Pa': 5, 'U': 6, 'Np': 5, 'Pu': 4, 'Am': 3, 'Cm': 3, 'Bk': 3,
-            'Cf': 3, 'Es': 3, 'Fm': 3, 'Md': 3, 'No': 3, 'Lr': 3
+            "H": 1,
+            "Li": 1,
+            "Be": 2,
+            "B": 3,
+            "C": 4,
+            "N": -3,
+            "O": -2,
+            "F": -1,
+            "Na": 1,
+            "Mg": 2,
+            "Al": 3,
+            "Si": 4,
+            "P": 5,
+            "S": -2,
+            "Cl": -1,
+            "K": 1,
+            "Ca": 2,
+            "Sc": 3,
+            "Ti": 4,
+            "V": 5,
+            "Cr": 3,
+            "Mn": 2,
+            "Fe": 3,
+            "Co": 2,
+            "Ni": 2,
+            "Cu": 2,
+            "Zn": 2,
+            "Ga": 3,
+            "Ge": 4,
+            "As": 3,
+            "Se": -2,
+            "Br": -1,
+            "Rb": 1,
+            "Sr": 2,
+            "Y": 3,
+            "Zr": 4,
+            "Nb": 5,
+            "Mo": 6,
+            "Tc": 7,
+            "Ru": 4,
+            "Rh": 3,
+            "Pd": 2,
+            "Ag": 1,
+            "Cd": 2,
+            "In": 3,
+            "Sn": 4,
+            "Sb": 3,
+            "Te": -2,
+            "I": -1,
+            "Cs": 1,
+            "Ba": 2,
+            "La": 3,
+            "Ce": 3,
+            "Pr": 3,
+            "Nd": 3,
+            "Pm": 3,
+            "Sm": 3,
+            "Eu": 3,
+            "Gd": 3,
+            "Tb": 3,
+            "Dy": 3,
+            "Ho": 3,
+            "Er": 3,
+            "Tm": 3,
+            "Yb": 3,
+            "Lu": 3,
+            "Hf": 4,
+            "Ta": 5,
+            "W": 6,
+            "Re": 7,
+            "Os": 4,
+            "Ir": 3,
+            "Pt": 2,
+            "Au": 1,
+            "Hg": 2,
+            "Tl": 3,
+            "Pb": 2,
+            "Bi": 3,
+            "Po": 4,
+            "At": -1,
+            "Rn": 0,
+            "Fr": 1,
+            "Ra": 2,
+            "Ac": 3,
+            "Th": 4,
+            "Pa": 5,
+            "U": 6,
+            "Np": 5,
+            "Pu": 4,
+            "Am": 3,
+            "Cm": 3,
+            "Bk": 3,
+            "Cf": 3,
+            "Es": 3,
+            "Fm": 3,
+            "Md": 3,
+            "No": 3,
+            "Lr": 3,
         }
 
         # Use provided valence states or defaults
@@ -319,8 +432,12 @@ class BondValenceSum:
             if per_atom_key in self.valence_states:
                 return self.valence_states[per_atom_key]
             # Also check the per_atom_optimized_valences dict
-            if hasattr(self, 'per_atom_optimized_valences') and self.per_atom_optimized_valences and atom_index in self.per_atom_optimized_valences:
-                    return self.per_atom_optimized_valences[atom_index]
+            if (
+                hasattr(self, "per_atom_optimized_valences")
+                and self.per_atom_optimized_valences
+                and atom_index in self.per_atom_optimized_valences
+            ):
+                return self.per_atom_optimized_valences[atom_index]
 
         # Standard element-wide valence lookup
         if element in self.valence_states:
@@ -341,13 +458,71 @@ class BondValenceSum:
         allowed_pairs = set()
 
         # Define element categories
-        metals = {'Li', 'Be', 'Na', 'Mg', 'Al', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn',
-                 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo',
-                 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Cs', 'Ba', 'La', 'Ce',
-                 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
-                 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi'}
+        metals = {
+            "Li",
+            "Be",
+            "Na",
+            "Mg",
+            "Al",
+            "K",
+            "Ca",
+            "Sc",
+            "Ti",
+            "V",
+            "Cr",
+            "Mn",
+            "Fe",
+            "Co",
+            "Ni",
+            "Cu",
+            "Zn",
+            "Ga",
+            "Rb",
+            "Sr",
+            "Y",
+            "Zr",
+            "Nb",
+            "Mo",
+            "Tc",
+            "Ru",
+            "Rh",
+            "Pd",
+            "Ag",
+            "Cd",
+            "In",
+            "Sn",
+            "Cs",
+            "Ba",
+            "La",
+            "Ce",
+            "Pr",
+            "Nd",
+            "Pm",
+            "Sm",
+            "Eu",
+            "Gd",
+            "Tb",
+            "Dy",
+            "Ho",
+            "Er",
+            "Tm",
+            "Yb",
+            "Lu",
+            "Hf",
+            "Ta",
+            "W",
+            "Re",
+            "Os",
+            "Ir",
+            "Pt",
+            "Au",
+            "Hg",
+            "Tl",
+            "Pb",
+            "Bi",
+        }
 
-        anions = {'O', 'F', 'Cl', 'Br', 'I', 'S', 'Se', 'Te', 'N', 'P', 'As'}
+        anions = {"O", "F", "Cl", "Br", "I", "S", "Se", "Te", "N", "P", "As"}
 
         # Generate meaningful pairs
         for elem1 in elements:
@@ -366,7 +541,7 @@ class BondValenceSum:
                 # but this is rare, so we'll be conservative
 
                 # Skip hydrogen-metal pairs (usually not relevant for BVS)
-                if ('H' in pair and any(elem in metals for elem in pair)):
+                if "H" in pair and any(elem in metals for elem in pair):
                     continue
 
                 # Add other meaningful pairs if they have bond valence parameters
@@ -376,7 +551,7 @@ class BondValenceSum:
                     self.bv_params.get_parameters(elem1, val1, elem2, val2)
                     # If we get here, parameters exist - consider adding the pair
                     # But be selective to avoid unwanted pairs
-                    if not ('H' in pair and any(elem in metals for elem in pair)):
+                    if not ("H" in pair and any(elem in metals for elem in pair)):
                         allowed_pairs.add(pair)
                 except (ValueError, KeyError):
                     # No parameters available, skip this pair
@@ -420,11 +595,69 @@ class BondValenceSum:
         Returns:
             True if element is considered a metal
         """
-        metals = {'Li', 'Be', 'Na', 'Mg', 'Al', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn',
-                 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo',
-                 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Cs', 'Ba', 'La', 'Ce',
-                 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
-                 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi'}
+        metals = {
+            "Li",
+            "Be",
+            "Na",
+            "Mg",
+            "Al",
+            "K",
+            "Ca",
+            "Sc",
+            "Ti",
+            "V",
+            "Cr",
+            "Mn",
+            "Fe",
+            "Co",
+            "Ni",
+            "Cu",
+            "Zn",
+            "Ga",
+            "Rb",
+            "Sr",
+            "Y",
+            "Zr",
+            "Nb",
+            "Mo",
+            "Tc",
+            "Ru",
+            "Rh",
+            "Pd",
+            "Ag",
+            "Cd",
+            "In",
+            "Sn",
+            "Cs",
+            "Ba",
+            "La",
+            "Ce",
+            "Pr",
+            "Nd",
+            "Pm",
+            "Sm",
+            "Eu",
+            "Gd",
+            "Tb",
+            "Dy",
+            "Ho",
+            "Er",
+            "Tm",
+            "Yb",
+            "Lu",
+            "Hf",
+            "Ta",
+            "W",
+            "Re",
+            "Os",
+            "Ir",
+            "Pt",
+            "Au",
+            "Hg",
+            "Tl",
+            "Pb",
+            "Bi",
+        }
         return element in metals
 
     def _determine_best_valence(self, atom_index: int, element: str) -> Tuple[int, float, Dict]:
@@ -445,22 +678,24 @@ class BondValenceSum:
         if not possible_valences:
             # Fall back to default valence if no options available
             default_val = self._get_valence_state(element)
-            return default_val, 0.0, {'tried_valences': [default_val], 'deviations': [0.0]}
+            return default_val, 0.0, {"tried_valences": [default_val], "deviations": [0.0]}
 
-        optimization_results = {'tried_valences': [], 'deviations': [], 'bvs_values': []}
+        optimization_results = {"tried_valences": [], "deviations": [], "bvs_values": []}
         best_valence = None
-        best_deviation = float('inf')
+        best_deviation = float("inf")
 
         for valence in possible_valences:
             # Temporarily set this valence
-            original_valence = self.valence_states.get(element, self.default_valences.get(element, valence))
+            original_valence = self.valence_states.get(
+                element, self.default_valences.get(element, valence)
+            )
             self.valence_states[element] = valence
 
             # Calculate BVS for this atom with this valence
             bvs = 0.0
             for neighbor in self.neighbors[atom_index]:
-                j = neighbor['index']
-                distance = neighbor['distance']
+                j = neighbor["index"]
+                distance = neighbor["distance"]
 
                 element2 = self.atoms[j].symbol
                 valence2 = self._get_valence_state(element2)
@@ -470,7 +705,9 @@ class BondValenceSum:
                     continue
 
                 # Calculate bond valence
-                bond_valence = self._calculate_bond_valence(element, valence, element2, valence2, distance)
+                bond_valence = self._calculate_bond_valence(
+                    element, valence, element2, valence2, distance
+                )
                 if bond_valence > 0:
                     bvs += bond_valence
 
@@ -478,9 +715,9 @@ class BondValenceSum:
             expected_bvs = abs(valence)
             deviation = abs(bvs - expected_bvs)
 
-            optimization_results['tried_valences'].append(valence)
-            optimization_results['deviations'].append(deviation)
-            optimization_results['bvs_values'].append(bvs)
+            optimization_results["tried_valences"].append(valence)
+            optimization_results["deviations"].append(deviation)
+            optimization_results["bvs_values"].append(bvs)
 
             if deviation < best_deviation:
                 best_deviation = deviation
@@ -515,16 +752,18 @@ class BondValenceSum:
                 element_results[element] = {}
 
                 for atom_idx in atom_indices:
-                    best_valence, best_deviation, opt_results = self._determine_best_valence(atom_idx, element)
+                    best_valence, best_deviation, opt_results = self._determine_best_valence(
+                        atom_idx, element
+                    )
 
                     # Store per-atom optimized valence
                     self.per_atom_optimized_valences[atom_idx] = best_valence
 
                     # Store results for reporting
                     element_results[element][atom_idx] = {
-                        'best_valence': best_valence,
-                        'best_deviation': best_deviation,
-                        'optimization_results': opt_results
+                        "best_valence": best_valence,
+                        "best_deviation": best_deviation,
+                        "optimization_results": opt_results,
                     }
 
                     # Update valence_states for this specific atom
@@ -552,18 +791,22 @@ class BondValenceSum:
         for element in elements:
             if self._is_metal_element(element):
                 # Get all atom indices for this element
-                atom_indices = [i for i, sym in enumerate(self.atoms.get_chemical_symbols()) if sym == element]
+                atom_indices = [
+                    i for i, sym in enumerate(self.atoms.get_chemical_symbols()) if sym == element
+                ]
 
                 # Determine best valence for each atom of this element
                 element_results = {}
                 valence_votes = {}
 
                 for atom_idx in atom_indices:
-                    best_valence, best_deviation, opt_results = self._determine_best_valence(atom_idx, element)
+                    best_valence, best_deviation, opt_results = self._determine_best_valence(
+                        atom_idx, element
+                    )
                     element_results[atom_idx] = {
-                        'best_valence': best_valence,
-                        'best_deviation': best_deviation,
-                        'optimization_results': opt_results
+                        "best_valence": best_valence,
+                        "best_deviation": best_deviation,
+                        "optimization_results": opt_results,
                     }
 
                     # Vote for the best valence across all atoms of this element
@@ -576,7 +819,7 @@ class BondValenceSum:
                     # Get all possible valences tried for this element
                     all_valences = set()
                     for result in element_results.values():
-                        all_valences.update(result['optimization_results']['tried_valences'])
+                        all_valences.update(result["optimization_results"]["tried_valences"])
 
                     # Calculate average deviation for each valence across ALL atoms
                     valence_avg_deviations = {}
@@ -585,10 +828,10 @@ class BondValenceSum:
                         count = 0
 
                         for result in element_results.values():
-                            opt_results = result['optimization_results']
-                            if valence in opt_results['tried_valences']:
-                                valence_idx = opt_results['tried_valences'].index(valence)
-                                deviation = opt_results['deviations'][valence_idx]
+                            opt_results = result["optimization_results"]
+                            if valence in opt_results["tried_valences"]:
+                                valence_idx = opt_results["tried_valences"].index(valence)
+                                deviation = opt_results["deviations"][valence_idx]
                                 total_deviation += deviation
                                 count += 1
 
@@ -596,8 +839,9 @@ class BondValenceSum:
                             valence_avg_deviations[valence] = total_deviation / count
 
                     # Find valence with lowest average deviation across all atoms
-                    best_element_valence = min(valence_avg_deviations.keys(),
-                                             key=lambda v: valence_avg_deviations[v])
+                    best_element_valence = min(
+                        valence_avg_deviations.keys(), key=lambda v: valence_avg_deviations[v]
+                    )
 
                     self.optimized_valences[element] = best_element_valence
                     self.valence_optimization_results[element] = element_results
@@ -622,14 +866,11 @@ class BondValenceSum:
                 # Calculate distance with proper minimum image convention
                 distance = self.atoms.get_distance(i, j, mic=True, vector=False)
                 if distance <= self.distance_cutoff:
-                    self.neighbors[i].append({
-                        'index': j,
-                        'distance': distance,
-                        'offset': offset
-                    })
+                    self.neighbors[i].append({"index": j, "distance": distance, "offset": offset})
 
-    def _calculate_bond_valence(self, element1: str, valence1: int, element2: str, valence2: int,
-                               distance: float) -> float:
+    def _calculate_bond_valence(
+        self, element1: str, valence1: int, element2: str, valence2: int, distance: float
+    ) -> float:
         """
         Calculate bond valence for a specific bond.
 
@@ -647,14 +888,14 @@ class BondValenceSum:
         custom_key = f"{element1}-{element2}"
         if custom_key in self.custom_parameters:
             params = self.custom_parameters[custom_key]
-            R0 = params['R0']
-            B = params['B']
+            R0 = params["R0"]
+            B = params["B"]
         else:
             # Get parameters from database
             try:
                 params = self.bv_params.get_parameters(element1, valence1, element2, valence2)
-                R0 = params['R0']
-                B = params['B']
+                R0 = params["R0"]
+                B = params["B"]
             except ValueError:
                 # If no parameters found, return 0 (no contribution)
                 return 0.0
@@ -688,8 +929,8 @@ class BondValenceSum:
             bonds = []
 
             for neighbor in self.neighbors[i]:
-                j = neighbor['index']
-                distance = neighbor['distance']
+                j = neighbor["index"]
+                distance = neighbor["distance"]
 
                 element2 = self.atoms[j].symbol
                 valence2 = self._get_valence_state(element2, j)
@@ -699,17 +940,21 @@ class BondValenceSum:
                     continue
 
                 # Calculate bond valence
-                bond_valence = self._calculate_bond_valence(element1, valence1, element2, valence2, distance)
+                bond_valence = self._calculate_bond_valence(
+                    element1, valence1, element2, valence2, distance
+                )
 
                 if bond_valence > 0:
                     bvs += bond_valence
-                    bonds.append({
-                        'neighbor_index': j,
-                        'neighbor_element': element2,
-                        'neighbor_valence': valence2,
-                        'distance': distance,
-                        'bond_valence': bond_valence
-                    })
+                    bonds.append(
+                        {
+                            "neighbor_index": j,
+                            "neighbor_element": element2,
+                            "neighbor_valence": valence2,
+                            "distance": distance,
+                            "bond_valence": bond_valence,
+                        }
+                    )
 
             self.bond_valence_sums[i] = bvs
             self.bond_data[i] = bonds
@@ -738,14 +983,14 @@ class BondValenceSum:
 
             # Base analysis data
             atom_data = {
-                'atom_index': i,
-                'element': element,
-                'used_valence': current_valence,
-                'expected_valence': expected_valence,
-                'calculated_bvs': calculated_bvs,
-                'deviation': deviation,
-                'coordination_number': coordination,
-                'relative_deviation': deviation / expected_valence if expected_valence > 0 else 0
+                "atom_index": i,
+                "element": element,
+                "used_valence": current_valence,
+                "expected_valence": expected_valence,
+                "calculated_bvs": calculated_bvs,
+                "deviation": deviation,
+                "coordination_number": coordination,
+                "relative_deviation": deviation / expected_valence if expected_valence > 0 else 0,
             }
 
             # Add valence optimization results if available
@@ -753,26 +998,39 @@ class BondValenceSum:
                 if element in self.valence_optimization_results:
                     if i in self.valence_optimization_results[element]:
                         opt_results = self.valence_optimization_results[element][i]
-                        atom_data.update({
-                            'valence_optimized': True,
-                            'optimization_deviation': opt_results['best_deviation'],
-                            'tried_valences': str(opt_results['optimization_results']['tried_valences']),
-                            'tried_deviations': str([f"{d:.3f}" for d in opt_results['optimization_results']['deviations']])
-                        })
+                        atom_data.update(
+                            {
+                                "valence_optimized": True,
+                                "optimization_deviation": opt_results["best_deviation"],
+                                "tried_valences": str(
+                                    opt_results["optimization_results"]["tried_valences"]
+                                ),
+                                "tried_deviations": str(
+                                    [
+                                        f"{d:.3f}"
+                                        for d in opt_results["optimization_results"]["deviations"]
+                                    ]
+                                ),
+                            }
+                        )
                     else:
-                        atom_data.update({
-                            'valence_optimized': False,
-                            'optimization_deviation': None,
-                            'tried_valences': None,
-                            'tried_deviations': None
-                        })
+                        atom_data.update(
+                            {
+                                "valence_optimized": False,
+                                "optimization_deviation": None,
+                                "tried_valences": None,
+                                "tried_deviations": None,
+                            }
+                        )
                 else:
-                    atom_data.update({
-                        'valence_optimized': False,
-                        'optimization_deviation': None,
-                        'tried_valences': None,
-                        'tried_deviations': None
-                    })
+                    atom_data.update(
+                        {
+                            "valence_optimized": False,
+                            "optimization_deviation": None,
+                            "tried_valences": None,
+                            "tried_deviations": None,
+                        }
+                    )
 
             analysis_data.append(atom_data)
 
@@ -807,7 +1065,7 @@ class BondValenceSum:
         pairs = self.get_allowed_pairs()
         print("Allowed element pairs for bond valence calculations:")
         for i, pair in enumerate(pairs):
-            print(f"  {i+1:2d}. {pair[0]}-{pair[1]}")
+            print(f"  {i + 1:2d}. {pair[0]}-{pair[1]}")
         print(f"\nTotal: {len(pairs)} pairs")
         if self.exclude_same_element:
             print("Note: Same-element pairs are excluded")
@@ -847,9 +1105,9 @@ class BondValenceSum:
                 print(f"  Optimized valence: {self.optimized_valences[element]:+d}")
 
             for atom_idx, result in element_results.items():
-                opt_data = result['optimization_results']
-                best_valence = result['best_valence']
-                best_deviation = result['best_deviation']
+                opt_data = result["optimization_results"]
+                best_valence = result["best_valence"]
+                best_deviation = result["best_deviation"]
 
                 print(f"  Atom {atom_idx}:")
                 print(f"    Best valence: {best_valence:+d} (deviation: {best_deviation:.3f})")
@@ -872,24 +1130,32 @@ class BondValenceSum:
         print()
 
         # Group by element
-        for element in sorted(df['element'].unique()):
-            element_data = df[df['element'] == element]
+        for element in sorted(df["element"].unique()):
+            element_data = df[df["element"] == element]
             print(f"{element} atoms ({len(element_data)}):")
 
             # Show valence information
-            used_valence = element_data['used_valence'].iloc[0]
-            expected_valence = element_data['expected_valence'].iloc[0]
+            used_valence = element_data["used_valence"].iloc[0]
+            expected_valence = element_data["expected_valence"].iloc[0]
             print(f"  Used valence: {used_valence:+d} (expected: {expected_valence:.2f})")
 
             # Show optimization info if available
-            if self.auto_determine_valence and 'valence_optimized' in element_data.columns:
-                optimized_count = element_data['valence_optimized'].sum()
+            if self.auto_determine_valence and "valence_optimized" in element_data.columns:
+                optimized_count = element_data["valence_optimized"].sum()
                 if optimized_count > 0:
-                    avg_opt_deviation = element_data[element_data['valence_optimized']]['optimization_deviation'].mean()
-                    print(f"  Optimized atoms: {optimized_count}/{len(element_data)} (avg deviation: {avg_opt_deviation:.3f})")
+                    avg_opt_deviation = element_data[element_data["valence_optimized"]][
+                        "optimization_deviation"
+                    ].mean()
+                    print(
+                        f"  Optimized atoms: {optimized_count}/{len(element_data)} (avg deviation: {avg_opt_deviation:.3f})"
+                    )
 
-            print(f"  Average BVS: {element_data['calculated_bvs'].mean():.3f} ± {element_data['calculated_bvs'].std():.3f}")
-            print(f"  Average deviation: {element_data['deviation'].mean():.3f} ± {element_data['deviation'].std():.3f}")
+            print(
+                f"  Average BVS: {element_data['calculated_bvs'].mean():.3f} ± {element_data['calculated_bvs'].std():.3f}"
+            )
+            print(
+                f"  Average deviation: {element_data['deviation'].mean():.3f} ± {element_data['deviation'].std():.3f}"
+            )
             print(f"  Average coordination: {element_data['coordination_number'].mean():.1f}")
             print()
 

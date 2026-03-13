@@ -14,7 +14,7 @@ from asetools.analysis import (
 )
 
 # Parameters to extract for pyatoms mode
-PYATOMS_PARAMS = ['GGA', 'ENCUT', 'EDIFF', 'EDIFFG', 'ISPIN', 'ISMEAR', 'SIGMA', 'IVDW', 'LDAU']
+PYATOMS_PARAMS = ["GGA", "ENCUT", "EDIFF", "EDIFFG", "ISPIN", "ISMEAR", "SIGMA", "IVDW", "LDAU"]
 
 
 def get_pyatoms_steps(folder):
@@ -26,7 +26,7 @@ def get_pyatoms_steps(folder):
     Returns:
         list: Sorted list of step folder paths (e.g., ['H2O/step_00/', 'H2O/step_01/'])
     """
-    step_folders = sorted(glob.glob(os.path.join(folder, 'step_*/')))
+    step_folders = sorted(glob.glob(os.path.join(folder, "step_*/")))
     return step_folders
 
 
@@ -39,18 +39,18 @@ def extract_step_parameters(step_folder):
     Returns:
         dict: Dictionary with parameter names as keys and values
     """
-    outcar_path = os.path.join(step_folder, 'OUTCAR')
+    outcar_path = os.path.join(step_folder, "OUTCAR")
     params = {}
 
     if not os.path.exists(outcar_path):
-        return {p: 'N/A' for p in PYATOMS_PARAMS}
+        return {p: "N/A" for p in PYATOMS_PARAMS}
 
     for param in PYATOMS_PARAMS:
         try:
             value, _ = get_parameter_from_run(outcar_path, check_converg=False, parameter=param)
-            params[param] = value if value is not None else 'N/A'
+            params[param] = value if value is not None else "N/A"
         except Exception:
-            params[param] = 'N/A'
+            params[param] = "N/A"
 
     return params
 
@@ -64,16 +64,16 @@ def extract_step_energy(step_folder):
     Returns:
         float or str: Energy value or 'N/A' if not found
     """
-    outcar_path = os.path.join(step_folder, 'OUTCAR')
+    outcar_path = os.path.join(step_folder, "OUTCAR")
 
     if not os.path.exists(outcar_path):
-        return 'N/A'
+        return "N/A"
 
     try:
         energy, _ = check_energy_and_maxforce(outcar_path, magmom=False, verbose=False)
         return round(energy, 4)
     except Exception:
-        return 'N/A'
+        return "N/A"
 
 
 def extract_step_magmom(step_folder):
@@ -85,18 +85,18 @@ def extract_step_magmom(step_folder):
     Returns:
         float or str: Magnetic moment or 'N/A' if not found/not spin-polarized
     """
-    outcar_path = os.path.join(step_folder, 'OUTCAR')
+    outcar_path = os.path.join(step_folder, "OUTCAR")
 
     if not os.path.exists(outcar_path):
-        return 'N/A'
+        return "N/A"
 
     try:
-        atoms = read(outcar_path, format='vasp-out', index=-1)
+        atoms = read(outcar_path, format="vasp-out", index=-1)
         magmom = atoms.get_magnetic_moment()
         return round(magmom, 2)
     except Exception:
         # Non-spin-polarized or error reading
-        return 'N/A'
+        return "N/A"
 
 
 def check_pyatoms_finished(folder):
@@ -108,7 +108,7 @@ def check_pyatoms_finished(folder):
     Returns:
         tuple: (finished: bool, final_energy: float or None, final_fmax: float or None)
     """
-    loginfo_path = os.path.join(folder, 'log.info')
+    loginfo_path = os.path.join(folder, "log.info")
 
     if not os.path.exists(loginfo_path):
         return False, None, None
@@ -117,24 +117,26 @@ def check_pyatoms_finished(folder):
     final_energy = None
     final_fmax = None
 
-    with open(loginfo_path, 'r') as f:
+    with open(loginfo_path, "r") as f:
         lines = f.readlines()
 
     process_completed = False
     for line in lines:
         # Check for procedure or job completion
-        if ('VaspGeomOptProcedure' in line or 'VaspGeomOptJob' in line) and 'completed successfully' in line:
+        if (
+            "VaspGeomOptProcedure" in line or "VaspGeomOptJob" in line
+        ) and "completed successfully" in line:
             process_completed = True
 
         # Check for global processes closing (final confirmation)
-        if process_completed and 'Closing global processes' in line:
+        if process_completed and "Closing global processes" in line:
             finished = True
 
         # Extract energy and force
-        if 'energy' in line and 'force' in line:
+        if "energy" in line and "force" in line:
             try:
-                final_energy = float(line.split()[-3].split(',')[0])
-                final_fmax = float(line.split()[-1].rstrip('.'))
+                final_energy = float(line.split()[-3].split(",")[0])
+                final_fmax = float(line.split()[-1].rstrip("."))
             except (ValueError, IndexError):
                 pass
 
@@ -143,10 +145,10 @@ def check_pyatoms_finished(folder):
 
 def run_pyatoms_mode():
     """Run summary in pyatoms mode - analyze multi-step pyatoms calculations."""
-    folders = sorted(glob.glob('*/'))
+    folders = sorted(glob.glob("*/"))
 
     # Filter to only folders containing pyatoms calculations (have log.info)
-    pyatoms_folders = [f for f in folders if os.path.exists(os.path.join(f, 'log.info'))]
+    pyatoms_folders = [f for f in folders if os.path.exists(os.path.join(f, "log.info"))]
 
     if not pyatoms_folders:
         print("No pyatoms calculations found (no folders with log.info)")
@@ -173,15 +175,15 @@ def run_pyatoms_mode():
     print("STEP PARAMETERS (from first calculation)")
     print("=" * 80)
 
-    params_data = {'Step': []}
+    params_data = {"Step": []}
     for param in PYATOMS_PARAMS:
         params_data[param] = []
 
     for i, step_folder in enumerate(first_steps):
         params = extract_step_parameters(step_folder)
-        params_data['Step'].append(i)
+        params_data["Step"].append(i)
         for param in PYATOMS_PARAMS:
-            params_data[param].append(params.get(param, 'N/A'))
+            params_data[param].append(params.get(param, "N/A"))
 
     params_df = pd.DataFrame(params_data)
     print(params_df.to_string(index=False))
@@ -192,16 +194,16 @@ def run_pyatoms_mode():
     print("ENERGY SUMMARY")
     print("=" * 80)
 
-    energy_data = {'Config': []}
+    energy_data = {"Config": []}
     for i in range(n_steps):
-        energy_data[f'E_step{i}'] = []
-    energy_data['MagMom'] = []
-    energy_data['Converged'] = []
+        energy_data[f"E_step{i}"] = []
+    energy_data["MagMom"] = []
+    energy_data["Converged"] = []
 
     not_converged = []
 
     for folder in pyatoms_folders:
-        folder_name = folder.rstrip('/')
+        folder_name = folder.rstrip("/")
         step_folders = get_pyatoms_steps(folder)
 
         # Check if calculation finished
@@ -212,44 +214,44 @@ def run_pyatoms_mode():
             not_converged.append(folder_name)
             continue
 
-        energy_data['Config'].append(folder_name)
-        energy_data['Converged'].append(True)
+        energy_data["Config"].append(folder_name)
+        energy_data["Converged"].append(True)
 
         # Extract energy from each step
         for i, step_folder in enumerate(step_folders):
             energy = extract_step_energy(step_folder)
-            energy_data[f'E_step{i}'].append(energy)
+            energy_data[f"E_step{i}"].append(energy)
 
         # Extract magnetic moment from final step
         final_step = step_folders[-1]
         magmom = extract_step_magmom(final_step)
-        energy_data['MagMom'].append(magmom)
+        energy_data["MagMom"].append(magmom)
 
     # Calculate relative energies based on final step
-    if energy_data['Config']:
-        final_step_col = f'E_step{n_steps - 1}'
-        final_energies = [e for e in energy_data[final_step_col] if e != 'N/A']
+    if energy_data["Config"]:
+        final_step_col = f"E_step{n_steps - 1}"
+        final_energies = [e for e in energy_data[final_step_col] if e != "N/A"]
 
         if final_energies:
             min_energy = min(final_energies)
-            energy_data['Rel.E'] = []
+            energy_data["Rel.E"] = []
             for e in energy_data[final_step_col]:
-                if e == 'N/A':
-                    energy_data['Rel.E'].append('N/A')
+                if e == "N/A":
+                    energy_data["Rel.E"].append("N/A")
                 else:
-                    energy_data['Rel.E'].append(round(e - min_energy, 4))
+                    energy_data["Rel.E"].append(round(e - min_energy, 4))
         else:
-            energy_data['Rel.E'] = ['N/A'] * len(energy_data['Config'])
+            energy_data["Rel.E"] = ["N/A"] * len(energy_data["Config"])
 
     energy_df = pd.DataFrame(energy_data)
     print(energy_df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
     print()
 
     print("Not converged/finished:")
-    print(' '.join(not_converged) if not_converged else "(none)")
+    print(" ".join(not_converged) if not_converged else "(none)")
 
     # Write to summary_pyatoms.log
-    with open('summary_pyatoms.log', 'w') as f:
+    with open("summary_pyatoms.log", "w") as f:
         f.write("STEP PARAMETERS (from first calculation)\n")
         f.write("=" * 80 + "\n")
         f.write(params_df.to_string(index=False))
@@ -259,50 +261,56 @@ def run_pyatoms_mode():
         f.write(energy_df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
         f.write("\n\n")
         f.write("Not converged/finished:\n")
-        f.write(' '.join(not_converged) if not_converged else "(none)")
+        f.write(" ".join(not_converged) if not_converged else "(none)")
         f.write("\n")
 
     print("\nOutput saved to summary_pyatoms.log")
 
+
 def is_summary_up_to_date(magmom_requested=False):
     """Check if summary.log exists and is newer than all folders, and if magmom flag status matches"""
-    if not os.path.exists('summary.log'):
+    if not os.path.exists("summary.log"):
         return False
 
     # Check if magnetic moments flag status has changed
-    with open('summary.log', 'r') as f:
+    with open("summary.log", "r") as f:
         log_content = f.read()
-        log_has_magmom = 'MagMom' in log_content
+        log_has_magmom = "MagMom" in log_content
 
     # Only regenerate if magmom is requested but log doesn't have it
     # If log has magmom but not requested, still use existing log (saves time)
     if magmom_requested and not log_has_magmom:
         return False
 
-    summary_mtime = os.path.getmtime('summary.log')
-    folders = glob.glob('*/')
+    summary_mtime = os.path.getmtime("summary.log")
+    folders = glob.glob("*/")
 
     for folder in folders:
         # Check if any OUTCAR in folders is newer than summary.log
-        outcar_path = os.path.join(folder, 'OUTCAR')
+        outcar_path = os.path.join(folder, "OUTCAR")
         if os.path.exists(outcar_path) and os.path.getmtime(outcar_path) > summary_mtime:
             return False
         # Also check for log.info files (pyatoms)
-        loginfo_path = os.path.join(folder, 'log.info')
+        loginfo_path = os.path.join(folder, "log.info")
         if os.path.exists(loginfo_path) and os.path.getmtime(loginfo_path) > summary_mtime:
             return False
 
     return True
 
+
 def main():
     ## Block from chatgpt
-    parser = argparse.ArgumentParser(description='Process folders.')
-    parser.add_argument('-m', '--magmom', action='store_true',
-                        help='extract and present magnetic moments')
-    parser.add_argument('-f', '--fast', action='store_true',
-                        help='fast mode (reading out file)')
-    parser.add_argument('-p', '--pyatoms', action='store_true',
-                        help='pyatoms mode: analyze multi-step pyatoms calculations')
+    parser = argparse.ArgumentParser(description="Process folders.")
+    parser.add_argument(
+        "-m", "--magmom", action="store_true", help="extract and present magnetic moments"
+    )
+    parser.add_argument("-f", "--fast", action="store_true", help="fast mode (reading out file)")
+    parser.add_argument(
+        "-p",
+        "--pyatoms",
+        action="store_true",
+        help="pyatoms mode: analyze multi-step pyatoms calculations",
+    )
     args = parser.parse_args()
     ##
 
@@ -315,79 +323,102 @@ def main():
     if is_summary_up_to_date(magmom_requested=args.magmom):
         print("Summary is up to date. Reading from summary.log:")
         print()
-        with open('summary.log', 'r') as f:
+        with open("summary.log", "r") as f:
             print(f.read())
         return
 
-    folders = glob.glob('*/')
+    folders = glob.glob("*/")
     if args.magmom:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target-fmax': [], 'MaxForce': [], 'Energy':[], 'MagMom':[]}
+        dic = {
+            "Config": [],
+            "ISIF": [],
+            "Converged": [],
+            "ENCUT": [],
+            "Target-fmax": [],
+            "MaxForce": [],
+            "Energy": [],
+            "MagMom": [],
+        }
     else:
-        dic = {'Config': [], 'ISIF':[], 'Converged':[], 'ENCUT': [], 'Target-fmax': [], 'MaxForce': [], 'Energy':[]}
+        dic = {
+            "Config": [],
+            "ISIF": [],
+            "Converged": [],
+            "ENCUT": [],
+            "Target-fmax": [],
+            "MaxForce": [],
+            "Energy": [],
+        }
 
     # Define alternative filenames to look for when fast mode is enabled
-    alternative_filenames = ['vasp.out', 'out.txt']
+    alternative_filenames = ["vasp.out", "out.txt"]
     not_converged = []
     for f in sorted(folders):
         ispyatoms = False
-        if f+'log.info' in glob.glob(f+'log.info'):
+        if f + "log.info" in glob.glob(f + "log.info"):
             ispyatoms = True
             finishedpyatoms = False
             finishedprocess = False
             # Read log.info to check if the global processes have finished
-            logfile = open(f+'log.info', 'r')
+            logfile = open(f + "log.info", "r")
             lines = logfile.readlines()
-            optsteps = []; e = []; fmax = []
+            optsteps = []
+            e = []
+            fmax = []
             for line in lines:
-                if 'pyatoms.jobs.job]' in line and 'Procedure step' in line:
+                if "pyatoms.jobs.job]" in line and "Procedure step" in line:
                     optsteps.append(int(line.split()[-5]))
-                #else:
+                # else:
                 #    optsteps = 1
                 # I think if multistep Opt there will be multiple 'VaspGeomOptProcedure' and 'VaspGeomOptJob' in log.info
                 # for a single step procedure, there will be only one 'VaspGeomOptJob'
-                if ('VaspGeomOptProcedure' in line and 'completed successfully' in line) or ('VaspGeomOptJob' in line and 'completed successfully' in line):      # this work for GeomOpt only
+                if ("VaspGeomOptProcedure" in line and "completed successfully" in line) or (
+                    "VaspGeomOptJob" in line and "completed successfully" in line
+                ):  # this work for GeomOpt only
                     finishedprocess = True
 
-                if finishedprocess and 'Closing global processes' in line:
+                if finishedprocess and "Closing global processes" in line:
                     finishedpyatoms = True
 
-                if 'energy' in line:
-                    e.append( float(line.split()[-3].split(',')[0]) )   # example: energy -481.276399, force 0.013.
-                    fmax.append( float(line.split()[-1][:-1]) )
+                if "energy" in line:
+                    e.append(
+                        float(line.split()[-3].split(",")[0])
+                    )  # example: energy -481.276399, force 0.013.
+                    fmax.append(float(line.split()[-1][:-1]))
             if not finishedpyatoms:
-                print(f, 'Pyatoms Job Not Finished')
+                print(f, "Pyatoms Job Not Finished")
                 continue
             else:
-                print(f, 'Pyatoms Job Finished')
-                dic['Config'].append(f)
-                dic['Converged'].append((True, 'pyatoms'))
-                dic['ENCUT'].append('N/A')
-                dic['Target-fmax'].append('N/A')
-                dic['MaxForce'].append( round(fmax[-1], 3) )
-                dic['Energy'].append( round(e[-1], 3) )
+                print(f, "Pyatoms Job Finished")
+                dic["Config"].append(f)
+                dic["Converged"].append((True, "pyatoms"))
+                dic["ENCUT"].append("N/A")
+                dic["Target-fmax"].append("N/A")
+                dic["MaxForce"].append(round(fmax[-1], 3))
+                dic["Energy"].append(round(e[-1], 3))
 
         ########## Block for fast mode ########
         elif args.fast:
             converged = fast_mode_check(f, alternative_filenames)
             if converged is None:
                 # Timeout or error reading files (likely OneDrive not downloaded)
-                print(f, 'skipped (files not accessible)')
+                print(f, "skipped (files not accessible)")
                 not_converged.append(f)
             elif converged:
-                dic['Config'].append(f)
-                dic['Converged'].append(converged)
-                dic['ENCUT'].append('N/A')
-                dic['Target-fmax'].append('N/A')
-                dic['MaxForce'].append('N/A')
-                dic['Energy'].append('N/A')
+                dic["Config"].append(f)
+                dic["Converged"].append(converged)
+                dic["ENCUT"].append("N/A")
+                dic["Target-fmax"].append("N/A")
+                dic["MaxForce"].append("N/A")
+                dic["Energy"].append("N/A")
             else:
-                print(f, 'not converged')
+                print(f, "not converged")
                 not_converged.append(f)
             continue
         #########################################
 
         elif not ispyatoms:
-            if os.path.exists(f + 'OUTCAR'):
+            if os.path.exists(f + "OUTCAR"):
                 try:
                     # First check if an ASE optimizer was used (check for optimizer log files)
                     ase_converged, ase_fmax, optimizer_type = check_ase_optimizer_convergence(f)
@@ -398,72 +429,88 @@ def main():
                         converged_status = ase_converged
                         final_fmax = ase_fmax
                         if not converged_status:
-                            print(f, f'not converged ({optimizer_type}: fmax={ase_fmax:.4f})')
+                            print(f, f"not converged ({optimizer_type}: fmax={ase_fmax:.4f})")
                             not_converged.append(f)
                     else:
                         # No ASE optimizer - use standard OUTCAR convergence check
-                        converged = check_outcar_convergence(f + 'OUTCAR', verbose=False)
+                        converged = check_outcar_convergence(f + "OUTCAR", verbose=False)
                         converged_status = converged[0]
-                        energy, maxforce_outcar = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+                        energy, maxforce_outcar = check_energy_and_maxforce(
+                            f + "OUTCAR", magmom=False, verbose=False
+                        )
                         final_fmax = maxforce_outcar
                         if not converged_status:
-                            print(f, 'not converged')
+                            print(f, "not converged")
                             not_converged.append(f)
 
                     # Get energy and forces
                     if args.magmom:
-                        energy, maxforce, magmom = check_energy_and_maxforce(f + 'OUTCAR', magmom=args.magmom, verbose=False)
-                        dic['MagMom'].append(round(magmom, 3))
+                        energy, maxforce, magmom = check_energy_and_maxforce(
+                            f + "OUTCAR", magmom=args.magmom, verbose=False
+                        )
+                        dic["MagMom"].append(round(magmom, 3))
                     else:
-                        energy, maxforce = check_energy_and_maxforce(f + 'OUTCAR', magmom=False, verbose=False)
+                        energy, maxforce = check_energy_and_maxforce(
+                            f + "OUTCAR", magmom=False, verbose=False
+                        )
 
-                    isif, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ISIF')
-                    encut, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='ENCUT')
-                    ediffg, _ = get_parameter_from_run(f + 'OUTCAR', check_converg=False, parameter='EDIFFG')
+                    isif, _ = get_parameter_from_run(
+                        f + "OUTCAR", check_converg=False, parameter="ISIF"
+                    )
+                    encut, _ = get_parameter_from_run(
+                        f + "OUTCAR", check_converg=False, parameter="ENCUT"
+                    )
+                    ediffg, _ = get_parameter_from_run(
+                        f + "OUTCAR", check_converg=False, parameter="EDIFFG"
+                    )
 
                     # Convert EDIFFG to positive value for target fmax (VASP uses negative for forces)
-                    target_fmax = abs(ediffg) if ediffg is not None else 'N/A'
+                    target_fmax = abs(ediffg) if ediffg is not None else "N/A"
 
-                    dic['Config'].append(f)
-                    dic['ISIF'].append(isif)
-                    dic['Converged'].append(converged_status)
-                    dic['ENCUT'].append(encut)
-                    dic['Target-fmax'].append(target_fmax)
+                    dic["Config"].append(f)
+                    dic["ISIF"].append(isif)
+                    dic["Converged"].append(converged_status)
+                    dic["ENCUT"].append(encut)
+                    dic["Target-fmax"].append(target_fmax)
                     # Use ASE fmax if available, otherwise use OUTCAR maxforce
-                    dic['MaxForce'].append(round(final_fmax if ase_converged is not None else maxforce, 3))
-                    dic['Energy'].append(round(energy, 3))
-
+                    dic["MaxForce"].append(
+                        round(final_fmax if ase_converged is not None else maxforce, 3)
+                    )
+                    dic["Energy"].append(round(energy, 3))
 
                 except ValueError as e:
-                    print(f'Error processing {f}: {e}. OUTCAR may be incomplete or damaged.')
+                    print(f"Error processing {f}: {e}. OUTCAR may be incomplete or damaged.")
                     not_converged.append(f)
             else:
-                print('No OUTCAR in', f)
+                print("No OUTCAR in", f)
                 not_converged.append(f)
 
-    dic['Rel.E'] = []
-    for e in dic['Energy']:
-        if e == 'N/A':
-            dic['Rel.E'].append('N/A')
+    dic["Rel.E"] = []
+    for e in dic["Energy"]:
+        if e == "N/A":
+            dic["Rel.E"].append("N/A")
         else:
-            dic['Rel.E'].append(e - min(dic['Energy'], default=0))  # default=0 to handle empty Energy list
+            dic["Rel.E"].append(
+                e - min(dic["Energy"], default=0)
+            )  # default=0 to handle empty Energy list
 
     df = pd.DataFrame.from_dict(dic)
 
     # Use to_string() to ensure all columns display in one line
     print(df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
     print()
-    not_converged = [f.split('/')[0] for f in not_converged]
-    print('Not converged:')
-    print(' '.join(not_converged))
+    not_converged = [f.split("/")[0] for f in not_converged]
+    print("Not converged:")
+    print(" ".join(not_converged))
 
     # Write output to summary.log
-    with open('summary.log', 'w') as f:
+    with open("summary.log", "w") as f:
         f.write(df.to_string(index=True, max_rows=None, max_cols=None, line_width=1000))
-        f.write('\n\n')
-        f.write('Not converged:\n')
-        f.write(' '.join(not_converged))
-        f.write('\n')
+        f.write("\n\n")
+        f.write("Not converged:\n")
+        f.write(" ".join(not_converged))
+        f.write("\n")
+
 
 def check_ase_optimizer_convergence(folder, fmax_threshold=0.02):
     """
@@ -481,24 +528,31 @@ def check_ase_optimizer_convergence(folder, fmax_threshold=0.02):
                Returns (None, None, None) if no ASE optimizer log found
     """
     # Common ASE optimizer log files
-    optimizer_logs = ['BFGS.log', 'FIRE.log', 'LBFGS.log', 'GPMIN.log',
-                      'MDMIN.log', 'QUASINEWTON.log', 'DIMER.log']
+    optimizer_logs = [
+        "BFGS.log",
+        "FIRE.log",
+        "LBFGS.log",
+        "GPMIN.log",
+        "MDMIN.log",
+        "QUASINEWTON.log",
+        "DIMER.log",
+    ]
 
     for log_name in optimizer_logs:
         log_path = os.path.join(folder, log_name)
         if os.path.exists(log_path):
             try:
-                with open(log_path, 'r') as f:
+                with open(log_path, "r") as f:
                     lines = f.readlines()
 
                 # Parse the last optimization step
                 # Format: "BFGS:  step  time  energy  fmax"
-                optimizer_type = log_name.replace('.log', '')
+                optimizer_type = log_name.replace(".log", "")
                 final_fmax = None
 
                 for line in reversed(lines):
                     line = line.strip()
-                    if line.startswith(optimizer_type + ':'):
+                    if line.startswith(optimizer_type + ":"):
                         parts = line.split()
                         try:
                             # Last column is typically fmax
@@ -537,7 +591,7 @@ def fast_mode_check(f, alternative_filenames):
             if os.path.exists(filepath):
                 try:
                     # Try to open with timeout protection
-                    vaspout = open(filepath, 'r')
+                    vaspout = open(filepath, "r")
                     # Test read to check if file is accessible (will fail for OneDrive placeholders)
                     _ = vaspout.readline()
                     vaspout.seek(0)  # Reset to beginning
@@ -549,23 +603,23 @@ def fast_mode_check(f, alternative_filenames):
                     continue
 
         if not foundout:
-            print(f'No accessible OUT file ({alternative_filenames}) in {f}')
+            print(f"No accessible OUT file ({alternative_filenames}) in {f}")
             return None
 
         # Read INCAR to get IBRION
         ibrion = None
-        incar_path = f + 'INCAR'
+        incar_path = f + "INCAR"
         if os.path.exists(incar_path):
             try:
-                with open(incar_path, 'r') as incar:
+                with open(incar_path, "r") as incar:
                     # Test read first to check accessibility
                     incarlines = incar.readlines()
                     for line in incarlines:
-                        if 'IBRION' in line:
+                        if "IBRION" in line:
                             ibrion = int(line.split()[2])
                             break
             except (OSError, TimeoutError):
-                print(f'Warning: Cannot read INCAR in {f} (file may not be downloaded)')
+                print(f"Warning: Cannot read INCAR in {f} (file may not be downloaded)")
                 if vaspout:
                     vaspout.close()
                 return None
@@ -575,22 +629,22 @@ def fast_mode_check(f, alternative_filenames):
             lines = vaspout.readlines()[-5:]
             vaspout.close()
         except (OSError, TimeoutError):
-            print(f'Warning: Cannot read output file in {f} (file may not be downloaded)')
+            print(f"Warning: Cannot read output file in {f} (file may not be downloaded)")
             if vaspout:
                 vaspout.close()
             return None
 
         # Check convergence based on IBRION
         if ibrion in [1, 2, 3]:
-            return any('reached required accuracy' in line for line in lines)
+            return any("reached required accuracy" in line for line in lines)
         else:
-            return any('E0=' in line for line in lines)
+            return any("E0=" in line for line in lines)
 
     except TimeoutError:
-        print(f'Timeout reading files in {f} (OneDrive files may not be downloaded)')
+        print(f"Timeout reading files in {f} (OneDrive files may not be downloaded)")
         return None
     except Exception as e:
-        print(f'Error reading files in {f}: {e}')
+        print(f"Error reading files in {f}: {e}")
         return None
 
 

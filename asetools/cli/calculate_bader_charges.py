@@ -25,10 +25,7 @@ from ase import Atoms
 from ase.io import read
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -43,9 +40,12 @@ class BaderChargeAnalyzer:
     - Export results in various formats
     """
 
-    def __init__(self, structure_file: str = 'CONTCAR',
-                 outcar_file: str = 'OUTCAR',
-                 acf_file: str = 'ACF.dat'):
+    def __init__(
+        self,
+        structure_file: str = "CONTCAR",
+        outcar_file: str = "OUTCAR",
+        acf_file: str = "ACF.dat",
+    ):
         """
         Initialize the Bader charge analyzer.
 
@@ -67,7 +67,7 @@ class BaderChargeAnalyzer:
     def load_structure(self) -> None:
         """Load atomic structure from file."""
         try:
-            self.atoms = read(str(self.structure_file), format='vasp')
+            self.atoms = read(str(self.structure_file), format="vasp")
             logger.info(f"Loaded structure with {len(self.atoms)} atoms from {self.structure_file}")
         except Exception as e:
             logger.error(f"Failed to load structure from {self.structure_file}: {e}")
@@ -95,24 +95,26 @@ class BaderChargeAnalyzer:
         zval_values = []
 
         try:
-            with open(self.outcar_file, 'r') as f:
+            with open(self.outcar_file, "r") as f:
                 lines = f.readlines()
 
             for i, line in enumerate(lines):
                 # Extract element types from POTCAR information
-                if 'POTCAR:' in line and len(elements) < n_unique:
-                    element = line.split()[2].split('_')[0]
+                if "POTCAR:" in line and len(elements) < n_unique:
+                    element = line.split()[2].split("_")[0]
                     elements.append(element)
 
                 # Extract valence electron counts
-                if 'Ionic Valenz' in line:
+                if "Ionic Valenz" in line:
                     valence_line = lines[i + 1]
                     values = valence_line.split()[2:]
                     zval_values = [float(val) for val in values]
                     break
 
             if len(elements) != len(zval_values):
-                raise ValueError(f"Mismatch between elements ({len(elements)}) and ZVAL values ({len(zval_values)})")
+                raise ValueError(
+                    f"Mismatch between elements ({len(elements)}) and ZVAL values ({len(zval_values)})"
+                )
 
             self.zval_dict = dict(zip(elements, zval_values))
             logger.info(f"Extracted ZVAL for elements: {self.zval_dict}")
@@ -140,7 +142,7 @@ class BaderChargeAnalyzer:
         logger.info("ACF.dat not found, running Bader charge analysis...")
 
         # Check required files exist
-        required_files = ['AECCAR0', 'AECCAR2', 'CHGCAR']
+        required_files = ["AECCAR0", "AECCAR2", "CHGCAR"]
         missing_files = [f for f in required_files if not Path(f).exists()]
         if missing_files:
             raise FileNotFoundError(f"Required files missing for Bader analysis: {missing_files}")
@@ -148,13 +150,13 @@ class BaderChargeAnalyzer:
         try:
             # Generate charge density sum
             logger.info("Running chgsum.pl to create CHGCAR_sum...")
-            ret1 = os.system('chgsum.pl AECCAR0 AECCAR2')
+            ret1 = os.system("chgsum.pl AECCAR0 AECCAR2")
             if ret1 != 0:
                 raise RuntimeError("chgsum.pl failed")
 
             # Run Bader analysis
             logger.info("Running Bader analysis...")
-            ret2 = os.system('bader -vac off CHGCAR -ref CHGCAR_sum')
+            ret2 = os.system("bader -vac off CHGCAR -ref CHGCAR_sum")
             if ret2 != 0:
                 raise RuntimeError("Bader analysis failed")
 
@@ -182,14 +184,14 @@ class BaderChargeAnalyzer:
             raise FileNotFoundError(f"ACF.dat file not found: {self.acf_file}")
 
         try:
-            with open(self.acf_file, 'r') as f:
+            with open(self.acf_file, "r") as f:
                 lines = f.readlines()
 
             n_atoms = len(self.atoms)
             charges = np.zeros(n_atoms)
 
             # Extract charges from lines 2 to n_atoms+2 (0-indexed)
-            for i, line in enumerate(lines[2:2+n_atoms]):
+            for i, line in enumerate(lines[2 : 2 + n_atoms]):
                 charges[i] = float(line.split()[4])
 
             self.bader_charges = charges
@@ -222,8 +224,9 @@ class BaderChargeAnalyzer:
         logger.info("Calculated final charges for all atoms")
         return final_charges
 
-    def write_results(self, output_file: str = 'bader_charges.txt',
-                     format_type: str = 'table') -> None:
+    def write_results(
+        self, output_file: str = "bader_charges.txt", format_type: str = "table"
+    ) -> None:
         """
         Write charge analysis results to file.
 
@@ -240,11 +243,11 @@ class BaderChargeAnalyzer:
         output_path = Path(output_file)
 
         try:
-            if format_type == 'table':
+            if format_type == "table":
                 self._write_table_format(output_path, symbols, positions)
-            elif format_type == 'csv':
+            elif format_type == "csv":
                 self._write_csv_format(output_path, symbols, positions)
-            elif format_type == 'json':
+            elif format_type == "json":
                 self._write_json_format(output_path, symbols, positions)
             else:
                 raise ValueError(f"Unsupported format: {format_type}")
@@ -255,53 +258,66 @@ class BaderChargeAnalyzer:
             logger.error(f"Failed to write results: {e}")
             raise
 
-    def _write_table_format(self, output_path: Path, symbols: List[str],
-                           positions: np.ndarray) -> None:
+    def _write_table_format(
+        self, output_path: Path, symbols: List[str], positions: np.ndarray
+    ) -> None:
         """Write results in formatted table format."""
-        with open(output_path, 'w') as f:
-            f.write(f"{'#':<3} {'Symbol':<8} {'X':<12} {'Y':<12} {'Z':<12} "
-                   f"{'Bader_Chg':<12} {'Final_Chg':<12}\n")
+        with open(output_path, "w") as f:
+            f.write(
+                f"{'#':<3} {'Symbol':<8} {'X':<12} {'Y':<12} {'Z':<12} "
+                f"{'Bader_Chg':<12} {'Final_Chg':<12}\n"
+            )
             f.write("-" * 75 + "\n")
 
             for i, symbol in enumerate(symbols):
-                f.write(f"{i:<3} {symbol:<8} {positions[i,0]:<12.6f} "
-                       f"{positions[i,1]:<12.6f} {positions[i,2]:<12.6f} "
-                       f"{self.bader_charges[i]:<12.6f} {self.final_charges[i]:<12.6f}\n")
+                f.write(
+                    f"{i:<3} {symbol:<8} {positions[i, 0]:<12.6f} "
+                    f"{positions[i, 1]:<12.6f} {positions[i, 2]:<12.6f} "
+                    f"{self.bader_charges[i]:<12.6f} {self.final_charges[i]:<12.6f}\n"
+                )
 
-    def _write_csv_format(self, output_path: Path, symbols: List[str],
-                         positions: np.ndarray) -> None:
+    def _write_csv_format(
+        self, output_path: Path, symbols: List[str], positions: np.ndarray
+    ) -> None:
         """Write results in CSV format."""
         import csv
 
-        with open(output_path, 'w', newline='') as f:
+        with open(output_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(['Index', 'Symbol', 'X', 'Y', 'Z', 'Bader_Charge', 'Final_Charge'])
+            writer.writerow(["Index", "Symbol", "X", "Y", "Z", "Bader_Charge", "Final_Charge"])
 
             for i, symbol in enumerate(symbols):
-                writer.writerow([i, symbol, positions[i,0], positions[i,1],
-                               positions[i,2], self.bader_charges[i], self.final_charges[i]])
+                writer.writerow(
+                    [
+                        i,
+                        symbol,
+                        positions[i, 0],
+                        positions[i, 1],
+                        positions[i, 2],
+                        self.bader_charges[i],
+                        self.final_charges[i],
+                    ]
+                )
 
-    def _write_json_format(self, output_path: Path, symbols: List[str],
-                          positions: np.ndarray) -> None:
+    def _write_json_format(
+        self, output_path: Path, symbols: List[str], positions: np.ndarray
+    ) -> None:
         """Write results in JSON format."""
         import json
 
-        results = {
-            'zval_dict': self.zval_dict,
-            'atoms': []
-        }
+        results = {"zval_dict": self.zval_dict, "atoms": []}
 
         for i, symbol in enumerate(symbols):
             atom_data = {
-                'index': i,
-                'symbol': symbol,
-                'position': positions[i].tolist(),
-                'bader_charge': float(self.bader_charges[i]),
-                'final_charge': float(self.final_charges[i])
+                "index": i,
+                "symbol": symbol,
+                "position": positions[i].tolist(),
+                "bader_charge": float(self.bader_charges[i]),
+                "final_charge": float(self.final_charges[i]),
             }
-            results['atoms'].append(atom_data)
+            results["atoms"].append(atom_data)
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
 
     def print_summary(self) -> None:
@@ -313,9 +329,9 @@ class BaderChargeAnalyzer:
         symbols = self.atoms.get_chemical_symbols()
         unique_symbols = sorted(set(symbols))
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("BADER CHARGE ANALYSIS SUMMARY")
-        print("="*60)
+        print("=" * 60)
         print(f"Total atoms: {len(self.atoms)}")
         print(f"Elements: {', '.join(unique_symbols)}")
         print(f"ZVAL values: {self.zval_dict}")
@@ -326,18 +342,20 @@ class BaderChargeAnalyzer:
             element_indices = [i for i, s in enumerate(symbols) if s == element]
             element_charges = self.final_charges[element_indices]
 
-            print(f"{element:>4}: {len(element_indices):3d} atoms, "
-                  f"charge range: {element_charges.min():8.4f} to {element_charges.max():8.4f}, "
-                  f"average: {element_charges.mean():8.4f}")
+            print(
+                f"{element:>4}: {len(element_indices):3d} atoms, "
+                f"charge range: {element_charges.min():8.4f} to {element_charges.max():8.4f}, "
+                f"average: {element_charges.mean():8.4f}"
+            )
 
         print(f"\nTotal charge: {self.final_charges.sum():8.4f}")
-        print("="*60)
+        print("=" * 60)
 
 
 def main():
     """Main entry point for the command-line interface."""
     parser = argparse.ArgumentParser(
-        description='Calculate Bader charges for VASP calculations',
+        description="Calculate Bader charges for VASP calculations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -345,25 +363,28 @@ Examples:
   %(prog)s -s POSCAR -o OUTCAR      # Specify input files
   %(prog)s --format csv -o charges.csv  # Output as CSV
   %(prog)s --skip-bader              # Skip Bader analysis (ACF.dat exists)
-        """
+        """,
     )
 
-    parser.add_argument('-s', '--structure', default='CONTCAR',
-                       help='Structure file (default: CONTCAR)')
-    parser.add_argument('-o', '--outcar', default='OUTCAR',
-                       help='OUTCAR file (default: OUTCAR)')
-    parser.add_argument('-a', '--acf', default='ACF.dat',
-                       help='ACF.dat file (default: ACF.dat)')
-    parser.add_argument('--output', default='bader_charges.txt',
-                       help='Output file (default: bader_charges.txt)')
-    parser.add_argument('--format', choices=['table', 'csv', 'json'], default='table',
-                       help='Output format (default: table)')
-    parser.add_argument('--skip-bader', action='store_true',
-                       help='Skip Bader analysis (assume ACF.dat exists)')
-    parser.add_argument('--quiet', '-q', action='store_true',
-                       help='Suppress output messages')
-    parser.add_argument('--verbose', '-v', action='store_true',
-                       help='Enable verbose output')
+    parser.add_argument(
+        "-s", "--structure", default="CONTCAR", help="Structure file (default: CONTCAR)"
+    )
+    parser.add_argument("-o", "--outcar", default="OUTCAR", help="OUTCAR file (default: OUTCAR)")
+    parser.add_argument("-a", "--acf", default="ACF.dat", help="ACF.dat file (default: ACF.dat)")
+    parser.add_argument(
+        "--output", default="bader_charges.txt", help="Output file (default: bader_charges.txt)"
+    )
+    parser.add_argument(
+        "--format",
+        choices=["table", "csv", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    parser.add_argument(
+        "--skip-bader", action="store_true", help="Skip Bader analysis (assume ACF.dat exists)"
+    )
+    parser.add_argument("--quiet", "-q", action="store_true", help="Suppress output messages")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
 
     args = parser.parse_args()
 
@@ -376,9 +397,7 @@ Examples:
     try:
         # Initialize analyzer
         analyzer = BaderChargeAnalyzer(
-            structure_file=args.structure,
-            outcar_file=args.outcar,
-            acf_file=args.acf
+            structure_file=args.structure, outcar_file=args.outcar, acf_file=args.acf
         )
 
         # Load structure
@@ -411,5 +430,5 @@ Examples:
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

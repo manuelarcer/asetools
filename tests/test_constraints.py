@@ -32,13 +32,10 @@ class TestConstraintManager:
         # Create test JSON file
         config_data = {
             "pairs": [[0, 1], [2, 3]],
-            "metadata": {
-                "description": "Test constraints",
-                "spring_constant": 25.0
-            }
+            "metadata": {"description": "Test constraints", "spring_constant": 25.0},
         }
         json_file = tmp_path / "test_constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()
@@ -58,7 +55,7 @@ class TestConstraintManager:
     def test_load_constraint_config_invalid_json(self, tmp_path):
         """Test error handling for malformed JSON."""
         json_file = tmp_path / "invalid.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             f.write("{invalid json content")
 
         cm = ConstraintManager()
@@ -69,7 +66,8 @@ class TestConstraintManager:
         """Test bond distance calculation from covalent radii."""
         # Create H2O molecule
         from ase.build import molecule
-        atoms = molecule('H2O')
+
+        atoms = molecule("H2O")
 
         cm = ConstraintManager(distance_factor=1.134)
         # O-H bond distance
@@ -82,7 +80,7 @@ class TestConstraintManager:
     def test_apply_hookean_from_pairs(self):
         """Test creating Hookean constraints from atom pairs."""
         # Create simple chain of atoms
-        atoms = Atoms('COOH', positions=[[0, 0, 0], [1.4, 0, 0], [2.5, 0, 0], [3.5, 0, 0]])
+        atoms = Atoms("COOH", positions=[[0, 0, 0], [1.4, 0, 0], [2.5, 0, 0], [3.5, 0, 0]])
 
         cm = ConstraintManager()
         pairs = [[0, 1], [1, 2]]  # C-O and O-O bonds
@@ -93,7 +91,7 @@ class TestConstraintManager:
 
     def test_apply_hookean_from_pairs_invalid_index(self):
         """Test error handling for out-of-range atom indices."""
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
 
         cm = ConstraintManager()
         pairs = [[0, 10]]  # Index 10 is out of range
@@ -103,7 +101,7 @@ class TestConstraintManager:
 
     def test_get_existing_fix_indices_no_constraints(self):
         """Test extracting FixAtoms indices when no constraints exist."""
-        atoms = bulk('Cu', 'fcc', a=3.6)
+        atoms = bulk("Cu", "fcc", a=3.6)
 
         cm = ConstraintManager()
         fix_indices = cm.get_existing_fix_indices(atoms)
@@ -112,7 +110,7 @@ class TestConstraintManager:
 
     def test_get_existing_fix_indices_with_fixatoms(self):
         """Test extracting FixAtoms indices when FixAtoms constraints exist."""
-        atoms = bulk('Cu', 'fcc', a=3.6).repeat((2, 2, 2))
+        atoms = bulk("Cu", "fcc", a=3.6).repeat((2, 2, 2))
         atoms.set_constraint(FixAtoms(indices=[0, 1, 2, 3]))
 
         cm = ConstraintManager()
@@ -122,11 +120,8 @@ class TestConstraintManager:
 
     def test_get_existing_fix_indices_multiple_constraints(self):
         """Test extracting FixAtoms indices from multiple constraints."""
-        atoms = bulk('Cu', 'fcc', a=3.6).repeat((2, 2, 2))
-        constraints = [
-            FixAtoms(indices=[0, 1]),
-            FixAtoms(indices=[2, 3])
-        ]
+        atoms = bulk("Cu", "fcc", a=3.6).repeat((2, 2, 2))
+        constraints = [FixAtoms(indices=[0, 1]), FixAtoms(indices=[2, 3])]
         atoms.set_constraint(constraints)
 
         cm = ConstraintManager()
@@ -136,7 +131,7 @@ class TestConstraintManager:
 
     def test_merge_constraints_no_existing(self):
         """Test merging constraints when no existing constraints."""
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
 
         cm = ConstraintManager()
         new_constraints = [Hookean(a1=0, a2=1, k=20.0, rt=1.0)]
@@ -147,7 +142,7 @@ class TestConstraintManager:
 
     def test_merge_constraints_with_existing_fixatoms(self):
         """Test merging constraints preserves existing FixAtoms."""
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         atoms.set_constraint(FixAtoms(indices=[0]))
 
         cm = ConstraintManager()
@@ -162,7 +157,7 @@ class TestConstraintManager:
 
     def test_merge_constraints_empty_raises_error(self):
         """Test that merging empty constraints raises error."""
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
 
         cm = ConstraintManager()
         with pytest.raises(RuntimeError, match="No constraints to apply"):
@@ -171,12 +166,12 @@ class TestConstraintManager:
     def test_apply_from_json(self, tmp_path):
         """Test applying constraints from JSON file."""
         # Create test atoms
-        atoms = Atoms('H2O2', positions=[[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0]])
+        atoms = Atoms("H2O2", positions=[[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0]])
 
         # Create test JSON file
         config_data = {"pairs": [[0, 1], [2, 3]]}
         json_file = tmp_path / "constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()
@@ -190,10 +185,10 @@ class TestConstraintManager:
         """Test error when JSON missing 'pairs' key."""
         config_data = {"metadata": {}}
         json_file = tmp_path / "invalid_constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         cm = ConstraintManager()
 
         with pytest.raises(RuntimeError, match="missing required 'pairs' key"):
@@ -203,10 +198,10 @@ class TestConstraintManager:
         """Test error when pairs list is empty."""
         config_data = {"pairs": []}
         json_file = tmp_path / "empty_pairs.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
-        atoms = Atoms('H2O', positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        atoms = Atoms("H2O", positions=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         cm = ConstraintManager()
 
         with pytest.raises(RuntimeError, match="Empty pairs list"):
@@ -214,17 +209,14 @@ class TestConstraintManager:
 
     def test_apply_from_json_with_metadata(self, tmp_path):
         """Test that metadata in JSON overrides default parameters."""
-        atoms = Atoms('H2O2', positions=[[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0]])
+        atoms = Atoms("H2O2", positions=[[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0]])
 
         config_data = {
             "pairs": [[0, 1]],
-            "metadata": {
-                "spring_constant": 30.0,
-                "distance_factor": 1.2
-            }
+            "metadata": {"spring_constant": 30.0, "distance_factor": 1.2},
         }
         json_file = tmp_path / "constraints_with_metadata.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()
@@ -236,19 +228,19 @@ class TestConstraintManager:
 
     def test_apply_stage_constraints(self, tmp_path):
         """Test applying constraints from workflow stage configuration."""
-        atoms = Atoms('OH', positions=[[0, 0, 0], [1, 0, 0]])
+        atoms = Atoms("OH", positions=[[0, 0, 0], [1, 0, 0]])
 
         config_data = {"pairs": [[0, 1]]}
         json_file = tmp_path / "stage_constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()
         stage_config = {
-            'type': 'hookean',
-            'config_file': str(json_file),
-            'spring_constant': 25.0,
-            'distance_factor': 1.15
+            "type": "hookean",
+            "config_file": str(json_file),
+            "spring_constant": 25.0,
+            "distance_factor": 1.15,
         }
         cm.apply_stage_constraints(atoms, stage_config)
 
@@ -257,26 +249,20 @@ class TestConstraintManager:
 
     def test_apply_stage_constraints_unsupported_type(self, tmp_path):
         """Test error for unsupported constraint type."""
-        atoms = Atoms('OH', positions=[[0, 0, 0], [1, 0, 0]])
+        atoms = Atoms("OH", positions=[[0, 0, 0], [1, 0, 0]])
 
         cm = ConstraintManager()
-        stage_config = {
-            'type': 'unsupported_type',
-            'config_file': 'some_file.json'
-        }
+        stage_config = {"type": "unsupported_type", "config_file": "some_file.json"}
 
         with pytest.raises(ValueError, match="Unsupported constraint type"):
             cm.apply_stage_constraints(atoms, stage_config)
 
     def test_apply_stage_constraints_missing_config_file(self):
         """Test error when config_file is missing."""
-        atoms = Atoms('OH', positions=[[0, 0, 0], [1, 0, 0]])
+        atoms = Atoms("OH", positions=[[0, 0, 0], [1, 0, 0]])
 
         cm = ConstraintManager()
-        stage_config = {
-            'type': 'hookean',
-            'spring_constant': 20.0
-        }
+        stage_config = {"type": "hookean", "spring_constant": 20.0}
 
         with pytest.raises(ValueError, match="Missing 'config_file'"):
             cm.apply_stage_constraints(atoms, stage_config)
@@ -288,12 +274,13 @@ class TestConstraintIntegration:
     def test_water_molecule_constraints(self, tmp_path):
         """Test applying constraints to water molecule."""
         from ase.build import molecule
-        atoms = molecule('H2O')
+
+        atoms = molecule("H2O")
 
         # Create constraint for O-H bonds
         config_data = {"pairs": [[0, 1], [0, 2]]}  # O bonded to both H
         json_file = tmp_path / "water_constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()
@@ -304,7 +291,7 @@ class TestConstraintIntegration:
     def test_surface_with_adsorbate(self, tmp_path):
         """Test constraints on surface slab with adsorbate."""
         # Create simple slab
-        slab = bulk('Cu', 'fcc', a=3.6)
+        slab = bulk("Cu", "fcc", a=3.6)
         slab = slab.repeat((2, 2, 3))
 
         # Fix bottom layer
@@ -313,13 +300,14 @@ class TestConstraintIntegration:
 
         # Add H atom on top (simplified adsorbate)
         from ase import Atom
-        slab.append(Atom('H', position=[1.8, 1.8, 10.0]))
+
+        slab.append(Atom("H", position=[1.8, 1.8, 10.0]))
         h_index = len(slab) - 1
 
         # Create constraint connecting H to surface Cu
         config_data = {"pairs": [[h_index, 0]]}  # H to first Cu atom
         json_file = tmp_path / "surface_constraints.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(config_data, f)
 
         cm = ConstraintManager()

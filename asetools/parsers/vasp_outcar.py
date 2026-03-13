@@ -1,6 +1,7 @@
 """
 Module for parsing OUTCAR files.
 """
+
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path, PurePath
@@ -16,7 +17,7 @@ from ase.io import ParseError, read
 from ase.io.utils import ImageChunk
 
 # Denotes end of Ionic step for OUTCAR reading
-_OUTCAR_SCF_DELIM = 'FREE ENERGIE OF THE ION-ELECTRON SYSTEM'
+_OUTCAR_SCF_DELIM = "FREE ENERGIE OF THE ION-ELECTRON SYSTEM"
 
 # Some type aliases
 _HEADER = Dict[str, Any]
@@ -31,6 +32,7 @@ class NoNonEmptyLines(Exception):
 
 class UnableToLocateDelimiter(Exception):
     """Did not find the provided delimiter"""
+
     def __init__(self, delimiter, msg):
         self.delimiter = delimiter
         super().__init__(msg)
@@ -41,8 +43,8 @@ def _check_line(line: str) -> str:
     See issue #179, https://gitlab.com/ase/ase/issues/179
     Only call in cases we need the numeric values
     """
-    if re.search('[0-9]-[0-9]', line):
-        line = re.sub('([0-9])-([0-9])', r'\1 -\2', line)
+    if re.search("[0-9]-[0-9]", line):
+        line = re.sub("([0-9])-([0-9])", r"\1 -\2", line)
     return line
 
 
@@ -71,18 +73,16 @@ def search_lines(delim: str, cursor: _CURSOR, lines: _CHUNK) -> _CURSOR:
             return cursor
         # We didn't find the delimiter
         cursor += 1
-    raise UnableToLocateDelimiter(
-        delim, f'Did not find starting point for delimiter {delim}')
+    raise UnableToLocateDelimiter(delim, f"Did not find starting point for delimiter {delim}")
 
 
 def convert_vasp_outcar_stress(stress: Sequence):
     """Helper function to convert the stress line in an OUTCAR to the
-    expected units in ASE """
+    expected units in ASE"""
     stress_arr = -np.array(stress)
     shape = stress_arr.shape
-    if shape != (6, ):
-        raise ValueError(
-            f'Stress has the wrong shape. Expected (6,), got {shape}')
+    if shape != (6,):
+        raise ValueError(f"Stress has the wrong shape. Expected (6,), got {shape}")
     stress_arr = stress_arr[[0, 1, 2, 4, 5, 3]] * 1e-1 * ase.units.GPa
     return stress_arr
 
@@ -90,9 +90,9 @@ def convert_vasp_outcar_stress(stress: Sequence):
 def read_constraints_from_file(directory):
     directory = Path(directory)
     constraint = None
-    for filename in ('CONTCAR', 'POSCAR'):
+    for filename in ("CONTCAR", "POSCAR"):
         if (directory / filename).is_file():
-            constraint = read(directory / filename, format='vasp').constraints
+            constraint = read(directory / filename, format="vasp").constraints
             break
     return constraint
 
@@ -120,7 +120,7 @@ class VaspPropertyParser(ABC):
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         """Extract a property from the cursor position.
         Assumes that "has_property" would evaluate to True
-        from cursor position """
+        from cursor position"""
 
 
 class SimpleProperty(VaspPropertyParser, ABC):
@@ -129,7 +129,7 @@ class SimpleProperty(VaspPropertyParser, ABC):
     def __init__(self):
         super().__init__()
         if self.LINE_DELIMITER is None:
-            raise ValueError('Must specify a line delimiter.')
+            raise ValueError("Must specify a line delimiter.")
 
     def has_property(self, cursor, lines) -> bool:
         line = lines[cursor]
@@ -139,6 +139,7 @@ class SimpleProperty(VaspPropertyParser, ABC):
 class VaspChunkPropertyParser(VaspPropertyParser, ABC):
     """Base class for parsing a chunk of the OUTCAR.
     The base assumption is that only a chunk of lines is passed"""
+
     def __init__(self, header: _HEADER = None):
         super().__init__()
         header = header or {}
@@ -150,8 +151,7 @@ class VaspChunkPropertyParser(VaspPropertyParser, ABC):
         try:
             return self.header[key]
         except KeyError:
-            raise ParseError(
-                f'Parser requested unavailable key "{key}" from header')
+            raise ParseError(f'Parser requested unavailable key "{key}" from header')
 
 
 class VaspHeaderPropertyParser(VaspPropertyParser, ABC):
@@ -173,7 +173,8 @@ class Spinpol(SimpleVaspHeaderParser):
     "   ISPIN  =      2    spin polarized calculation?"
 
     """
-    LINE_DELIMITER = 'ISPIN'
+
+    LINE_DELIMITER = "ISPIN"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = lines[cursor].strip()
@@ -182,7 +183,7 @@ class Spinpol(SimpleVaspHeaderParser):
         # ISPIN 2 = spinpolarized, otherwise no
         # ISPIN 1 = non-spinpolarized
         spinpol = ispin == 2
-        return {'spinpol': spinpol}
+        return {"spinpol": spinpol}
 
 
 class SpeciesTypes(SimpleVaspHeaderParser):
@@ -194,7 +195,8 @@ class SpeciesTypes(SimpleVaspHeaderParser):
     We must parse this multiple times, as it's scattered in the header.
     So this class has to simply parse the entire header.
     """
-    LINE_DELIMITER = 'POTCAR:'
+
+    LINE_DELIMITER = "POTCAR:"
 
     def __init__(self, *args, **kwargs):
         self._species = []  # Store species as we find them
@@ -226,14 +228,14 @@ class SpeciesTypes(SimpleVaspHeaderParser):
 
     def _make_returnval(self) -> _RESULT:
         """Construct the return value for the "parse" method"""
-        return {'species': self.get_species()}
+        return {"species": self.get_species()}
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = lines[cursor].strip()
 
         parts = line.split()
         # Determine in what position we'd expect to find the symbol
-        if '1/r potential' in line:
+        if "1/r potential" in line:
             # This denotes an AE potential
             # Currently only H_AE
             # "  H  1/r potential  "
@@ -246,16 +248,15 @@ class SpeciesTypes(SimpleVaspHeaderParser):
 
         sym = parts[idx]
         # remove "_h", "_GW", "_3" tags etc.
-        sym = sym.split('_')[0]
+        sym = sym.split("_")[0]
         # in the case of the "H1.25" potentials etc.,
         # remove any non-alphabetic characters
-        sym = ''.join([s for s in sym if s.isalpha()])
+        sym = "".join([s for s in sym if s.isalpha()])
 
         if sym not in atomic_numbers:
             # Check that we have properly parsed the symbol, and we found
             # an element
-            raise ParseError(
-                f'Found an unexpected symbol {sym} in line {line}')
+            raise ParseError(f"Found an unexpected symbol {sym} in line {line}")
 
         self.species.append(sym)
 
@@ -267,19 +268,21 @@ class IonsPerSpecies(SimpleVaspHeaderParser):
 
     "   ions per type =              32  31   2"
     """
-    LINE_DELIMITER = 'ions per type'
+
+    LINE_DELIMITER = "ions per type"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = lines[cursor].strip()
         parts = line.split()
         ion_types = list(map(int, parts[4:]))
-        return {'ion_types': ion_types}
+        return {"ion_types": ion_types}
 
 
 class KpointHeader(SimpleVaspHeaderParser):
     """Reads nkpts and nbands from the line delimiter.
     Then it also searches for the ibzkpts and kpt_weights"""
-    LINE_DELIMITER = 'NKPTS'
+
+    LINE_DELIMITER = "NKPTS"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = lines[cursor].strip()
@@ -287,12 +290,12 @@ class KpointHeader(SimpleVaspHeaderParser):
         nkpts = int(parts[3])
         nbands = int(parts[-1])
 
-        results = {'nkpts': nkpts, 'nbands': nbands}
+        results = {"nkpts": nkpts, "nbands": nbands}
         # We also now get the k-point weights etc.,
         # because we need to know how many k-points we have
         # for parsing that
         # Move cursor down to next delimiter
-        delim2 = 'k-points in reciprocal lattice and weights'
+        delim2 = "k-points in reciprocal lattice and weights"
         for offset, line in enumerate(lines[cursor:], start=0):
             line = line.strip()
             if delim2 in line:
@@ -305,18 +308,19 @@ class KpointHeader(SimpleVaspHeaderParser):
                     parts = line.split()
                     ibzkpts[nk] = list(map(float, parts[:3]))
                     kpt_weights[nk] = float(parts[-1])
-                results['ibzkpts'] = ibzkpts
-                results['kpt_weights'] = kpt_weights
+                results["ibzkpts"] = ibzkpts
+                results["kpt_weights"] = kpt_weights
                 break
         else:
-            raise ParseError('Did not find the K-points in the OUTCAR')
+            raise ParseError("Did not find the K-points in the OUTCAR")
 
         return results
 
 
 class Stress(SimpleVaspChunkParser):
     """Process the stress from an OUTCAR"""
-    LINE_DELIMITER = 'in kB '
+
+    LINE_DELIMITER = "in kB "
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = self.get_line(cursor, lines)
@@ -326,14 +330,14 @@ class Stress(SimpleVaspChunkParser):
         except ValueError:
             # Vasp FORTRAN string formatting issues, can happen with some bad geometry steps
             # Alternatively, we can re-raise as a ParseError?
-            warn('Found badly formatted stress line. Setting stress to None.', stacklevel=2)
+            warn("Found badly formatted stress line. Setting stress to None.", stacklevel=2)
         else:
             result = convert_vasp_outcar_stress(stress)
-        return {'stress': result}
+        return {"stress": result}
 
 
 class Cell(SimpleVaspChunkParser):
-    LINE_DELIMITER = 'direct lattice vectors'
+    LINE_DELIMITER = "direct lattice vectors"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         nskip = 1
@@ -342,17 +346,18 @@ class Cell(SimpleVaspChunkParser):
             line = self.get_line(cursor + i + nskip, lines)
             parts = line.split()
             cell[i, :] = list(map(float, parts[0:3]))
-        return {'cell': cell}
+        return {"cell": cell}
 
 
 class PositionsAndForces(SimpleVaspChunkParser):
     """Positions and forces are written in the same block.
     We parse both simultaneously"""
-    LINE_DELIMITER = 'POSITION          '
+
+    LINE_DELIMITER = "POSITION          "
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         nskip = 2
-        natoms = self.get_from_header('natoms')
+        natoms = self.get_from_header("natoms")
         positions = np.zeros((natoms, 3))
         forces = np.zeros((natoms, 3))
 
@@ -361,15 +366,15 @@ class PositionsAndForces(SimpleVaspChunkParser):
             parts = list(map(float, line.split()))
             positions[i] = parts[0:3]
             forces[i] = parts[3:6]
-        return {'positions': positions, 'forces': forces}
+        return {"positions": positions, "forces": forces}
 
 
 class Magmom(VaspChunkPropertyParser):
     def has_property(self, cursor: _CURSOR, lines: _CHUNK) -> bool:
-        """ We need to check for two separate delimiter strings,
-        to ensure we are at the right place """
+        """We need to check for two separate delimiter strings,
+        to ensure we are at the right place"""
         line = lines[cursor]
-        if 'number of electron' in line:
+        if "number of electron" in line:
             parts = line.split()
             if len(parts) > 5 and parts[0].strip() != "NELECT":
                 return True
@@ -378,11 +383,12 @@ class Magmom(VaspChunkPropertyParser):
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = self.get_line(cursor, lines)
         parts = line.split()
-        idx = parts.index('magnetization') + 1
+        idx = parts.index("magnetization") + 1
         magmom_lst = parts[idx:]
         if len(magmom_lst) != 1:
             warn(
-                'Non-collinear spin is not yet implemented. Setting magmom to x value.', stacklevel=2
+                "Non-collinear spin is not yet implemented. Setting magmom to x value.",
+                stacklevel=2,
             )
         magmom = float(magmom_lst[0])
         # Use these lines when non-collinear spin is supported!
@@ -391,7 +397,7 @@ class Magmom(VaspChunkPropertyParser):
         #     # Non-collinear spin
         #     # Make a (3,) dim array
         #     magmom = np.array(list(map(float, magmom)))
-        return {'magmom': magmom}
+        return {"magmom": magmom}
 
 
 class Magmoms(SimpleVaspChunkParser):
@@ -399,11 +405,12 @@ class Magmoms(SimpleVaspChunkParser):
     This is just the magmoms in the collinear case.
 
     non-collinear spin is (currently) not supported"""
-    LINE_DELIMITER = 'magnetization (x)'
+
+    LINE_DELIMITER = "magnetization (x)"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         # Magnetization for collinear
-        natoms = self.get_from_header('natoms')
+        natoms = self.get_from_header("natoms")
         nskip = 4  # Skip some lines
         magmoms = np.zeros(natoms)
         for i in range(natoms):
@@ -411,17 +418,17 @@ class Magmoms(SimpleVaspChunkParser):
             magmoms[i] = float(line.split()[-1])
         # Once we support non-collinear spin,
         # search for magnetization (y) and magnetization (z) as well.
-        return {'magmoms': magmoms}
+        return {"magmoms": magmoms}
 
 
 class EFermi(SimpleVaspChunkParser):
-    LINE_DELIMITER = 'E-fermi :'
+    LINE_DELIMITER = "E-fermi :"
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = self.get_line(cursor, lines)
         parts = line.split()
         efermi = float(parts[2])
-        return {'efermi': efermi}
+        return {"efermi": efermi}
 
 
 class Energy(SimpleVaspChunkParser):
@@ -438,7 +445,7 @@ class Energy(SimpleVaspChunkParser):
         parts = line.strip().split()
         energy_zero = float(parts[6])  # Extrapolated to 0 K
 
-        return {'free_energy': energy_free, 'energy': energy_zero}
+        return {"free_energy": energy_free, "energy": energy_zero}
 
 
 class Kpoints(VaspChunkPropertyParser):
@@ -447,7 +454,7 @@ class Kpoints(VaspChunkPropertyParser):
         # Example line:
         # " spin component 1" or " spin component 2"
         # We only check spin up, as if we are spin-polarized, we'll parse that as well
-        if 'spin component 1' in line:
+        if "spin component 1" in line:
             parts = line.strip().split()
             # This string is repeated elsewhere, but not with this exact shape
             if len(parts) == 3:
@@ -462,17 +469,17 @@ class Kpoints(VaspChunkPropertyParser):
         return False
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
-        nkpts = self.get_from_header('nkpts')
-        nbands = self.get_from_header('nbands')
-        weights = self.get_from_header('kpt_weights')
-        spinpol = self.get_from_header('spinpol')
+        nkpts = self.get_from_header("nkpts")
+        nbands = self.get_from_header("nbands")
+        weights = self.get_from_header("kpt_weights")
+        spinpol = self.get_from_header("spinpol")
         nspins = 2 if spinpol else 1
 
         kpts = []
         for spin in range(nspins):
             # for Vasp 6, they added some extra information after the spin components.
             # so we might need to seek the spin component line
-            cursor = search_lines(f'spin component {spin + 1}', cursor, lines)
+            cursor = search_lines(f"spin component {spin + 1}", cursor, lines)
 
             cursor += 2  # Skip two lines
             for _ in range(nkpts):
@@ -497,14 +504,10 @@ class Kpoints(VaspChunkPropertyParser):
                     occupations[n] = f_n
                     eigenvalues[n] = eps_n
                     cursor += 1
-                kpt = SinglePointKPoint(weight,
-                                        spin,
-                                        ikpt,
-                                        eps_n=eigenvalues,
-                                        f_n=occupations)
+                kpt = SinglePointKPoint(weight, spin, ikpt, eps_n=eigenvalues, f_n=occupations)
                 kpts.append(kpt)
 
-        return {'kpts': kpts}
+        return {"kpts": kpts}
 
 
 class DefaultParsersContainer:
@@ -514,6 +517,7 @@ class DefaultParsersContainer:
     Takes in an arbitrary number of parsers. The parsers should be uninitialized,
     as they are created on request.
     """
+
     def __init__(self, *parsers_cls):
         self._parsers_dct = {}
         for parser in parsers_cls:
@@ -540,6 +544,7 @@ class DefaultParsersContainer:
 class TypeParser(ABC):
     """Base class for parsing a type, e.g. header or chunk,
     by applying the internal attached parsers"""
+
     def __init__(self, parsers):
         self.parsers = parsers
 
@@ -591,14 +596,10 @@ class ChunkParser(TypeParser, ABC):
         for parser in self.parsers:
             parser.header = self.header
 
-    def _check_parsers(self,
-                       parsers: Sequence[VaspChunkPropertyParser]) -> None:
+    def _check_parsers(self, parsers: Sequence[VaspChunkPropertyParser]) -> None:
         """Check the parsers are of correct type 'VaspChunkPropertyParser'"""
-        if not all(
-                isinstance(parser, VaspChunkPropertyParser)
-                for parser in parsers):
-            raise TypeError(
-                'All parsers must be of type VaspChunkPropertyParser')
+        if not all(isinstance(parser, VaspChunkPropertyParser) for parser in parsers):
+            raise TypeError("All parsers must be of type VaspChunkPropertyParser")
 
     @abstractmethod
     def build(self, lines: _CHUNK) -> Atoms:
@@ -606,14 +607,10 @@ class ChunkParser(TypeParser, ABC):
 
 
 class HeaderParser(TypeParser, ABC):
-    def _check_parsers(self,
-                       parsers: Sequence[VaspHeaderPropertyParser]) -> None:
+    def _check_parsers(self, parsers: Sequence[VaspHeaderPropertyParser]) -> None:
         """Check the parsers are of correct type 'VaspHeaderPropertyParser'"""
-        if not all(
-                isinstance(parser, VaspHeaderPropertyParser)
-                for parser in parsers):
-            raise TypeError(
-                'All parsers must be of type VaspHeaderPropertyParser')
+        if not all(isinstance(parser, VaspHeaderPropertyParser) for parser in parsers):
+            raise TypeError("All parsers must be of type VaspHeaderPropertyParser")
 
     @abstractmethod
     def build(self, lines: _CHUNK) -> _HEADER:
@@ -622,9 +619,10 @@ class HeaderParser(TypeParser, ABC):
 
 class OutcarChunkParser(ChunkParser):
     """Class for parsing a chunk of an OUTCAR."""
-    def __init__(self,
-                 header: _HEADER = None,
-                 parsers: Optional[Sequence[VaspChunkPropertyParser]] = None):
+
+    def __init__(
+        self, header: _HEADER = None, parsers: Optional[Sequence[VaspChunkPropertyParser]] = None
+    ):
         global default_chunk_parsers
         parsers = parsers or default_chunk_parsers.make_parsers()
         super().__init__(parsers, header=header)
@@ -634,35 +632,37 @@ class OutcarChunkParser(ChunkParser):
         self.update_parser_headers()  # Ensure header is in sync
 
         results = self.parse(lines)
-        symbols = self.header['symbols']
-        constraint = self.header.get('constraint', None)
+        symbols = self.header["symbols"]
+        constraint = self.header.get("constraint", None)
 
         atoms_kwargs = dict(symbols=symbols, constraint=constraint, pbc=True)
 
         # Find some required properties in the parsed results.
         # Raise ParseError if they are not present
-        for prop in ('positions', 'cell'):
+        for prop in ("positions", "cell"):
             try:
                 atoms_kwargs[prop] = results.pop(prop)
             except KeyError:
-                raise ParseError(
-                    f'Did not find required property {prop} during parse.')
+                raise ParseError(f"Did not find required property {prop} during parse.")
         atoms = Atoms(**atoms_kwargs)
 
-        kpts = results.pop('kpts', None)
+        kpts = results.pop("kpts", None)
         calc = SinglePointDFTCalculator(atoms, **results)
         if kpts is not None:
             calc.kpts = kpts
-        calc.name = 'vasp'
+        calc.name = "vasp"
         atoms.calc = calc
         return atoms
 
 
 class OutcarHeaderParser(HeaderParser):
     """Class for parsing a chunk of an OUTCAR."""
-    def __init__(self,
-                 parsers: Optional[Sequence[VaspHeaderPropertyParser]] = None,
-                 workdir: Optional[Union[str, PurePath]] = None):
+
+    def __init__(
+        self,
+        parsers: Optional[Sequence[VaspHeaderPropertyParser]] = None,
+        workdir: Optional[Union[str, PurePath]] = None,
+    ):
         global default_header_parsers
         parsers = parsers or default_header_parsers.make_parsers()
         super().__init__(parsers)
@@ -679,23 +679,25 @@ class OutcarHeaderParser(HeaderParser):
         self._workdir = value
 
     def _build_symbols(self, results: _RESULT) -> Sequence[str]:
-        if 'symbols' in results:
+        if "symbols" in results:
             # Safeguard, in case a different parser already
             # did this. Not currently available in a default parser
-            return results.pop('symbols')
+            return results.pop("symbols")
 
         # Build the symbols of the atoms
-        for required_key in ('ion_types', 'species'):
+        for required_key in ("ion_types", "species"):
             if required_key not in results:
                 raise ParseError(
-                    f'Did not find required key "{required_key}" in parsed header results.')
+                    f'Did not find required key "{required_key}" in parsed header results.'
+                )
 
-        ion_types = results.pop('ion_types')
-        species = results.pop('species')
+        ion_types = results.pop("ion_types")
+        species = results.pop("species")
         if len(ion_types) != len(species):
             raise ParseError(
-                'Expected length of ion_types to be same as species, '
-                 f'but got ion_types={len(ion_types)} and species={len(species)}')
+                "Expected length of ion_types to be same as species, "
+                f"but got ion_types={len(ion_types)} and species={len(species)}"
+            )
 
         # Expand the symbols list
         symbols = []
@@ -725,10 +727,7 @@ class OutcarHeaderParser(HeaderParser):
         constraint = self._get_constraint()
 
         # Remaining results from the parse goes into the header
-        header = dict(symbols=symbols,
-                      natoms=natoms,
-                      constraint=constraint,
-                      **results)
+        header = dict(symbols=symbols, natoms=natoms, constraint=constraint, **results)
         return header
 
 
@@ -736,10 +735,8 @@ class OUTCARChunk(ImageChunk):
     """Container class for a chunk of the OUTCAR which consists of a
     self-contained SCF step, i.e. and image. Also contains the header_data
     """
-    def __init__(self,
-                 lines: _CHUNK,
-                 header: _HEADER,
-                 parser: ChunkParser = None):
+
+    def __init__(self, lines: _CHUNK, header: _HEADER, parser: ChunkParser = None):
         super().__init__()
         self.lines = lines
         self.header = header
@@ -755,12 +752,12 @@ def build_header(fd: TextIO) -> _CHUNK:
     lines = []
     for line in fd:
         lines.append(line)
-        if 'Iteration' in line:
+        if "Iteration" in line:
             # Start of SCF cycle
             return lines
 
     # We never found the SCF delimiter, so the OUTCAR must be incomplete
-    raise ParseError('Incomplete OUTCAR')
+    raise ParseError("Incomplete OUTCAR")
 
 
 def build_chunk(fd: TextIO) -> _CHUNK:
@@ -777,9 +774,9 @@ def build_chunk(fd: TextIO) -> _CHUNK:
     return lines
 
 
-def outcarchunks(fd: TextIO,
-                 chunk_parser: ChunkParser = None,
-                 header_parser: HeaderParser = None) -> Iterator[OUTCARChunk]:
+def outcarchunks(
+    fd: TextIO, chunk_parser: ChunkParser = None, header_parser: HeaderParser = None
+) -> Iterator[OUTCARChunk]:
     """Function to build chunks of OUTCAR from a file stream"""
     name = Path(fd.name)
     workdir = name.parent

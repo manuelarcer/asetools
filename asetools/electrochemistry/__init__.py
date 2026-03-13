@@ -7,7 +7,7 @@ from .appliedpotential import (
 )
 
 __all__ = [
-    'extract_corrected_energy_fermie',
-    'fit_data',
-    'get_energy_at_givenpotential',
+    "extract_corrected_energy_fermie",
+    "fit_data",
+    "get_energy_at_givenpotential",
 ]

@@ -10,16 +10,20 @@ from asetools.analysis import check_outcar_convergence
 def check_if_exists_in_db(db: Any, atoms: Atoms) -> Tuple[bool, Optional[int]]:
 
     forces = atoms.get_forces(apply_constraint=False)
-    indb = False ; index = None
+    indb = False
+    index = None
     if len(db) > 0:
         for row in db.select():
             db_forces = row.forces
-            if len(atoms) == row.natoms and ( db_forces == forces ).all():
+            if len(atoms) == row.natoms and (db_forces == forces).all():
                 indb = True
                 index = row.id
     return indb, index
 
-def add_config_to_db(db: Any, outcar: str, idname: Optional[str] = None, update: bool = False) -> Optional[int]:
+
+def add_config_to_db(
+    db: Any, outcar: str, idname: Optional[str] = None, update: bool = False
+) -> Optional[int]:
     # db: database file, existent or new
     # outcar: path/to/outcar/OUTCAR
     # idname: Assigned name to the config
@@ -28,21 +32,22 @@ def add_config_to_db(db: Any, outcar: str, idname: Optional[str] = None, update:
     converged = check_outcar_convergence(outcar)
     if converged:
         if idname is None:
-            idname = outcar.split('/')[-2]
-        atoms = read(outcar, format='vasp-out', index=-1)
+            idname = outcar.split("/")[-2]
+        atoms = read(outcar, format="vasp-out", index=-1)
         indb, index = check_if_exists_in_db(db, atoms)
         if not indb:
-            print('New configuration, added to the DB')
+            print("New configuration, added to the DB")
             return db.write(atoms, name=idname)
         elif indb and update:
-            print('Config ALREADY in DB, UPDATING...')
+            print("Config ALREADY in DB, UPDATING...")
             return db.update(index, atoms=atoms, name=idname)
         else:
-            return print('Config ALREADY in DB, skipped....')
+            return print("Config ALREADY in DB, skipped....")
+
 
 def db_to_pandas(db: Any, columns: Optional[List[str]] = None) -> pd.DataFrame:
     if columns is None:
-        columns = ['name', 'id', 'energy', 'free_energy', 'magmom']
+        columns = ["name", "id", "energy", "free_energy", "magmom"]
     # db: must be a loaded ASE-DB
     # columns; columns to extract from the DB to the DataFrame
 
@@ -50,7 +55,7 @@ def db_to_pandas(db: Any, columns: Optional[List[str]] = None) -> pd.DataFrame:
     for c in columns:
         dic[c] = []
 
-    for _i, row in enumerate(db.select(columns='all')):
+    for _i, row in enumerate(db.select(columns="all")):
         for c in columns:
             dic[c].append(row[c])
     df = pd.DataFrame.from_dict(dic)

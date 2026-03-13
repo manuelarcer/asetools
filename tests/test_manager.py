@@ -23,8 +23,8 @@ class TestLoadStructure:
     def test_load_from_outcar(self):
         """Test loading from OUTCAR when available (priority 1)."""
         # Copy test OUTCAR to temp directory
-        src_outcar = os.path.join(self.original_dir, 'tests/data/OUTCAR')
-        shutil.copy(src_outcar, 'OUTCAR')
+        src_outcar = os.path.join(self.original_dir, "tests/data/OUTCAR")
+        shutil.copy(src_outcar, "OUTCAR")
 
         # Load structure
         atoms = load_structure()
@@ -34,15 +34,15 @@ class TestLoadStructure:
         assert len(atoms) > 0
 
         # Verify by comparing to direct OUTCAR read
-        expected = read('OUTCAR', format='vasp-out', index=-1)
+        expected = read("OUTCAR", format="vasp-out", index=-1)
         assert len(atoms) == len(expected)
         assert atoms.get_chemical_formula() == expected.get_chemical_formula()
 
     def test_load_from_outcar_vasp6(self):
         """Test loading from VASP 6 OUTCAR."""
         # Copy test OUTCAR_vasp6 to temp directory
-        src_outcar = os.path.join(self.original_dir, 'tests/data/OUTCAR_vasp6')
-        shutil.copy(src_outcar, 'OUTCAR')
+        src_outcar = os.path.join(self.original_dir, "tests/data/OUTCAR_vasp6")
+        shutil.copy(src_outcar, "OUTCAR")
 
         # Load structure
         atoms = load_structure()
@@ -52,14 +52,14 @@ class TestLoadStructure:
         assert len(atoms) > 0
 
         # Verify by comparing to direct OUTCAR read
-        expected = read('OUTCAR', format='vasp-out', index=-1)
+        expected = read("OUTCAR", format="vasp-out", index=-1)
         assert len(atoms) == len(expected)
 
     def test_fallback_to_contcar(self):
         """Test fallback to CONTCAR when OUTCAR doesn't exist (priority 2)."""
         # Copy test CONTCAR to temp directory (no OUTCAR)
-        src_contcar = os.path.join(self.original_dir, 'tests/data/CONTCAR_CuNiOOH_001')
-        shutil.copy(src_contcar, 'CONTCAR')
+        src_contcar = os.path.join(self.original_dir, "tests/data/CONTCAR_CuNiOOH_001")
+        shutil.copy(src_contcar, "CONTCAR")
 
         # Load structure
         atoms = load_structure()
@@ -69,18 +69,18 @@ class TestLoadStructure:
         assert len(atoms) > 0
 
         # Verify by comparing to direct CONTCAR read
-        expected = read('CONTCAR', format='vasp')
+        expected = read("CONTCAR", format="vasp")
         assert len(atoms) == len(expected)
         assert atoms.get_chemical_formula() == expected.get_chemical_formula()
 
     def test_fallback_to_initial_pattern(self):
         """Test fallback to initial pattern when neither OUTCAR nor CONTCAR exist (priority 3)."""
         # Copy test POSCAR to temp directory
-        src_poscar = os.path.join(self.original_dir, 'tests/data/poscar')
-        shutil.copy(src_poscar, 'POSCAR')
+        src_poscar = os.path.join(self.original_dir, "tests/data/poscar")
+        shutil.copy(src_poscar, "POSCAR")
 
         # Load structure
-        atoms = load_structure('POSCAR')
+        atoms = load_structure("POSCAR")
 
         # Verify it loaded from POSCAR
         assert atoms is not None
@@ -89,11 +89,11 @@ class TestLoadStructure:
     def test_fallback_with_glob_pattern(self):
         """Test fallback with glob pattern for initial structure."""
         # Copy test file with .vasp extension
-        src_file = os.path.join(self.original_dir, 'tests/data/poscar')
-        shutil.copy(src_file, 'structure.vasp')
+        src_file = os.path.join(self.original_dir, "tests/data/poscar")
+        shutil.copy(src_file, "structure.vasp")
 
         # Load structure with pattern
-        atoms = load_structure('*.vasp')
+        atoms = load_structure("*.vasp")
 
         # Verify it loaded
         assert atoms is not None
@@ -102,17 +102,17 @@ class TestLoadStructure:
     def test_outcar_priority_over_contcar(self):
         """Test that OUTCAR takes priority when both OUTCAR and CONTCAR exist."""
         # Copy both OUTCAR and CONTCAR
-        src_outcar = os.path.join(self.original_dir, 'tests/data/OUTCAR')
-        src_contcar = os.path.join(self.original_dir, 'tests/data/CONTCAR_CuNiOOH_001')
-        shutil.copy(src_outcar, 'OUTCAR')
-        shutil.copy(src_contcar, 'CONTCAR')
+        src_outcar = os.path.join(self.original_dir, "tests/data/OUTCAR")
+        src_contcar = os.path.join(self.original_dir, "tests/data/CONTCAR_CuNiOOH_001")
+        shutil.copy(src_outcar, "OUTCAR")
+        shutil.copy(src_contcar, "CONTCAR")
 
         # Load structure
         atoms = load_structure()
 
         # Verify it loaded from OUTCAR (not CONTCAR)
-        expected_outcar = read('OUTCAR', format='vasp-out', index=-1)
-        expected_contcar = read('CONTCAR', format='vasp')
+        expected_outcar = read("OUTCAR", format="vasp-out", index=-1)
+        expected_contcar = read("CONTCAR", format="vasp")
 
         # Should match OUTCAR
         assert len(atoms) == len(expected_outcar)
@@ -121,12 +121,12 @@ class TestLoadStructure:
     def test_corrupted_outcar_fallback_to_contcar(self):
         """Test fallback to CONTCAR when OUTCAR is corrupted."""
         # Create a corrupted OUTCAR file
-        with open('OUTCAR', 'w') as f:
-            f.write('CORRUPTED DATA\n')
+        with open("OUTCAR", "w") as f:
+            f.write("CORRUPTED DATA\n")
 
         # Copy valid CONTCAR
-        src_contcar = os.path.join(self.original_dir, 'tests/data/CONTCAR_CuNiOOH_001')
-        shutil.copy(src_contcar, 'CONTCAR')
+        src_contcar = os.path.join(self.original_dir, "tests/data/CONTCAR_CuNiOOH_001")
+        shutil.copy(src_contcar, "CONTCAR")
 
         # Load structure - should fall back to CONTCAR
         atoms = load_structure()
@@ -134,20 +134,20 @@ class TestLoadStructure:
         # Verify it loaded from CONTCAR
         assert atoms is not None
         assert len(atoms) > 0
-        expected = read('CONTCAR', format='vasp')
+        expected = read("CONTCAR", format="vasp")
         assert len(atoms) == len(expected)
 
     def test_corrupted_outcar_and_contcar_fallback_to_poscar(self):
         """Test fallback chain when both OUTCAR and CONTCAR are corrupted."""
         # Create corrupted files
-        with open('OUTCAR', 'w') as f:
-            f.write('CORRUPTED DATA\n')
-        with open('CONTCAR', 'w') as f:
-            f.write('CORRUPTED DATA\n')
+        with open("OUTCAR", "w") as f:
+            f.write("CORRUPTED DATA\n")
+        with open("CONTCAR", "w") as f:
+            f.write("CORRUPTED DATA\n")
 
         # Copy valid POSCAR
-        src_poscar = os.path.join(self.original_dir, 'tests/data/poscar')
-        shutil.copy(src_poscar, 'POSCAR')
+        src_poscar = os.path.join(self.original_dir, "tests/data/poscar")
+        shutil.copy(src_poscar, "POSCAR")
 
         # Load structure - should fall back to POSCAR
         atoms = load_structure()
@@ -169,12 +169,12 @@ class TestLoadStructure:
     def test_pattern_not_matching_exits_with_error(self):
         """Test that function exits when pattern doesn't match any files."""
         # Create a file that doesn't match the pattern
-        src_file = os.path.join(self.original_dir, 'tests/data/poscar')
-        shutil.copy(src_file, 'structure.xyz')
+        src_file = os.path.join(self.original_dir, "tests/data/poscar")
+        shutil.copy(src_file, "structure.xyz")
 
         # Should exit with error when looking for POSCAR
         with pytest.raises(SystemExit) as exc_info:
-            load_structure('POSCAR')
+            load_structure("POSCAR")
 
         assert exc_info.value.code == 1
 
@@ -187,7 +187,7 @@ def test_load_structure_from_data_directory():
     original_dir = os.getcwd()
 
     # Change to data directory
-    data_dir = 'tests/data/summary_test/0_1.2'
+    data_dir = "tests/data/summary_test/0_1.2"
     if os.path.exists(data_dir):
         os.chdir(data_dir)
 

@@ -33,8 +33,8 @@ import scipy.optimize as opt
 
 # Constants
 EV_TO_KJ_MOL = 96.485  # eV to kJ/mol conversion
-P_STANDARD = 100000    # Standard pressure in Pa
-R_GAS = 0.008314463    # Gas constant in kJ/(mol·K)
+P_STANDARD = 100000  # Standard pressure in Pa
+R_GAS = 0.008314463  # Gas constant in kJ/(mol·K)
 
 logger = logging.getLogger(__name__)
 
@@ -49,22 +49,26 @@ class AdsorbateSpecies:
 
     # Default entropy parameters from notebooks
     DEFAULT_ENTROPY_PARAMS = {
-        'CO': {'a': 88.4037336109, 'b': 0.141268928},
-        'O': {'a': 87.9953566884, 'b': 0.1480182342},
-        'H': {'a': 87.9953566884, 'b': 0.1480182342},  # Placeholder, user should provide
-        'N': {'a': 87.9953566884, 'b': 0.1480182342},  # Placeholder, user should provide
+        "CO": {"a": 88.4037336109, "b": 0.141268928},
+        "O": {"a": 87.9953566884, "b": 0.1480182342},
+        "H": {"a": 87.9953566884, "b": 0.1480182342},  # Placeholder, user should provide
+        "N": {"a": 87.9953566884, "b": 0.1480182342},  # Placeholder, user should provide
     }
 
     # Default dissociation behavior (True for H2, O2, N2)
     DEFAULT_DISSOCIATION = {
-        'CO': False,   # Molecular adsorption
-        'O': True,     # From O2 dissociation
-        'H': True,     # From H2 dissociation
-        'N': True,     # From N2 dissociation
+        "CO": False,  # Molecular adsorption
+        "O": True,  # From O2 dissociation
+        "H": True,  # From H2 dissociation
+        "N": True,  # From N2 dissociation
     }
 
-    def __init__(self, name: str, entropy_params: Optional[Dict[str, float]] = None,
-                 dissociative: Optional[bool] = None):
+    def __init__(
+        self,
+        name: str,
+        entropy_params: Optional[Dict[str, float]] = None,
+        dissociative: Optional[bool] = None,
+    ):
         """
         Initialize adsorbate species.
 
@@ -76,8 +80,9 @@ class AdsorbateSpecies:
         self.name = name
 
         if entropy_params is None:
-            self.entropy_params = self.DEFAULT_ENTROPY_PARAMS.get(name,
-                {'a': 88.0, 'b': 0.14})  # Generic default
+            self.entropy_params = self.DEFAULT_ENTROPY_PARAMS.get(
+                name, {"a": 88.0, "b": 0.14}
+            )  # Generic default
         else:
             self.entropy_params = entropy_params
 
@@ -97,8 +102,8 @@ class AdsorbateSpecies:
         Returns:
             Entropy in kJ/(mol·K)
         """
-        a = self.entropy_params['a']
-        b = self.entropy_params['b']
+        a = self.entropy_params["a"]
+        b = self.entropy_params["b"]
 
         S = a * temperature**b / 1000 - R_GAS * np.log(pressure / P_STANDARD)
         return S
@@ -119,12 +124,12 @@ class SurfaceProperties:
         if surface_data_file is None:
             # Use default database file
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            surface_data_file = os.path.join(current_dir, '..', 'data', 'surface_properties.json')
+            surface_data_file = os.path.join(current_dir, "..", "data", "surface_properties.json")
 
-        with open(surface_data_file, 'r') as f:
+        with open(surface_data_file, "r") as f:
             data = json.load(f)
-        self.surface_energies = data['surface_energies']
-        self.surface_areas = data['surface_areas']
+        self.surface_energies = data["surface_energies"]
+        self.surface_areas = data["surface_areas"]
 
     def get_surface_energy(self, metal: str, facet: str) -> float:
         """Get surface energy in eV/Å²."""
@@ -168,15 +173,16 @@ class InterpolationModel:
 
     def _validate_data(self):
         """Validate CSV data format."""
-        required_columns = ['Catalyst', 'facet', 'Ads', 'cov', 'Eads']
+        required_columns = ["Catalyst", "facet", "Ads", "cov", "Eads"]
         if not all(col in self.data.columns for col in required_columns):
             raise ValueError(f"CSV must contain columns: {required_columns}")
 
         # Convert facet to string to handle both string and numeric facet names
-        self.data['facet'] = self.data['facet'].astype(str)
+        self.data["facet"] = self.data["facet"].astype(str)
 
-    def get_adsorption_energy(self, catalyst: str, facet: str, adsorbate: str,
-                            coverage: float) -> float:
+    def get_adsorption_energy(
+        self, catalyst: str, facet: str, adsorbate: str, coverage: float
+    ) -> float:
         """
         Get adsorption energy for given conditions using interpolation.
 
@@ -190,17 +196,19 @@ class InterpolationModel:
             Adsorption energy in eV
         """
         # Filter data for specific conditions
-        mask = ((self.data['Catalyst'] == catalyst) &
-                (self.data['facet'] == facet) &
-                (self.data['Ads'] == adsorbate))
+        mask = (
+            (self.data["Catalyst"] == catalyst)
+            & (self.data["facet"] == facet)
+            & (self.data["Ads"] == adsorbate)
+        )
         subset = self.data[mask]
 
         if len(subset) == 0:
             raise ValueError(f"No data found for {catalyst}/{facet}/{adsorbate}")
 
         # Interpolate
-        coverages = subset['cov'].values
-        energies = subset['Eads'].values
+        coverages = subset["cov"].values
+        energies = subset["Eads"].values
 
         # Sort by coverage
         sort_idx = np.argsort(coverages)
@@ -235,8 +243,9 @@ class LatticeGasModel:
         """
         self.params = interaction_params
 
-    def get_adsorption_energy(self, catalyst: str, facet: str, adsorbate: str,
-                            coverages: Dict[str, float]) -> float:
+    def get_adsorption_energy(
+        self, catalyst: str, facet: str, adsorbate: str, coverages: Dict[str, float]
+    ) -> float:
         """
         Calculate coverage-dependent adsorption energy using lattice gas model.
 
@@ -250,15 +259,15 @@ class LatticeGasModel:
             Adsorption energy in eV
         """
         facet_params = self.params[catalyst][facet]
-        z = facet_params['coordination']  # Coordination number
-        E_zero = facet_params['zero_coverage_energies'][adsorbate]
+        z = facet_params["coordination"]  # Coordination number
+        E_zero = facet_params["zero_coverage_energies"][adsorbate]
 
         # Calculate interaction energy
         interaction_energy = 0.0
 
         # Self-interaction
-        if adsorbate in facet_params['self_interactions']:
-            w_self = facet_params['self_interactions'][adsorbate]
+        if adsorbate in facet_params["self_interactions"]:
+            w_self = facet_params["self_interactions"][adsorbate]
             interaction_energy += w_self * coverages[adsorbate]
 
         # Cross-interactions with other species
@@ -266,15 +275,15 @@ class LatticeGasModel:
             if other_species != adsorbate:
                 key1 = (adsorbate, other_species)
                 key2 = (other_species, adsorbate)
-                if key1 in facet_params['cross_interactions']:
-                    w_cross = facet_params['cross_interactions'][key1]
+                if key1 in facet_params["cross_interactions"]:
+                    w_cross = facet_params["cross_interactions"][key1]
                     interaction_energy += w_cross * coverage
-                elif key2 in facet_params['cross_interactions']:
-                    w_cross = facet_params['cross_interactions'][key2]
+                elif key2 in facet_params["cross_interactions"]:
+                    w_cross = facet_params["cross_interactions"][key2]
                     interaction_energy += w_cross * coverage
 
         # For dissociative adsorption (O), multiply by 2 as in notebook
-        if adsorbate in ['O', 'H', 'N']:  # Dissociative species
+        if adsorbate in ["O", "H", "N"]:  # Dissociative species
             return 2 * E_zero - 2 * z * interaction_energy
         else:  # Molecular adsorption
             return E_zero - z * interaction_energy
@@ -285,8 +294,12 @@ class ThermodynamicsCalculator:
     Main calculator for ab initio thermodynamic calculations.
     """
 
-    def __init__(self, metal: str, adsorbates: List[str],
-                 surface_properties: Optional[SurfaceProperties] = None):
+    def __init__(
+        self,
+        metal: str,
+        adsorbates: List[str],
+        surface_properties: Optional[SurfaceProperties] = None,
+    ):
         """
         Initialize thermodynamics calculator.
 
@@ -313,14 +326,16 @@ class ThermodynamicsCalculator:
             data_source: Either path to CSV file or pandas DataFrame with adsorption energy data
         """
         self.model = InterpolationModel(data_source)
-        self.model_type = 'interpolation'
+        self.model_type = "interpolation"
 
     def load_lattice_gas_model(self, interaction_params: Dict):
         """Load lattice gas model with interaction parameters."""
         self.model = LatticeGasModel(interaction_params)
-        self.model_type = 'lattice_gas'
+        self.model_type = "lattice_gas"
 
-    def _ads_energy(self, adsorbate: str, facet: str, coverages: Union[Dict[str, float], float]) -> float:
+    def _ads_energy(
+        self, adsorbate: str, facet: str, coverages: Union[Dict[str, float], float]
+    ) -> float:
         """
         Calculate adsorption energy for given conditions.
 
@@ -333,9 +348,11 @@ class ThermodynamicsCalculator:
             Adsorption energy in kJ/mol
         """
         if self.model is None:
-            raise ValueError("No adsorption model loaded. Use load_interpolation_model() or load_lattice_gas_model()")
+            raise ValueError(
+                "No adsorption model loaded. Use load_interpolation_model() or load_lattice_gas_model()"
+            )
 
-        if self.model_type == 'interpolation':
+        if self.model_type == "interpolation":
             # For single adsorbate interpolation
             if isinstance(coverages, dict):
                 coverage = coverages.get(adsorbate, 0.0)
@@ -343,7 +360,7 @@ class ThermodynamicsCalculator:
                 coverage = coverages
             eads_ev = self.model.get_adsorption_energy(self.metal, facet, adsorbate, coverage)
 
-        elif self.model_type == 'lattice_gas':
+        elif self.model_type == "lattice_gas":
             # For multi-adsorbate lattice gas
             if not isinstance(coverages, dict):
                 raise ValueError("Lattice gas model requires coverage dict")
@@ -351,8 +368,9 @@ class ThermodynamicsCalculator:
 
         return eads_ev * EV_TO_KJ_MOL
 
-    def _system_equilibrium_single(self, coverage: float, adsorbate: str, facet: str,
-                                 temperature: float, pressure: float) -> float:
+    def _system_equilibrium_single(
+        self, coverage: float, adsorbate: str, facet: str, temperature: float, pressure: float
+    ) -> float:
         """
         Equilibrium equation for single adsorbate system.
 
@@ -371,16 +389,29 @@ class ThermodynamicsCalculator:
         if species.dissociative:
             # Dissociative: A2(g) + 2* ⇌ 2A*
             left = coverage**2
-            right = (pressure / P_STANDARD) * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature)) * (1 - coverage)**2
+            right = (
+                (pressure / P_STANDARD)
+                * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature))
+                * (1 - coverage) ** 2
+            )
         else:
             # Molecular: A(g) + * ⇌ A*
             left = coverage
-            right = (pressure / P_STANDARD) * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature)) * (1 - coverage)
+            right = (
+                (pressure / P_STANDARD)
+                * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature))
+                * (1 - coverage)
+            )
 
         return abs(left - right)
 
-    def _system_equilibrium_multi(self, coverages_list: List[float], facet: str,
-                                temperature: float, pressures: Dict[str, float]) -> float:
+    def _system_equilibrium_multi(
+        self,
+        coverages_list: List[float],
+        facet: str,
+        temperature: float,
+        pressures: Dict[str, float],
+    ) -> float:
         """
         Equilibrium equation for multi-adsorbate competitive adsorption.
 
@@ -415,10 +446,18 @@ class ThermodynamicsCalculator:
             # Equilibrium equations
             if species.dissociative:
                 left = coverage**2
-                right = (pressure / P_STANDARD) * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature)) * available_sites**2
+                right = (
+                    (pressure / P_STANDARD)
+                    * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature))
+                    * available_sites**2
+                )
             else:
                 left = coverage
-                right = (pressure / P_STANDARD) * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature)) * available_sites
+                right = (
+                    (pressure / P_STANDARD)
+                    * np.exp(-(eads - temperature * (-entropy)) / (R_GAS * temperature))
+                    * available_sites
+                )
 
             total_objective += abs(left - right)
 
@@ -428,9 +467,13 @@ class ThermodynamicsCalculator:
         """Constraint: total coverage ≤ 1."""
         return 1.0 - sum(coverages_list)
 
-    def calculate_equilibrium_coverage(self, facet: str, temperature: float,
-                                     pressures: Union[float, Dict[str, float]],
-                                     max_iterations: int = 100) -> Dict[str, float]:
+    def calculate_equilibrium_coverage(
+        self,
+        facet: str,
+        temperature: float,
+        pressures: Union[float, Dict[str, float]],
+        max_iterations: int = 100,
+    ) -> Dict[str, float]:
         """
         Calculate equilibrium coverage for given conditions.
 
@@ -450,7 +493,7 @@ class ThermodynamicsCalculator:
 
             # Solve equilibrium
             best_solution = None
-            best_obj = float('inf')
+            best_obj = float("inf")
 
             for _ in range(max_iterations):
                 initial_guess = random.random()
@@ -460,9 +503,9 @@ class ThermodynamicsCalculator:
                         self._system_equilibrium_single,
                         initial_guess,
                         args=(adsorbate, facet, temperature, pressure),
-                        method='SLSQP',
+                        method="SLSQP",
                         bounds=[(0, 1)],
-                        options={'eps': 1e-12, 'ftol': 1e-15, 'maxiter': 5000}
+                        options={"eps": 1e-12, "ftol": 1e-15, "maxiter": 5000},
                     )
 
                     if solution.fun < best_obj and solution.success:
@@ -484,7 +527,9 @@ class ThermodynamicsCalculator:
             if best_solution is not None and best_obj <= 1e-4:
                 return {adsorbate: round(best_solution.x[0], 4)}
             else:
-                logger.warning(f"Convergence not achieved for T={temperature}, facet={facet}. Setting coverage to 1.")
+                logger.warning(
+                    f"Convergence not achieved for T={temperature}, facet={facet}. Setting coverage to 1."
+                )
                 return {adsorbate: 1.0}
 
         else:
@@ -492,10 +537,10 @@ class ThermodynamicsCalculator:
             if not isinstance(pressures, dict):
                 raise ValueError("Multi-adsorbate system requires pressure dict")
 
-            constraint = {'type': 'ineq', 'fun': self._constraint_total_coverage}
+            constraint = {"type": "ineq", "fun": self._constraint_total_coverage}
 
             best_solution = None
-            best_obj = float('inf')
+            best_obj = float("inf")
 
             for _ in range(max_iterations):
                 # Random initial guess
@@ -503,17 +548,17 @@ class ThermodynamicsCalculator:
                 # Normalize to satisfy constraint
                 total = sum(initial_coverages)
                 if total > 1:
-                    initial_coverages = [c/total * 0.9 for c in initial_coverages]
+                    initial_coverages = [c / total * 0.9 for c in initial_coverages]
 
                 try:
                     solution = opt.minimize(
                         self._system_equilibrium_multi,
                         initial_coverages,
                         args=(facet, temperature, pressures),
-                        method='SLSQP',
+                        method="SLSQP",
                         bounds=[(0, 1) for _ in self.adsorbates],
                         constraints=constraint,
-                        options={'eps': 1e-8, 'ftol': 1e-12, 'maxiter': 5000}
+                        options={"eps": 1e-8, "ftol": 1e-12, "maxiter": 5000},
                     )
 
                     if solution.fun < best_obj and solution.success:
@@ -522,22 +567,31 @@ class ThermodynamicsCalculator:
 
                     # Good convergence
                     if solution.fun <= 1e-4 and not math.isnan(solution.fun):
-                        return {adsorbate: round(cov, 4) for adsorbate, cov in
-                               zip(self.adsorbates, solution.x)}
+                        return {
+                            adsorbate: round(cov, 4)
+                            for adsorbate, cov in zip(self.adsorbates, solution.x)
+                        }
 
                 except:
                     continue
 
             # Use best solution
             if best_solution is not None:
-                return {adsorbate: round(cov, 4) for adsorbate, cov in
-                       zip(self.adsorbates, best_solution.x)}
+                return {
+                    adsorbate: round(cov, 4)
+                    for adsorbate, cov in zip(self.adsorbates, best_solution.x)
+                }
             else:
                 logger.warning(f"Convergence failed for T={temperature}, facet={facet}")
                 return {adsorbate: 0.0 for adsorbate in self.adsorbates}
 
-    def calculate_surface_energy(self, facet: str, coverages: Dict[str, float],
-                               temperature: float, pressures: Union[float, Dict[str, float]]) -> float:
+    def calculate_surface_energy(
+        self,
+        facet: str,
+        coverages: Dict[str, float],
+        temperature: float,
+        pressures: Union[float, Dict[str, float]],
+    ) -> float:
         """
         Calculate surface energy including adsorbate contributions.
 
@@ -581,9 +635,12 @@ class ThermodynamicsCalculator:
 
         return gamma_clean + adsorbate_contribution
 
-    def calculate_equilibrium(self, temperature_range: Tuple[float, float, float],
-                            pressures: Union[float, Dict[str, float]],
-                            facets: Optional[List[str]] = None) -> pd.DataFrame:
+    def calculate_equilibrium(
+        self,
+        temperature_range: Tuple[float, float, float],
+        pressures: Union[float, Dict[str, float]],
+        facets: Optional[List[str]] = None,
+    ) -> pd.DataFrame:
         """
         Calculate equilibrium coverage and surface energies over temperature range.
 
@@ -601,19 +658,19 @@ class ThermodynamicsCalculator:
         temperatures = np.arange(*temperature_range)
 
         # Initialize data dictionary
-        data = {'Temp': []}
+        data = {"Temp": []}
 
         for facet in facets:
             for adsorbate in self.adsorbates:
-                data[f'Cov_{adsorbate}_{facet}'] = []
-                data[f'Eads_{adsorbate}_{facet}'] = []
-            data[f'Gamma_{facet}'] = []
+                data[f"Cov_{adsorbate}_{facet}"] = []
+                data[f"Eads_{adsorbate}_{facet}"] = []
+            data[f"Gamma_{facet}"] = []
 
         # Calculate for each temperature
         for T in temperatures:
             # Add temperature only once
-            if len(data['Temp']) == 0 or data['Temp'][-1] != T:
-                data['Temp'].append(T)
+            if len(data["Temp"]) == 0 or data["Temp"][-1] != T:
+                data["Temp"].append(T)
 
             for facet in facets:
                 # Calculate equilibrium coverage
@@ -622,16 +679,16 @@ class ThermodynamicsCalculator:
                 # Store coverage and adsorption energies
                 for adsorbate in self.adsorbates:
                     coverage = coverages.get(adsorbate, 0.0)
-                    data[f'Cov_{adsorbate}_{facet}'].append(coverage)
+                    data[f"Cov_{adsorbate}_{facet}"].append(coverage)
 
                     if coverage > 0:
                         eads = self._ads_energy(adsorbate, facet, coverages) / EV_TO_KJ_MOL
                     else:
                         eads = 0.0
-                    data[f'Eads_{adsorbate}_{facet}'].append(eads)
+                    data[f"Eads_{adsorbate}_{facet}"].append(eads)
 
                 # Calculate surface energy
                 gamma = self.calculate_surface_energy(facet, coverages, T, pressures)
-                data[f'Gamma_{facet}'].append(gamma)
+                data[f"Gamma_{facet}"].append(gamma)
 
         return pd.DataFrame(data)

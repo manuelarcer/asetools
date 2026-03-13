@@ -4,17 +4,19 @@ import argparse
 import re
 
 # List of PARAM to check from OUTCAR
-list_param = {'StartParam': ['PREC', 'ISTART', 'ICHARG', 'ISPIN'],
-              'Electronic': ['ENCUT', 'NELM', 'EDIFF', 'LREAL', 'LMAXMIX', 'VOSKOWN'],
-              'IonicRelax': ['EDIFFG', 'NSW', 'IBRION', 'NFREE', 'ISIF', 'ISYM', 'LCORR', 'POTIM'],
-              'System': ['POMASS', 'ZVAL', 'RWIGS', 'VCA', 'NELECT', 'NUPDOWN'],
-              'DOS': ['EMIN', 'EMAX', 'EFERMI', 'ISMEAR', 'IALGO', 'SIGMA'],
-              'ElectronicRelax': ['IALGO'],
-              'Write': ['LWAVE', 'LCHARG', 'LVTOT', 'LVHAR', 'LELF', 'LORBIT'],
-              'DipoleCorr': ['LMONO', 'LDIPOL', 'IDIPOL', 'EPSILON'],
-              'ExCorr':  ['GGA', 'VOSKOWN', 'LHFCALC', 'LHFONE', 'AEXX'],
-              'LinearResp': ['LEPSILON']
-            }
+list_param = {
+    "StartParam": ["PREC", "ISTART", "ICHARG", "ISPIN"],
+    "Electronic": ["ENCUT", "NELM", "EDIFF", "LREAL", "LMAXMIX", "VOSKOWN"],
+    "IonicRelax": ["EDIFFG", "NSW", "IBRION", "NFREE", "ISIF", "ISYM", "LCORR", "POTIM"],
+    "System": ["POMASS", "ZVAL", "RWIGS", "VCA", "NELECT", "NUPDOWN"],
+    "DOS": ["EMIN", "EMAX", "EFERMI", "ISMEAR", "IALGO", "SIGMA"],
+    "ElectronicRelax": ["IALGO"],
+    "Write": ["LWAVE", "LCHARG", "LVTOT", "LVHAR", "LELF", "LORBIT"],
+    "DipoleCorr": ["LMONO", "LDIPOL", "IDIPOL", "EPSILON"],
+    "ExCorr": ["GGA", "VOSKOWN", "LHFCALC", "LHFONE", "AEXX"],
+    "LinearResp": ["LEPSILON"],
+}
+
 
 def extract_parameters(outcar_text, param_dict):
     found_params = {key: {} for key in param_dict}
@@ -30,16 +32,17 @@ def extract_parameters(outcar_text, param_dict):
 
     return found_params
 
+
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Extract parameters from an OUTCAR file.")
-    parser.add_argument('outcar_file', type=str, help='Path to the OUTCAR file to analyze')
+    parser.add_argument("outcar_file", type=str, help="Path to the OUTCAR file to analyze")
 
     # Parse arguments
     args = parser.parse_args()
 
     # Read the OUTCAR file
-    with open(args.outcar_file, 'r') as file:
+    with open(args.outcar_file, "r") as file:
         outcar_text = file.read()
 
     # Extract parameters
@@ -52,5 +55,6 @@ def main():
             print(f"  {param} = {value}")
         print()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

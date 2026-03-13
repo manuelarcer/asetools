@@ -19,67 +19,70 @@ def extract_neb_data(folder_path: str, final: int) -> pd.DataFrame:
     ## final: the final image number, e.g. 5 for 00 to 05
     ## Returns a pandas DataFrame with the energy of each image
 
-    frange = range(0, final+1)
-    res = {'i':[], 'E':[]}
+    frange = range(0, final + 1)
+    res = {"i": [], "E": []}
 
     for f in frange:
-        res['i'].append(f)
-        fname = os.path.join(folder_path, f'{f:02d}' + '/OUTCAR')
-        atoms = read(fname, format='vasp-out', index='-1')
+        res["i"].append(f)
+        fname = os.path.join(folder_path, f"{f:02d}" + "/OUTCAR")
+        atoms = read(fname, format="vasp-out", index="-1")
         e = atoms.get_potential_energy()
-        res['E'].append(e)
+        res["E"].append(e)
 
-    nebdf = pd.DataFrame.from_dict(res, orient='columns')
+    nebdf = pd.DataFrame.from_dict(res, orient="columns")
     return nebdf
 
-def plot_nebs(list_dfs: Optional[List[pd.DataFrame]] = None, font: str = 'large') -> None:
+
+def plot_nebs(list_dfs: Optional[List[pd.DataFrame]] = None, font: str = "large") -> None:
     if list_dfs is None:
         list_dfs = []
     # list_dfs: list of pandas DataFrames with the NEB data
     # font: font size for the labels and ticks
 
-    if font == 'large':
+    if font == "large":
         f_label = 18
         f_tick = 16
-    elif font == 'medium':
+    elif font == "medium":
         f_label = 16
         f_tick = 14
-    elif font == 'small':
+    elif font == "small":
         f_label = 14
         f_tick = 12
 
     # Determine the NEB_df with the most images
     max_images = 0
-    r_min_y = 9999 ; r_max_y = -9999
+    r_min_y = 9999
+    r_max_y = -9999
     for df in list_dfs:
         if len(df) > max_images:
             max_images = len(df)
 
-        rel_e = df['E'] - df['E'].iloc[0]       # Relative energy wrt the first image
+        rel_e = df["E"] - df["E"].iloc[0]  # Relative energy wrt the first image
         min_y = min(rel_e)
         max_y = max(rel_e)
-        r_min_y = min(r_min_y, min_y)           # Find the min and max relative energies
+        r_min_y = min(r_min_y, min_y)  # Find the min and max relative energies
         r_max_y = max(r_max_y, max_y)
 
     _fig, ax = plt.subplots(figsize=(6, 5))
 
-    ax.axhline(y=0, color='gray', linestyle='-.', linewidth=0.5)
+    ax.axhline(y=0, color="gray", linestyle="-.", linewidth=0.5)
     for df in list_dfs:
-        npoints = len(df['i'])
-        min(df['E'])
-        ax.plot(range(npoints), df['E'] - df['E'].iloc[0], '-o', linewidth=1.5, markersize=6)
-    #xlim(0, max_images)
-    ax.set_xlim(-0.5, max_images-0.5)
+        npoints = len(df["i"])
+        min(df["E"])
+        ax.plot(range(npoints), df["E"] - df["E"].iloc[0], "-o", linewidth=1.5, markersize=6)
+    # xlim(0, max_images)
+    ax.set_xlim(-0.5, max_images - 0.5)
     ax.set_ylim(r_min_y - 0.1, r_max_y + 0.1)
 
     # Draw gray horizontal lines at Zero
 
-    plt.ylabel('E$_i$ - E$_0$ (eV)', fontsize=f_label)
-    plt.xlabel('Image', fontsize=f_label)
-    plt.tick_params(axis='both', which='major', labelsize=f_tick)
+    plt.ylabel("E$_i$ - E$_0$ (eV)", fontsize=f_label)
+    plt.xlabel("Image", fontsize=f_label)
+    plt.tick_params(axis="both", which="major", labelsize=f_tick)
 
     plt.tight_layout()
     plt.show()
+
 
 def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[Atoms]:
     """
@@ -106,7 +109,7 @@ def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[At
     distances = [0.0]
     for i in range(1, n_images):
         # Calculate distance between consecutive images
-        pos1 = images[i-1].get_positions()
+        pos1 = images[i - 1].get_positions()
         pos2 = images[i].get_positions()
 
         if mic:
@@ -161,7 +164,10 @@ def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[At
     redistributed_images.append(images[-1].copy())  # Keep final image
     return redistributed_images
 
-def interpolate_neb_images(initial_atoms: Atoms, final_atoms: Atoms, n_images: int, method: str = 'idpp', mic: bool = True) -> List[Atoms]:
+
+def interpolate_neb_images(
+    initial_atoms: Atoms, final_atoms: Atoms, n_images: int, method: str = "idpp", mic: bool = True
+) -> List[Atoms]:
     """
     Generate intermediate images between initial and final structures.
 
@@ -197,7 +203,7 @@ def interpolate_neb_images(initial_atoms: Atoms, final_atoms: Atoms, n_images: i
     images = [initial_atoms.copy() for _ in range(n_images)]
     images[-1] = final_atoms.copy()
 
-    if method == 'idpp':
+    if method == "idpp":
         try:
             # Use IDPP interpolation with robust parameters
             idpp_interpolate(images, mic=mic, fmax=0.05, steps=200)
@@ -205,9 +211,9 @@ def interpolate_neb_images(initial_atoms: Atoms, final_atoms: Atoms, n_images: i
         except Exception as e:
             print(f"IDPP interpolation failed: {e}")
             print("Falling back to linear interpolation")
-            method = 'linear'
+            method = "linear"
 
-    if method == 'linear':
+    if method == "linear":
         # Linear interpolation as fallback
         pos_initial = initial_atoms.get_positions()
         pos_final = final_atoms.get_positions()
@@ -228,7 +234,10 @@ def interpolate_neb_images(initial_atoms: Atoms, final_atoms: Atoms, n_images: i
 
     return images
 
-def check_atomic_distances(atoms: Atoms, shrink_factor: float = 0.8, mic: bool = True) -> List[Tuple[int, int, float, float]]:
+
+def check_atomic_distances(
+    atoms: Atoms, shrink_factor: float = 0.8, mic: bool = True
+) -> List[Tuple[int, int, float, float]]:
     """
     Check for atoms that are too close to each other based on covalent radii.
 
@@ -279,7 +288,10 @@ def check_atomic_distances(atoms: Atoms, shrink_factor: float = 0.8, mic: bool =
 
     return close_pairs
 
-def check_neb_images_sanity(output_dir: str, shrink_factor: float = 0.8, mic: bool = True) -> Dict[str, List[Tuple[int, int, float, float]]]:
+
+def check_neb_images_sanity(
+    output_dir: str, shrink_factor: float = 0.8, mic: bool = True
+) -> Dict[str, List[Tuple[int, int, float, float]]]:
     """
     Check all NEB images for atoms that are too close to each other.
 
@@ -301,8 +313,9 @@ def check_neb_images_sanity(output_dir: str, shrink_factor: float = 0.8, mic: bo
     problems = {}
 
     # Find all image directories (00, 01, 02, etc.)
-    image_dirs = sorted([d for d in output_path.iterdir()
-                        if d.is_dir() and d.name.isdigit() and len(d.name) == 2])
+    image_dirs = sorted(
+        [d for d in output_path.iterdir() if d.is_dir() and d.name.isdigit() and len(d.name) == 2]
+    )
 
     for image_dir in image_dirs:
         poscar_file = image_dir / "POSCAR"
@@ -319,10 +332,17 @@ def check_neb_images_sanity(output_dir: str, shrink_factor: float = 0.8, mic: bo
 
     return problems
 
-def setup_neb_calculation(initial_file: str = 'IS/CONTCAR', final_file: str = 'FS/CONTCAR',
-                         output_dir: str = '.', n_images: int = 5, use_even_spacing: bool = True,
-                         mic: bool = True, check_distances: bool = True,
-                         shrink_factor: float = 0.8) -> bool:
+
+def setup_neb_calculation(
+    initial_file: str = "IS/CONTCAR",
+    final_file: str = "FS/CONTCAR",
+    output_dir: str = ".",
+    n_images: int = 5,
+    use_even_spacing: bool = True,
+    mic: bool = True,
+    check_distances: bool = True,
+    shrink_factor: float = 0.8,
+) -> bool:
     """
     Set up a complete NEB calculation folder structure.
 
@@ -386,7 +406,9 @@ def setup_neb_calculation(initial_file: str = 'IS/CONTCAR', final_file: str = 'F
 
     # Generate interpolated images
     try:
-        images = interpolate_neb_images(initial_atoms, final_atoms, total_images, method='idpp', mic=mic)
+        images = interpolate_neb_images(
+            initial_atoms, final_atoms, total_images, method="idpp", mic=mic
+        )
     except Exception as e:
         print(f"Error during interpolation: {e}")
         return False
@@ -406,7 +428,7 @@ def setup_neb_calculation(initial_file: str = 'IS/CONTCAR', final_file: str = 'F
         try:
             image_dir.mkdir(exist_ok=True)
             poscar_path = image_dir / "POSCAR"
-            write(str(poscar_path), atoms, format='vasp')
+            write(str(poscar_path), atoms, format="vasp")
             print(f"Created {poscar_path}")
         except Exception as e:
             print(f"Error creating image {i:02d}: {e}")
@@ -422,15 +444,21 @@ def setup_neb_calculation(initial_file: str = 'IS/CONTCAR', final_file: str = 'F
             for image, close_pairs in problems.items():
                 print(f"\nImage {image}:")
                 for i, j, distance, threshold in close_pairs:
-                    print(f"  Atoms {i}-{j}: distance={distance:.3f} Å < threshold={threshold:.3f} Å")
+                    print(
+                        f"  Atoms {i}-{j}: distance={distance:.3f} Å < threshold={threshold:.3f} Å"
+                    )
 
-            print(f"\nNote: Threshold = {shrink_factor} × (r_i + r_j) where r_i, r_j are covalent radii")
+            print(
+                f"\nNote: Threshold = {shrink_factor} × (r_i + r_j) where r_i, r_j are covalent radii"
+            )
             print("Consider adjusting structures or using different interpolation settings")
         else:
             print(f"✓ All atomic distances OK (threshold = {shrink_factor} × covalent radii)")
 
     spacing_method = "even spacing" if use_even_spacing else "IDPP spacing"
-    print(f"\nSuccessfully set up NEB calculation with {total_images} images using {spacing_method}")
+    print(
+        f"\nSuccessfully set up NEB calculation with {total_images} images using {spacing_method}"
+    )
     print(f"Created folders: {', '.join([f'{i:02d}' for i in range(total_images)])}")
     print("Each folder contains a POSCAR file for the corresponding image")
 

@@ -6,6 +6,6 @@ from .vasp_outcar import (
 )
 
 __all__ = [
-    'VaspPropertyParser',
-    'read_constraints_from_file',
+    "VaspPropertyParser",
+    "read_constraints_from_file",
 ]

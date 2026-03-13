@@ -1,9 +1,8 @@
-
 def test_analysis_vasp6():
     from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 
-    outcar = 'tests/data/OUTCAR_vasp6'
-    
+    outcar = "tests/data/OUTCAR_vasp6"
+
     conv, vasp = check_outcar_convergence(outcar, verbose=True)
     assert conv
     assert vasp
@@ -13,11 +12,12 @@ def test_analysis_vasp6():
     assert energy
     assert maxforce
 
+
 def test_analysis_vasp5():
     from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
 
-    outcar = 'tests/data/OUTCAR'
-    
+    outcar = "tests/data/OUTCAR"
+
     conv, vasp = check_outcar_convergence(outcar, verbose=True)
     assert conv
     assert vasp

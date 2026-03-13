@@ -58,13 +58,16 @@ class TestBondValence:
 
     def test_import(self):
         from asetools.structure.bond_valence import BondValenceSum, BondValenceParameters
+
         assert BondValenceSum is not None
         assert BondValenceParameters is not None
 
     def test_bvparm_data_exists(self):
         """Ensure the BV parameter data file is accessible."""
         import importlib.resources
+
         # The data file should be bundled
         from pathlib import Path
+
         data_file = Path(__file__).parent.parent / "asetools" / "data" / "bvparm2020.cif"
         assert data_file.exists(), "bvparm2020.cif not found in asetools/data/"

@@ -16,6 +16,7 @@ from ase import Atoms
 from ase.io import read, write
 from ase.constraints import FixAtoms
 
+
 # Example 1: Direct dimer calculation (requires VaspInteractive)
 def example_direct_dimer():
     """Example of running dimer calculation directly."""
@@ -23,7 +24,7 @@ def example_direct_dimer():
     print("=== Example 1: Direct Dimer Calculation ===")
 
     # Load your structure
-    atoms = read('POSCAR')  # or CONTCAR, or any ASE-supported format
+    atoms = read("POSCAR")  # or CONTCAR, or any ASE-supported format
 
     # Apply constraints if needed (e.g., fix bottom layers of slab)
     # Fix atoms based on z-coordinate (bottom 2 layers)
@@ -41,14 +42,14 @@ def example_direct_dimer():
     from vasp_interactive import VaspInteractive
 
     calc_kwargs = {
-        'encut': 300,
-        'kspacing': 1.0,
-        'ediff': 1e-6,
-        'nsw': 2000,
-        'ibrion': -1,  # Let ASE handle optimization
-        'isif': 0,
-        'prec': 'Normal',
-        'xc': 'PBE',
+        "encut": 300,
+        "kspacing": 1.0,
+        "ediff": 1e-6,
+        "nsw": 2000,
+        "ibrion": -1,  # Let ASE handle optimization
+        "isif": 0,
+        "prec": "Normal",
+        "xc": "PBE",
     }
 
     # Use VaspInteractive with context manager
@@ -63,7 +64,7 @@ def example_direct_dimer():
         d_atoms = setup_dimer_atoms(atoms)
 
         # Run dimer optimization
-        dimer_opt = MinModeTranslate(d_atoms, logfile='dimer.log', trajectory='dimer.traj')
+        dimer_opt = MinModeTranslate(d_atoms, logfile="dimer.log", trajectory="dimer.traj")
         dimer_opt.run(fmax=0.001)
 
         print("Dimer optimization completed")
@@ -110,11 +111,11 @@ globals:
 """
 
     # Save YAML configuration
-    with open('dimer_config.yaml', 'w') as f:
+    with open("dimer_config.yaml", "w") as f:
         f.write(yaml_content)
 
     # Load structure and apply constraints
-    atoms = read('POSCAR')
+    atoms = read("POSCAR")
 
     # Apply constraints (same as example 1)
     z_coords = atoms.get_positions()[:, 2]
@@ -125,8 +126,8 @@ globals:
     from asetools.manager.calculatorsetuptools import VASPConfigurationFromYAML
     from asetools.manager.manager import run_workflow
 
-    cfg = VASPConfigurationFromYAML('dimer_config.yaml', 'default')
-    run_workflow(atoms, cfg, 'dimer_search')
+    cfg = VASPConfigurationFromYAML("dimer_config.yaml", "default")
+    run_workflow(atoms, cfg, "dimer_search")
 
     print("Workflow dimer optimization completed")
 
@@ -139,18 +140,18 @@ def example_modecar_usage():
 
     from asetools.dimer import read_modecar, write_modecar, generate_displacement_vector
 
-    atoms = read('POSCAR')
+    atoms = read("POSCAR")
 
     # Generate displacement vector manually
-    displacement_vector = generate_displacement_vector(atoms, method='random')
+    displacement_vector = generate_displacement_vector(atoms, method="random")
 
     # Save to MODECAR
-    write_modecar(displacement_vector, atoms, 'MODECAR')
+    write_modecar(displacement_vector, atoms, "MODECAR")
     print("Wrote MODECAR file")
 
     # Read back MODECAR
-    if os.path.exists('MODECAR'):
-        disp_read = read_modecar('MODECAR')
+    if os.path.exists("MODECAR"):
+        disp_read = read_modecar("MODECAR")
         print(f"Read MODECAR: shape={disp_read.shape}, magnitude={np.linalg.norm(disp_read):.6f}")
 
         # MODECAR will be automatically used in dimer calculations
@@ -163,7 +164,7 @@ def example_advanced_constraints():
 
     print("=== Example 4: Advanced Constraint Setup ===")
 
-    atoms = read('POSCAR')
+    atoms = read("POSCAR")
 
     # Different constraint strategies:
 
@@ -178,11 +179,13 @@ def example_advanced_constraints():
         z_threshold = z_sorted[n_layers_fix - 1] + 0.1
         mask_layers = z_coords <= z_threshold
         constraint_layers = FixAtoms(mask=mask_layers)
-        print(f"Layer constraint: fixing {np.sum(mask_layers)} atoms in bottom {n_layers_fix} layers")
+        print(
+            f"Layer constraint: fixing {np.sum(mask_layers)} atoms in bottom {n_layers_fix} layers"
+        )
 
     # 2. Fix by element (e.g., substrate atoms)
     symbols = atoms.get_chemical_symbols()
-    substrate_elements = ['Al', 'Ni']  # Example substrate
+    substrate_elements = ["Al", "Ni"]  # Example substrate
     mask_elements = np.array([s in substrate_elements for s in symbols])
     constraint_elements = FixAtoms(mask=mask_elements)
     print(f"Element constraint: fixing {np.sum(mask_elements)} substrate atoms")
@@ -200,7 +203,7 @@ def example_advanced_constraints():
     # For dimer calculations, you can also use the mask parameter for additional control
     dimer_mask = [False] * len(atoms)
     # Only allow specific atoms to participate in dimer search
-    adsorbate_indices = [i for i, s in enumerate(symbols) if s in ['C', 'O', 'H']]
+    adsorbate_indices = [i for i, s in enumerate(symbols) if s in ["C", "O", "H"]]
     for idx in adsorbate_indices:
         dimer_mask[idx] = True
 
@@ -219,8 +222,8 @@ def example_dimer_analysis():
     from ase.io import Trajectory
 
     # Analyze completed dimer calculation
-    if os.path.exists('dimer.traj'):
-        traj = Trajectory('dimer.traj', 'r')
+    if os.path.exists("dimer.traj"):
+        traj = Trajectory("dimer.traj", "r")
 
         print(f"Dimer trajectory contains {len(traj)} images")
 
@@ -245,7 +248,7 @@ def example_dimer_analysis():
         traj.close()
 
     # Check if final MODECAR was saved
-    if os.path.exists('MODECAR_final'):
+    if os.path.exists("MODECAR_final"):
         print("Final eigenvector saved to MODECAR_final")
 
 
@@ -254,15 +257,15 @@ def main():
 
     print("Dimer Method Examples with asetools\\n")
 
-    if not os.path.exists('POSCAR'):
+    if not os.path.exists("POSCAR"):
         print("No POSCAR file found. Creating example files...")
         # Create a simple example structure
         from ase.build import fcc111, add_adsorbate
 
-        slab = fcc111('Al', size=(2, 2, 2), vacuum=7.0)
-        add_adsorbate(slab, 'O', height=2.0, position='hcp')
+        slab = fcc111("Al", size=(2, 2, 2), vacuum=7.0)
+        add_adsorbate(slab, "O", height=2.0, position="hcp")
 
-        write('POSCAR', slab, format='vasp')
+        write("POSCAR", slab, format="vasp")
         print("Created example POSCAR file with Al(111) + O adsorbate")
 
     # Run examples that don't require VaspInteractive
@@ -281,8 +284,9 @@ def main():
     except Exception as e:
         print(f"Example failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

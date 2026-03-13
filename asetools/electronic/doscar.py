@@ -14,18 +14,18 @@ class DOS:
 
     # Default color palette for multi-atom plotting
     DEFAULT_COLORS = [
-        '#CF308D',  # Magenta
-        '#30CF72',  # Green
-        '#303DCF',  # Blue
-        '#CFC230',  # Yellow
-        '#3C93C3',  # Light Blue
-        '#C36C3C',  # Orange
-        '#50C33C',  # Light Green
-        '#AF3CC3',  # Purple
-        '#CF3030',  # Red
-        '#30CFC2',  # Cyan
-        '#8030CF',  # Violet
-        '#CF8030'   # Dark Orange
+        "#CF308D",  # Magenta
+        "#30CF72",  # Green
+        "#303DCF",  # Blue
+        "#CFC230",  # Yellow
+        "#3C93C3",  # Light Blue
+        "#C36C3C",  # Orange
+        "#50C33C",  # Light Green
+        "#AF3CC3",  # Purple
+        "#CF3030",  # Red
+        "#30CFC2",  # Cyan
+        "#8030CF",  # Violet
+        "#CF8030",  # Dark Orange
     ]
 
     def __init__(self, doscarfile: str):
@@ -39,7 +39,7 @@ class DOS:
 
     def _load_doscar(self):
         """Load and parse DOSCAR file."""
-        with open(self.doscarfile, 'r') as doscar:
+        with open(self.doscarfile, "r") as doscar:
             lines = doscar.readlines()
 
         # Parse header information
@@ -54,17 +54,31 @@ class DOS:
             raise ValueError("Invalid DOSCAR format: cannot extract Fermi energy from line 5")
 
         # Initialize data structure
-        self.data = {'energy': [], 'DOSup': [], 'DOSdown': []}
+        self.data = {"energy": [], "DOSup": [], "DOSdown": []}
 
         # Initialize per-atom data if partial DOS is available
         if self.has_partial_dos:
             for i in range(self.natoms):
-                self.data[f'at-{i}'] = {
-                    'energy': [], 's+': [], 's-': [], 'py+': [], 'py-': [],
-                    'pz+': [], 'pz-': [], 'px+': [], 'px-': [],
-                    'dxy+': [], 'dxy-': [], 'dyz+': [], 'dyz-': [],
-                    'dz2+': [], 'dz2-': [], 'dxz+': [], 'dxz-': [],
-                    'dx2+': [], 'dx2-': []
+                self.data[f"at-{i}"] = {
+                    "energy": [],
+                    "s+": [],
+                    "s-": [],
+                    "py+": [],
+                    "py-": [],
+                    "pz+": [],
+                    "pz-": [],
+                    "px+": [],
+                    "px-": [],
+                    "dxy+": [],
+                    "dxy-": [],
+                    "dyz+": [],
+                    "dyz-": [],
+                    "dz2+": [],
+                    "dz2-": [],
+                    "dxz+": [],
+                    "dxz-": [],
+                    "dx2+": [],
+                    "dx2-": [],
                 }
 
         # Parse DOS data
@@ -90,15 +104,15 @@ class DOS:
                 count += 1
 
             if goDOS and i > 5:  # Only collect DOS data after the header line
-                self.data['energy'].append(float(line.split()[0]) - self.fermi_energy)
-                self.data['DOSup'].append(float(line.split()[1]))
-                self.data['DOSdown'].append(-float(line.split()[2]))
+                self.data["energy"].append(float(line.split()[0]) - self.fermi_energy)
+                self.data["DOSup"].append(float(line.split()[1]))
+                self.data["DOSdown"].append(-float(line.split()[2]))
 
             if gopDOS and line != repline:
-                atom_key = f'at-{count}'
+                atom_key = f"at-{count}"
                 for k, key in enumerate(self.data[atom_key]):
                     if k == 0:
-                        self.data[atom_key]['energy'].append(
+                        self.data[atom_key]["energy"].append(
                             float(line.split()[k]) - self.fermi_energy
                         )
                     else:
@@ -116,24 +130,26 @@ class DOS:
     @property
     def energy(self) -> np.ndarray:
         """Energy grid (relative to Fermi energy)."""
-        return self.data['energy']
+        return self.data["energy"]
 
     @property
     def dos_up(self) -> np.ndarray:
         """Spin-up DOS."""
-        return self.data['DOSup']
+        return self.data["DOSup"]
 
     @property
     def dos_down(self) -> np.ndarray:
         """Spin-down DOS."""
-        return self.data['DOSdown']
+        return self.data["DOSdown"]
 
     @property
     def total_dos(self) -> np.ndarray:
         """Total DOS (sum of spin-up and absolute spin-down)."""
         return self.dos_up + np.abs(self.dos_down)
 
-    def get_pdos_by_states(self, atoms: List[int], states: List[str]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_pdos_by_states(
+        self, atoms: List[int], states: List[str]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract projected DOS by orbital states.
 
         Args:
@@ -147,13 +163,20 @@ class DOS:
             raise ValueError("No partial DOS data available")
 
         state_orbitals = {
-            's_states': {'s+': 1, 's-': 2},
-            'p_states': {'py+': 3, 'py-': 4, 'pz+': 5, 'pz-': 6, 'px+': 7, 'px-': 8},
-            'd_states': {
-                'dxy+': 9, 'dxy-': 10, 'dyz+': 11, 'dyz-': 12,
-                'dz2+': 13, 'dz2-': 14, 'dxz+': 15, 'dxz-': 16,
-                'dx2+': 17, 'dx2-': 18
-            }
+            "s_states": {"s+": 1, "s-": 2},
+            "p_states": {"py+": 3, "py-": 4, "pz+": 5, "pz-": 6, "px+": 7, "px-": 8},
+            "d_states": {
+                "dxy+": 9,
+                "dxy-": 10,
+                "dyz+": 11,
+                "dyz-": 12,
+                "dz2+": 13,
+                "dz2-": 14,
+                "dxz+": 15,
+                "dxz-": 16,
+                "dx2+": 17,
+                "dx2-": 18,
+            },
         }
 
         sum_plus = np.zeros(len(self.energy))
@@ -162,14 +185,16 @@ class DOS:
         for at in atoms:
             for state in states:
                 for orbital in state_orbitals[state]:
-                    if orbital[-1] == '+':
-                        sum_plus += self.data[f'at-{at}'][orbital]
-                    elif orbital[-1] == '-':
-                        sum_minus -= self.data[f'at-{at}'][orbital]
+                    if orbital[-1] == "+":
+                        sum_plus += self.data[f"at-{at}"][orbital]
+                    elif orbital[-1] == "-":
+                        sum_minus -= self.data[f"at-{at}"][orbital]
 
         return self.energy, sum_plus, sum_minus
 
-    def get_pdos_by_orbitals(self, atoms: List[int], orbitals: Union[List[str], str]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_pdos_by_orbitals(
+        self, atoms: List[int], orbitals: Union[List[str], str]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract projected DOS by specific orbitals.
 
         Args:
@@ -183,36 +208,67 @@ class DOS:
             raise ValueError("No partial DOS data available")
 
         # Handle shorthand orbital specifications
-        if orbitals == 'all-s':
-            orbitals = ['s+', 's-']
-        elif orbitals == 'all-p':
-            orbitals = ['py+', 'py-', 'pz+', 'pz-', 'px+', 'px-']
-        elif orbitals == 'all-d':
-            orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-']
-        elif orbitals == 'all':
+        if orbitals == "all-s":
+            orbitals = ["s+", "s-"]
+        elif orbitals == "all-p":
+            orbitals = ["py+", "py-", "pz+", "pz-", "px+", "px-"]
+        elif orbitals == "all-d":
             orbitals = [
-                's+', 's-', 'py+', 'py-', 'pz+', 'pz-', 'px+', 'px-',
-                'dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-'
+                "dxy+",
+                "dxy-",
+                "dyz+",
+                "dyz-",
+                "dxz+",
+                "dxz-",
+                "dz2+",
+                "dz2-",
+                "dx2+",
+                "dx2-",
             ]
-        elif orbitals == 't2g':
-            orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
-        elif orbitals == 'eg':
-            orbitals = ['dz2+', 'dz2-', 'dx2+', 'dx2-']
+        elif orbitals == "all":
+            orbitals = [
+                "s+",
+                "s-",
+                "py+",
+                "py-",
+                "pz+",
+                "pz-",
+                "px+",
+                "px-",
+                "dxy+",
+                "dxy-",
+                "dyz+",
+                "dyz-",
+                "dxz+",
+                "dxz-",
+                "dz2+",
+                "dz2-",
+                "dx2+",
+                "dx2-",
+            ]
+        elif orbitals == "t2g":
+            orbitals = ["dxy+", "dxy-", "dyz+", "dyz-", "dxz+", "dxz-"]
+        elif orbitals == "eg":
+            orbitals = ["dz2+", "dz2-", "dx2+", "dx2-"]
 
         sum_plus = np.zeros(len(self.energy))
         sum_minus = np.zeros(len(self.energy))
 
         for at in atoms:
             for orbital in orbitals:
-                if orbital[-1] == '+':
-                    sum_plus += self.data[f'at-{at}'][orbital]
-                elif orbital[-1] == '-':
-                    sum_minus -= self.data[f'at-{at}'][orbital]
+                if orbital[-1] == "+":
+                    sum_plus += self.data[f"at-{at}"][orbital]
+                elif orbital[-1] == "-":
+                    sum_minus -= self.data[f"at-{at}"][orbital]
 
         return self.energy, sum_plus, sum_minus
 
-    def get_individual_atom_pdos(self, atoms: List[int], states: Optional[List[str]] = None,
-                                orbitals: Optional[Union[List[str], str]] = None) -> Dict[int, Dict[str, np.ndarray]]:
+    def get_individual_atom_pdos(
+        self,
+        atoms: List[int],
+        states: Optional[List[str]] = None,
+        orbitals: Optional[Union[List[str], str]] = None,
+    ) -> Dict[int, Dict[str, np.ndarray]]:
         """Get projected DOS data for individual atoms (not summed).
 
         Args:
@@ -240,11 +296,7 @@ class DOS:
             else:
                 energy, dos_up, dos_down = self.get_pdos_by_orbitals([atom], orbitals)
 
-            result[atom] = {
-                'energy': energy,
-                'dos_up': dos_up,
-                'dos_down': dos_down
-            }
+            result[atom] = {"energy": energy, "dos_up": dos_up, "dos_down": dos_down}
 
         return result
 
@@ -261,28 +313,32 @@ class DOS:
         if ax is None:
             _, ax = plt.subplots(figsize=(8, 6))
 
-        ax.plot(self.energy, self.dos_up, label='Spin Up', **kwargs)
-        ax.plot(self.energy, self.dos_down, label='Spin Down', **kwargs)
-        ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-        ax.axvline(x=0, color='k', linestyle='--', alpha=0.5, label='Fermi Level')
+        ax.plot(self.energy, self.dos_up, label="Spin Up", **kwargs)
+        ax.plot(self.energy, self.dos_down, label="Spin Down", **kwargs)
+        ax.axhline(y=0, color="k", linestyle="-", alpha=0.3)
+        ax.axvline(x=0, color="k", linestyle="--", alpha=0.5, label="Fermi Level")
 
-        ax.set_xlabel('Energy (eV)')
-        ax.set_ylabel('DOS (states/eV)')
-        ax.set_title('Total Density of States')
+        ax.set_xlabel("Energy (eV)")
+        ax.set_ylabel("DOS (states/eV)")
+        ax.set_title("Total Density of States")
         ax.legend()
-        #ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
 
         return ax
 
-    def plot_pdos_by_states(self, atoms: List[int], states: List[str],
-                           ax: Optional[plt.Axes] = None,
-                           colors: Optional[List[str]] = None,
-                           same_color_spins: bool = False,
-                           xlim: Optional[Tuple[float, float]] = None,
-                           ylim: Optional[Tuple[float, float]] = None,
-                           linewidth: float = 1.5,
-                           figsize: Tuple[float, float] = (8, 6),
-                           **kwargs) -> plt.Axes:
+    def plot_pdos_by_states(
+        self,
+        atoms: List[int],
+        states: List[str],
+        ax: Optional[plt.Axes] = None,
+        colors: Optional[List[str]] = None,
+        same_color_spins: bool = False,
+        xlim: Optional[Tuple[float, float]] = None,
+        ylim: Optional[Tuple[float, float]] = None,
+        linewidth: float = 1.5,
+        figsize: Tuple[float, float] = (8, 6),
+        **kwargs,
+    ) -> plt.Axes:
         """Plot projected DOS by orbital states.
 
         Args:
@@ -319,17 +375,17 @@ class DOS:
         # Plot with specified colors or defaults
         plot_kwargs = dict(kwargs)
         if up_color:
-            plot_kwargs['color'] = up_color
-        ax.plot(energy, dos_up, label=f'{label} (Up)', linewidth=linewidth, **plot_kwargs)
+            plot_kwargs["color"] = up_color
+        ax.plot(energy, dos_up, label=f"{label} (Up)", linewidth=linewidth, **plot_kwargs)
 
         plot_kwargs = dict(kwargs)
         if down_color:
-            plot_kwargs['color'] = down_color
-        ax.plot(energy, dos_down, label=f'{label} (Down)', linewidth=linewidth, **plot_kwargs)
+            plot_kwargs["color"] = down_color
+        ax.plot(energy, dos_down, label=f"{label} (Down)", linewidth=linewidth, **plot_kwargs)
 
         # Reference lines
-        ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-        ax.axvline(x=0, color='k', linestyle='--', alpha=0.5, label='Fermi Level')
+        ax.axhline(y=0, color="k", linestyle="-", alpha=0.3)
+        ax.axvline(x=0, color="k", linestyle="--", alpha=0.5, label="Fermi Level")
 
         # Set limits if provided
         if xlim is not None:
@@ -337,23 +393,27 @@ class DOS:
         if ylim is not None:
             ax.set_ylim(ylim)
 
-        ax.set_xlabel('Energy (eV)')
-        ax.set_ylabel('PDOS (states/eV)')
-        ax.set_title('Projected Density of States')
+        ax.set_xlabel("Energy (eV)")
+        ax.set_ylabel("PDOS (states/eV)")
+        ax.set_title("Projected Density of States")
         ax.legend()
-        #ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
 
         return ax
 
-    def plot_pdos_by_orbitals(self, atoms: List[int], orbitals: Union[List[str], str],
-                             ax: Optional[plt.Axes] = None,
-                             colors: Optional[List[str]] = None,
-                             same_color_spins: bool = False,
-                             xlim: Optional[Tuple[float, float]] = None,
-                             ylim: Optional[Tuple[float, float]] = None,
-                             linewidth: float = 1.5,
-                             figsize: Tuple[float, float] = (8, 6),
-                             **kwargs) -> plt.Axes:
+    def plot_pdos_by_orbitals(
+        self,
+        atoms: List[int],
+        orbitals: Union[List[str], str],
+        ax: Optional[plt.Axes] = None,
+        colors: Optional[List[str]] = None,
+        same_color_spins: bool = False,
+        xlim: Optional[Tuple[float, float]] = None,
+        ylim: Optional[Tuple[float, float]] = None,
+        linewidth: float = 1.5,
+        figsize: Tuple[float, float] = (8, 6),
+        **kwargs,
+    ) -> plt.Axes:
         """Plot projected DOS by specific orbitals.
 
         Args:
@@ -390,17 +450,17 @@ class DOS:
         # Plot with specified colors or defaults
         plot_kwargs = dict(kwargs)
         if up_color:
-            plot_kwargs['color'] = up_color
-        ax.plot(energy, dos_up, label=f'{label} (Up)', linewidth=linewidth, **plot_kwargs)
+            plot_kwargs["color"] = up_color
+        ax.plot(energy, dos_up, label=f"{label} (Up)", linewidth=linewidth, **plot_kwargs)
 
         plot_kwargs = dict(kwargs)
         if down_color:
-            plot_kwargs['color'] = down_color
-        ax.plot(energy, dos_down, label=f'{label} (Down)', linewidth=linewidth, **plot_kwargs)
+            plot_kwargs["color"] = down_color
+        ax.plot(energy, dos_down, label=f"{label} (Down)", linewidth=linewidth, **plot_kwargs)
 
         # Reference lines
-        ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-        ax.axvline(x=0, color='k', linestyle='--', alpha=0.5, label='Fermi Level')
+        ax.axhline(y=0, color="k", linestyle="-", alpha=0.3)
+        ax.axvline(x=0, color="k", linestyle="--", alpha=0.5, label="Fermi Level")
 
         # Set limits if provided
         if xlim is not None:
@@ -408,24 +468,28 @@ class DOS:
         if ylim is not None:
             ax.set_ylim(ylim)
 
-        ax.set_xlabel('Energy (eV)')
-        ax.set_ylabel('PDOS (states/eV)')
-        ax.set_title('Projected Density of States')
+        ax.set_xlabel("Energy (eV)")
+        ax.set_ylabel("PDOS (states/eV)")
+        ax.set_title("Projected Density of States")
         ax.legend()
-        #ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
 
         return ax
 
-    def plot_multi_atom_pdos(self, atoms: List[int], states: Optional[List[str]] = None,
-                            orbitals: Optional[Union[List[str], str]] = None,
-                            colors: Optional[List[str]] = None,
-                            same_color_spins: bool = True,
-                            ax: Optional[plt.Axes] = None,
-                            xlim: Optional[Tuple[float, float]] = None,
-                            ylim: Optional[Tuple[float, float]] = None,
-                            linewidth: float = 1.5,
-                            figsize: Tuple[float, float] = (6, 4),
-                            **kwargs) -> plt.Axes:
+    def plot_multi_atom_pdos(
+        self,
+        atoms: List[int],
+        states: Optional[List[str]] = None,
+        orbitals: Optional[Union[List[str], str]] = None,
+        colors: Optional[List[str]] = None,
+        same_color_spins: bool = True,
+        ax: Optional[plt.Axes] = None,
+        xlim: Optional[Tuple[float, float]] = None,
+        ylim: Optional[Tuple[float, float]] = None,
+        linewidth: float = 1.5,
+        figsize: Tuple[float, float] = (6, 4),
+        **kwargs,
+    ) -> plt.Axes:
         """Plot projected DOS for multiple atoms individually with automatic color assignment.
 
         Args:
@@ -465,21 +529,39 @@ class DOS:
             color = color_map[atom]
 
             # Plot spin-up
-            ax.plot(dos_data['energy'], dos_data['dos_up'],
-                   label=f'Atom {atom}', linewidth=linewidth, color=color, **kwargs)
+            ax.plot(
+                dos_data["energy"],
+                dos_data["dos_up"],
+                label=f"Atom {atom}",
+                linewidth=linewidth,
+                color=color,
+                **kwargs,
+            )
 
             # Plot spin-down with same or different color
             if same_color_spins:
-                ax.plot(dos_data['energy'], dos_data['dos_down'],
-                       linewidth=linewidth, color=color, **kwargs)
+                ax.plot(
+                    dos_data["energy"],
+                    dos_data["dos_down"],
+                    linewidth=linewidth,
+                    color=color,
+                    **kwargs,
+                )
             else:
                 # Use slightly different color for spin-down (add alpha or darken)
-                ax.plot(dos_data['energy'], dos_data['dos_down'],
-                       linewidth=linewidth, color=color, alpha=0.7, linestyle='--', **kwargs)
+                ax.plot(
+                    dos_data["energy"],
+                    dos_data["dos_down"],
+                    linewidth=linewidth,
+                    color=color,
+                    alpha=0.7,
+                    linestyle="--",
+                    **kwargs,
+                )
 
         # Add reference lines
-        ax.axhline(0, linewidth=1.2, color='k', alpha=1)
-        ax.axvline(0, linewidth=1.2, linestyle='--', color='k')
+        ax.axhline(0, linewidth=1.2, color="k", alpha=1)
+        ax.axvline(0, linewidth=1.2, linestyle="--", color="k")
 
         # Set limits if provided
         if xlim is not None:
@@ -488,23 +570,26 @@ class DOS:
             ax.set_ylim(ylim)
 
         # Labels and styling
-        ax.set_xlabel('Energy (eV)')
+        ax.set_xlabel("Energy (eV)")
         if states is not None:
-            ylabel = f'PDOS - {", ".join(states)} (states/eV)'
+            ylabel = f"PDOS - {', '.join(states)} (states/eV)"
         else:
-            ylabel = f'PDOS - {orbitals} (states/eV)'
+            ylabel = f"PDOS - {orbitals} (states/eV)"
         ax.set_ylabel(ylabel)
 
         ax.legend()
-        #ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
 
         return ax
 
-    def calculate_band_center(self, atoms: List[int],
-                             orbitals: Optional[Union[List[str], str]] = None,
-                             states: Optional[List[str]] = None,
-                             energy_range: Optional[Tuple[float, float]] = None,
-                             spin_treatment: str = 'combined') -> Union[float, Dict[str, float]]:
+    def calculate_band_center(
+        self,
+        atoms: List[int],
+        orbitals: Optional[Union[List[str], str]] = None,
+        states: Optional[List[str]] = None,
+        energy_range: Optional[Tuple[float, float]] = None,
+        spin_treatment: str = "combined",
+    ) -> Union[float, Dict[str, float]]:
         """Calculate the band center (e.g., d-band center) for specific atoms and orbitals.
 
         The band center is calculated as the first moment of the projected DOS:
@@ -533,7 +618,7 @@ class DOS:
         if states is None and orbitals is None:
             raise ValueError("Must specify either states or orbitals")
 
-        if spin_treatment not in ['combined', 'separate', 'up', 'down']:
+        if spin_treatment not in ["combined", "separate", "up", "down"]:
             raise ValueError("spin_treatment must be 'combined', 'separate', 'up', or 'down'")
 
         # Get PDOS data
@@ -550,21 +635,21 @@ class DOS:
             dos_down = dos_down[mask]
 
         # Calculate band center based on spin treatment
-        if spin_treatment == 'combined':
+        if spin_treatment == "combined":
             # Combine both spins (dos_down is already negative, so we add absolute value)
             total_dos = dos_up + np.abs(dos_down)
             return self._calculate_moment(energy, total_dos)
 
-        elif spin_treatment == 'up':
+        elif spin_treatment == "up":
             return self._calculate_moment(energy, dos_up)
 
-        elif spin_treatment == 'down':
+        elif spin_treatment == "down":
             return self._calculate_moment(energy, np.abs(dos_down))
 
-        elif spin_treatment == 'separate':
+        elif spin_treatment == "separate":
             return {
-                'up': self._calculate_moment(energy, dos_up),
-                'down': self._calculate_moment(energy, np.abs(dos_down))
+                "up": self._calculate_moment(energy, dos_up),
+                "down": self._calculate_moment(energy, np.abs(dos_down)),
             }
 
     def _calculate_moment(self, energy: np.ndarray, dos: np.ndarray) -> float:
@@ -588,7 +673,7 @@ class DOS:
         dos = np.abs(dos)
 
         # Calculate numerator: ∫ E × n(E) dE
-        _trapz = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+        _trapz = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
         numerator = _trapz(energy * dos, energy)
 
         # Calculate denominator: ∫ n(E) dE
@@ -607,10 +692,10 @@ class DOS:
             DataFrame with energy and DOS data
         """
         df_data = {
-            'energy': self.energy,
-            'dos_up': self.dos_up,
-            'dos_down': self.dos_down,
-            'total_dos': self.total_dos
+            "energy": self.energy,
+            "dos_up": self.dos_up,
+            "dos_down": self.dos_down,
+            "total_dos": self.total_dos,
         }
 
         return pd.DataFrame(df_data)
@@ -629,11 +714,12 @@ def extract_dos(doscarfile: str) -> Dict:
     dos = DOS(doscarfile)
     return dos.data
 
+
 def extract_fermi_e(doscarfile):
     try:
-        with open(doscarfile, 'r') as file:
+        with open(doscarfile, "r") as file:
             lines = file.readlines()
-            fermie = float( lines[5].split()[3] )
+            fermie = float(lines[5].split()[3])
         return fermie
     except FileNotFoundError:
         print(f"'{doscarfile}' not found.")
@@ -646,7 +732,9 @@ def extract_fermi_e(doscarfile):
     return None
 
 
-def extract_pdos_perstate(data: Dict, atoms: List[int], states: List[str]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def extract_pdos_perstate(
+    data: Dict, atoms: List[int], states: List[str]
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract projected DOS by orbital states (legacy function).
 
     Args:
@@ -658,30 +746,40 @@ def extract_pdos_perstate(data: Dict, atoms: List[int], states: List[str]) -> Tu
         Tuple of (energy, dos_up, dos_down)
     """
     dicstates = {
-        's_states': {'s+': 1, 's-': 2},
-        'p_states': {'py+': 3, 'py-': 4, 'pz+': 5, 'pz-': 6, 'px+': 7, 'px-': 8},
-        'd_states': {
-            'dxy+': 9, 'dxy-': 10, 'dyz+': 11, 'dyz-': 12,
-            'dz2+': 13, 'dz2-': 14, 'dxz+': 15, 'dxz-': 16,
-            'dx2+': 17, 'dx2-': 18
-        }
+        "s_states": {"s+": 1, "s-": 2},
+        "p_states": {"py+": 3, "py-": 4, "pz+": 5, "pz-": 6, "px+": 7, "px-": 8},
+        "d_states": {
+            "dxy+": 9,
+            "dxy-": 10,
+            "dyz+": 11,
+            "dyz-": 12,
+            "dz2+": 13,
+            "dz2-": 14,
+            "dxz+": 15,
+            "dxz-": 16,
+            "dx2+": 17,
+            "dx2-": 18,
+        },
     }
 
-    sum_plus = np.zeros(len(data['at-0']['py+']))
-    sum_minus = np.zeros(len(data['at-0']['py+']))
-    e = data['at-0']['energy']
+    sum_plus = np.zeros(len(data["at-0"]["py+"]))
+    sum_minus = np.zeros(len(data["at-0"]["py+"]))
+    e = data["at-0"]["energy"]
 
     for at in atoms:
         for sss in states:
             for key in dicstates[sss]:
-                if key[-1] == '+':
-                    sum_plus += data['at-'+str(at)][key]
-                elif key[-1] == '-':
-                    sum_minus -= data['at-'+str(at)][key]
+                if key[-1] == "+":
+                    sum_plus += data["at-" + str(at)][key]
+                elif key[-1] == "-":
+                    sum_minus -= data["at-" + str(at)][key]
 
     return e, sum_plus, sum_minus
 
-def extract_pdos_perorbital(data: Dict, atoms: List[int], orbitals: Union[List[str], str]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+def extract_pdos_perorbital(
+    data: Dict, atoms: List[int], orbitals: Union[List[str], str]
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract projected DOS by specific orbitals (legacy function).
 
     Args:
@@ -692,40 +790,60 @@ def extract_pdos_perorbital(data: Dict, atoms: List[int], orbitals: Union[List[s
     Returns:
         Tuple of (energy, dos_up, dos_down)
     """
-    if orbitals == 'all-s':
-        orbitals = ['s+', 's-']
-    elif orbitals == 'all-p':
-        orbitals = ['py+', 'py-', 'pz+', 'pz-', 'px+', 'px-']
-    elif orbitals == 'all-d':
-        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-']
-    elif orbitals == 'all':
+    if orbitals == "all-s":
+        orbitals = ["s+", "s-"]
+    elif orbitals == "all-p":
+        orbitals = ["py+", "py-", "pz+", "pz-", "px+", "px-"]
+    elif orbitals == "all-d":
+        orbitals = ["dxy+", "dxy-", "dyz+", "dyz-", "dxz+", "dxz-", "dz2+", "dz2-", "dx2+", "dx2-"]
+    elif orbitals == "all":
         orbitals = [
-            's+', 's-', 'py+', 'py-', 'pz+', 'pz-', 'px+', 'px-',
-            'dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-', 'dz2+', 'dz2-', 'dx2+', 'dx2-'
+            "s+",
+            "s-",
+            "py+",
+            "py-",
+            "pz+",
+            "pz-",
+            "px+",
+            "px-",
+            "dxy+",
+            "dxy-",
+            "dyz+",
+            "dyz-",
+            "dxz+",
+            "dxz-",
+            "dz2+",
+            "dz2-",
+            "dx2+",
+            "dx2-",
         ]
-    elif orbitals == 't2g':
-        orbitals = ['dxy+', 'dxy-', 'dyz+', 'dyz-', 'dxz+', 'dxz-']
-    elif orbitals == 'eg':
-        orbitals = ['dz2+', 'dz2-', 'dx2+', 'dx2-']
+    elif orbitals == "t2g":
+        orbitals = ["dxy+", "dxy-", "dyz+", "dyz-", "dxz+", "dxz-"]
+    elif orbitals == "eg":
+        orbitals = ["dz2+", "dz2-", "dx2+", "dx2-"]
 
-    sum_plus = np.zeros(len(data['at-0']['py+']))
-    sum_minus = np.zeros(len(data['at-0']['py+']))
-    e = data['at-0']['energy']
+    sum_plus = np.zeros(len(data["at-0"]["py+"]))
+    sum_minus = np.zeros(len(data["at-0"]["py+"]))
+    e = data["at-0"]["energy"]
 
     for at in atoms:
         for sss in orbitals:
-            if sss[-1] == '+':
-                sum_plus += data['at-'+str(at)][sss]
-            elif sss[-1] == '-':
-                sum_minus -= data['at-'+str(at)][sss]
+            if sss[-1] == "+":
+                sum_plus += data["at-" + str(at)][sss]
+            elif sss[-1] == "-":
+                sum_minus -= data["at-" + str(at)][sss]
 
     return e, sum_plus, sum_minus
 
-def calculate_band_center(doscarfile: str, atoms: List[int],
-                         orbitals: Optional[Union[List[str], str]] = None,
-                         states: Optional[List[str]] = None,
-                         energy_range: Optional[Tuple[float, float]] = None,
-                         spin_treatment: str = 'combined') -> Union[float, Dict[str, float]]:
+
+def calculate_band_center(
+    doscarfile: str,
+    atoms: List[int],
+    orbitals: Optional[Union[List[str], str]] = None,
+    states: Optional[List[str]] = None,
+    energy_range: Optional[Tuple[float, float]] = None,
+    spin_treatment: str = "combined",
+) -> Union[float, Dict[str, float]]:
     """Calculate the band center (e.g., d-band center) for specific atoms and orbitals (legacy function).
 
     This is a convenience function that wraps the DOS class method for backward compatibility.
@@ -746,5 +864,10 @@ def calculate_band_center(doscarfile: str, atoms: List[int],
         ValueError: If no partial DOS data, invalid parameters, or empty DOS
     """
     dos = DOS(doscarfile)
-    return dos.calculate_band_center(atoms, orbitals=orbitals, states=states,
-                                   energy_range=energy_range, spin_treatment=spin_treatment)
+    return dos.calculate_band_center(
+        atoms,
+        orbitals=orbitals,
+        states=states,
+        energy_range=energy_range,
+        spin_treatment=spin_treatment,
+    )

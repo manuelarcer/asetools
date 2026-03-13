@@ -9,9 +9,13 @@ from ase.io import read, write
 def main():
     if len(sys.argv) < 2:
         print("Usage: python outcar_extract.py OUTCAR [index] [output_file] [format]")
-        print("       python outcar_extract.py OUTCAR                    # last frame to final.vasp")
+        print(
+            "       python outcar_extract.py OUTCAR                    # last frame to final.vasp"
+        )
         print("       python outcar_extract.py OUTCAR 5                 # 5th frame to final.vasp")
-        print("       python outcar_extract.py OUTCAR 5 freq/CONTCAR.vasp  # 5th frame to specific file")
+        print(
+            "       python outcar_extract.py OUTCAR 5 freq/CONTCAR.vasp  # 5th frame to specific file"
+        )
         print("       python outcar_extract.py OUTCAR -1 final.extxyz extxyz  # with format")
         sys.exit(1)
 
@@ -19,7 +23,7 @@ def main():
 
     # Parse optional arguments
     index = -1
-    output_file = 'final.vasp'
+    output_file = "final.vasp"
     format_type = None
 
     if len(sys.argv) > 2:
@@ -30,7 +34,7 @@ def main():
         format_type = sys.argv[4]
 
     if not os.path.exists(input_file):
-        print(f'ERROR: Input file not found: {input_file}')
+        print(f"ERROR: Input file not found: {input_file}")
         sys.exit(1)
 
     # Create output directory if needed
@@ -46,7 +50,8 @@ def main():
     else:
         write(output_file, atoms)
 
-    print(f'Wrote frame {index} from {input_file} -> {output_file}')
+    print(f"Wrote frame {index} from {input_file} -> {output_file}")
+
 
 if __name__ == "__main__":
     main()

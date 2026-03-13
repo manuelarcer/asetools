@@ -55,8 +55,10 @@ def reorder_atoms(atoms, element_order=None, z_order=None):
         ordered_symbols = set(element_order)
         missing = unique_symbols - ordered_symbols
         if missing:
-            print(f"Warning: Elements {missing} in structure but not in element_order. "
-                  f"They will be appended at the end.")
+            print(
+                f"Warning: Elements {missing} in structure but not in element_order. "
+                f"They will be appended at the end."
+            )
             # Append missing elements in alphabetical order
             element_order = element_order + sorted(list(missing))
 
@@ -67,16 +69,16 @@ def reorder_atoms(atoms, element_order=None, z_order=None):
 
         # Apply z-ordering within each element group if requested
         if z_order is not None and len(atoms_of_element) > 0:
-            if z_order == 'top-bottom':
+            if z_order == "top-bottom":
                 # Sort by z descending (highest z first)
-                atoms_of_element = sorted(atoms_of_element,
-                                         key=lambda atom: atom.position[2],
-                                         reverse=True)
-            elif z_order == 'bottom-top':
+                atoms_of_element = sorted(
+                    atoms_of_element, key=lambda atom: atom.position[2], reverse=True
+                )
+            elif z_order == "bottom-top":
                 # Sort by z ascending (lowest z first)
-                atoms_of_element = sorted(atoms_of_element,
-                                         key=lambda atom: atom.position[2],
-                                         reverse=False)
+                atoms_of_element = sorted(
+                    atoms_of_element, key=lambda atom: atom.position[2], reverse=False
+                )
 
         sorted_atoms_list.extend(atoms_of_element)
 
@@ -92,13 +94,15 @@ def reorder_atoms(atoms, element_order=None, z_order=None):
         for old_idx, atom in enumerate(atoms):
             for new_idx, new_atom in enumerate(new_atoms):
                 # Match by position and symbol
-                if (atom.symbol == new_atom.symbol and
-                    all(abs(atom.position - new_atom.position) < 1e-6)):
+                if atom.symbol == new_atom.symbol and all(
+                    abs(atom.position - new_atom.position) < 1e-6
+                ):
                     index_mapping[old_idx] = new_idx
                     break
 
-        new_fixed_indices = [index_mapping[old_idx] for old_idx in fixed_indices
-                            if old_idx in index_mapping]
+        new_fixed_indices = [
+            index_mapping[old_idx] for old_idx in fixed_indices if old_idx in index_mapping
+        ]
 
         if new_fixed_indices:
             new_atoms.set_constraint(FixAtoms(indices=new_fixed_indices))
@@ -108,7 +112,7 @@ def reorder_atoms(atoms, element_order=None, z_order=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Reorder atoms in a configuration file by chemical symbol and z-coordinate.',
+        description="Reorder atoms in a configuration file by chemical symbol and z-coordinate.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -129,38 +133,39 @@ Examples:
 
   # Read CIF, write VASP format
   %(prog)s structure.cif --format vasp --output POSCAR
-        """
+        """,
+    )
+
+    parser.add_argument("input_file", help="Input structure file (POSCAR, CIF, XYZ, etc.)")
+
+    parser.add_argument(
+        "--order",
+        "-o",
+        nargs="+",
+        metavar="ELEMENT",
+        help="Order of chemical symbols (e.g., Cu O H). Default: alphabetical",
     )
 
     parser.add_argument(
-        'input_file',
-        help='Input structure file (POSCAR, CIF, XYZ, etc.)'
+        "--z-order",
+        "-z",
+        choices=["top-bottom", "bottom-top"],
+        help="Secondary ordering by z-coordinate within each element group. "
+        "top-bottom: highest z first; bottom-top: lowest z first",
     )
 
     parser.add_argument(
-        '--order', '-o',
-        nargs='+',
-        metavar='ELEMENT',
-        help='Order of chemical symbols (e.g., Cu O H). Default: alphabetical'
+        "--output",
+        "-out",
+        default="reordered_POSCAR",
+        help="Output file name (default: reordered_POSCAR)",
     )
 
     parser.add_argument(
-        '--z-order', '-z',
-        choices=['top-bottom', 'bottom-top'],
-        help='Secondary ordering by z-coordinate within each element group. '
-             'top-bottom: highest z first; bottom-top: lowest z first'
-    )
-
-    parser.add_argument(
-        '--output', '-out',
-        default='reordered_POSCAR',
-        help='Output file name (default: reordered_POSCAR)'
-    )
-
-    parser.add_argument(
-        '--format', '-f',
-        default='vasp',
-        help='Output format (default: vasp). See ASE documentation for supported formats.'
+        "--format",
+        "-f",
+        default="vasp",
+        help="Output format (default: vasp). See ASE documentation for supported formats.",
     )
 
     args = parser.parse_args()
@@ -173,9 +178,7 @@ Examples:
         sys.exit(1)
 
     # Reorder atoms
-    reordered_atoms = reorder_atoms(atoms,
-                                    element_order=args.order,
-                                    z_order=args.z_order)
+    reordered_atoms = reorder_atoms(atoms, element_order=args.order, z_order=args.z_order)
 
     # Write output
     try:

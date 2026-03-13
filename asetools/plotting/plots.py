@@ -8,13 +8,15 @@ import pandas as pd
 from scipy.interpolate import make_interp_spline
 
 # Default column names
-DEFAULT_LABEL_COL = 'Label'
-DEFAULT_TYPE_COL = 'Type-Conf'
-DEFAULT_ENERGY_COL = 'E'
-DEFAULT_NPCET_COL = 'nPCET'
+DEFAULT_LABEL_COL = "Label"
+DEFAULT_TYPE_COL = "Type-Conf"
+DEFAULT_ENERGY_COL = "E"
+DEFAULT_NPCET_COL = "nPCET"
 
 
-def validate_columns(data: pd.DataFrame, required_cols: List[str], optional_cols: Optional[List[str]] = None) -> bool:
+def validate_columns(
+    data: pd.DataFrame, required_cols: List[str], optional_cols: Optional[List[str]] = None
+) -> bool:
     """
     Validate that required columns exist in the DataFrame.
 
@@ -39,23 +41,33 @@ def validate_columns(data: pd.DataFrame, required_cols: List[str], optional_cols
     """
     missing = [col for col in required_cols if col not in data.columns]
     if missing:
-        raise ValueError(f"Missing required columns: {missing}. "
-                        f"Available columns: {list(data.columns)}")
+        raise ValueError(
+            f"Missing required columns: {missing}. Available columns: {list(data.columns)}"
+        )
 
     if optional_cols:
         missing_optional = [col for col in optional_cols if col not in data.columns]
         if missing_optional:
             import warnings
+
             warnings.warn(f"Optional columns not found: {missing_optional}", stacklevel=2)
 
     return True
 
 
-def add_line_to_pes(ax: plt.Axes, data: pd.DataFrame, energy_col: Optional[str] = None,
-                   type_col: Optional[str] = None, c: str = 'k', label: Optional[str] = None,
-                   indexes: Optional[List[int]] = None, col: Optional[str] = None,
-                   style: str = 'default', lw: Optional[float] = None,
-                   lw_connector: Optional[float] = None) -> plt.Axes:
+def add_line_to_pes(
+    ax: plt.Axes,
+    data: pd.DataFrame,
+    energy_col: Optional[str] = None,
+    type_col: Optional[str] = None,
+    c: str = "k",
+    label: Optional[str] = None,
+    indexes: Optional[List[int]] = None,
+    col: Optional[str] = None,
+    style: str = "default",
+    lw: Optional[float] = None,
+    lw_connector: Optional[float] = None,
+) -> plt.Axes:
     """
     Add a potential energy surface line to a matplotlib axis.
 
@@ -93,8 +105,12 @@ def add_line_to_pes(ax: plt.Axes, data: pd.DataFrame, energy_col: Optional[str] 
     # Handle backward compatibility with 'col' parameter
     if col is not None:
         import warnings
-        warnings.warn("Parameter 'col' is deprecated, use 'energy_col' instead",
-                     DeprecationWarning, stacklevel=2)
+
+        warnings.warn(
+            "Parameter 'col' is deprecated, use 'energy_col' instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if energy_col is None:
             energy_col = col
 
@@ -105,21 +121,31 @@ def add_line_to_pes(ax: plt.Axes, data: pd.DataFrame, energy_col: Optional[str] 
         type_col = DEFAULT_TYPE_COL
 
     # Validate style parameter
-    if style not in ('default', 'step'):
+    if style not in ("default", "step"):
         raise ValueError(f"style must be 'default' or 'step', got '{style}'")
 
     # Validate required columns
     validate_columns(data, [energy_col, type_col])
 
-    if style == 'step':
+    if style == "step":
         return _add_line_step_style(ax, data, energy_col, type_col, c, label, indexes, lw)
     else:
-        return _add_line_default_style(ax, data, energy_col, type_col, c, label, indexes, lw, lw_connector)
+        return _add_line_default_style(
+            ax, data, energy_col, type_col, c, label, indexes, lw, lw_connector
+        )
 
 
-def _add_line_default_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type_col: str,
-                           c: str, label: Optional[str], indexes: Optional[List[int]],
-                           lw: Optional[float] = None, lw_connector: Optional[float] = None) -> plt.Axes:
+def _add_line_default_style(
+    ax: plt.Axes,
+    data: pd.DataFrame,
+    energy_col: str,
+    type_col: str,
+    c: str,
+    label: Optional[str],
+    indexes: Optional[List[int]],
+    lw: Optional[float] = None,
+    lw_connector: Optional[float] = None,
+) -> plt.Axes:
     """Default style: thick horizontal lines with diagonal connectors."""
     # Set default line widths
     if lw is None:
@@ -127,49 +153,86 @@ def _add_line_default_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, t
     if lw_connector is None:
         lw_connector = 0.75
 
-    count = 0   # Count intermediates
+    count = 0  # Count intermediates
     gap = False
     for i, t in enumerate(data[type_col]):
-        if pd.isnull(t):    # If row is empty, increase count and continue
+        if pd.isnull(t):  # If row is empty, increase count and continue
             count += 1
             gap = True
             continue
-        if t == 'M':
+        if t == "M":
             if indexes is None:
-                x = count*2 + 1
+                x = count * 2 + 1
             else:
-                x = indexes[count]*2 + 1
+                x = indexes[count] * 2 + 1
             if count == 0:
-                ax.plot([x,x+1], [data[energy_col][i], data[energy_col][i]], color=c, linewidth=lw, label=label)
+                ax.plot(
+                    [x, x + 1],
+                    [data[energy_col][i], data[energy_col][i]],
+                    color=c,
+                    linewidth=lw,
+                    label=label,
+                )
             else:
-                ax.plot([x,x+1], [data[energy_col][i], data[energy_col][i]], color=c, linewidth=lw)
-            count += 1      # Count increases with each plotted M point
-            if i < (len(data) - 1) and data[type_col][i+1] == 'M':
+                ax.plot(
+                    [x, x + 1], [data[energy_col][i], data[energy_col][i]], color=c, linewidth=lw
+                )
+            count += 1  # Count increases with each plotted M point
+            if i < (len(data) - 1) and data[type_col][i + 1] == "M":
                 if gap:
-                    ax.plot([x+1, x+2], [data[energy_col][i], data[energy_col][i+1]], '-', color=c, linewidth=lw_connector)
+                    ax.plot(
+                        [x + 1, x + 2],
+                        [data[energy_col][i], data[energy_col][i + 1]],
+                        "-",
+                        color=c,
+                        linewidth=lw_connector,
+                    )
                     gap = False
                 else:
-                    ax.plot([x+1, x+2], [data[energy_col][i], data[energy_col][i+1]], '-', color=c, linewidth=lw_connector)
-        if t == 'T':
+                    ax.plot(
+                        [x + 1, x + 2],
+                        [data[energy_col][i], data[energy_col][i + 1]],
+                        "-",
+                        color=c,
+                        linewidth=lw_connector,
+                    )
+        if t == "T":
             if indexes is None:
-                x = count*2 + 0.5       # Count should be +1 from previous M point
-                X_Y_Spline = make_interp_spline([x-0.5, x, x+0.5], [data[energy_col][i-1], data[energy_col][i], data[energy_col][i+1]], k=2)
-                X_ = np.linspace(x-0.5, x+0.5, 50)
-            else:       # Both X_Y_Spline and X_ variables should change if using "indexes" as parameter
-                diff_x = indexes[count]*2 - indexes[count-1]*2 - 1      # Diff between point before and after
-                x = indexes[count]*2 + 1 - diff_x / 2.
+                x = count * 2 + 0.5  # Count should be +1 from previous M point
+                X_Y_Spline = make_interp_spline(
+                    [x - 0.5, x, x + 0.5],
+                    [data[energy_col][i - 1], data[energy_col][i], data[energy_col][i + 1]],
+                    k=2,
+                )
+                X_ = np.linspace(x - 0.5, x + 0.5, 50)
+            else:  # Both X_Y_Spline and X_ variables should change if using "indexes" as parameter
+                diff_x = (
+                    indexes[count] * 2 - indexes[count - 1] * 2 - 1
+                )  # Diff between point before and after
+                x = indexes[count] * 2 + 1 - diff_x / 2.0
                 print(diff_x, x)
-                X_Y_Spline = make_interp_spline([x - diff_x/2., x, x + diff_x/2.], [data[energy_col][i-1], data[energy_col][i], data[energy_col][i+1]], k=2)
-                X_ = np.linspace(x - diff_x/2., x + diff_x/2., 50)
+                X_Y_Spline = make_interp_spline(
+                    [x - diff_x / 2.0, x, x + diff_x / 2.0],
+                    [data[energy_col][i - 1], data[energy_col][i], data[energy_col][i + 1]],
+                    k=2,
+                )
+                X_ = np.linspace(x - diff_x / 2.0, x + diff_x / 2.0, 50)
 
             Y_ = X_Y_Spline(X_)
-            ax.plot(X_, Y_, '-', color=c, linewidth=lw_connector)
+            ax.plot(X_, Y_, "-", color=c, linewidth=lw_connector)
     return ax
 
 
-def _add_line_step_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type_col: str,
-                        c: str, label: Optional[str], indexes: Optional[List[int]],
-                        lw: Optional[float] = None) -> plt.Axes:
+def _add_line_step_style(
+    ax: plt.Axes,
+    data: pd.DataFrame,
+    energy_col: str,
+    type_col: str,
+    c: str,
+    label: Optional[str],
+    indexes: Optional[List[int]],
+    lw: Optional[float] = None,
+) -> plt.Axes:
     """Step style: horizontal and vertical lines only (no diagonal connectors)."""
     # Set default line width
     if lw is None:
@@ -182,7 +245,7 @@ def _add_line_step_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type
         if pd.isnull(t):
             count += 1
             continue
-        if t == 'M':
+        if t == "M":
             if indexes is None:
                 x = count * 2 + 1.5  # Center of the horizontal segment
             else:
@@ -229,14 +292,24 @@ def _add_line_step_style(ax: plt.Axes, data: pd.DataFrame, energy_col: str, type
 
     return ax
 
-def beautify_pes_plot(ax: plt.Axes, xlim: Optional[Tuple[float, float]] = None,
-                      ylim: Optional[Tuple[float, float]] = None, zero: bool = True,
-                      leg: bool = False, fs: int = 12,
-                      data: Optional[pd.DataFrame] = None, label_col: Optional[str] = None,
-                      type_col: Optional[str] = None, npcet_col: Optional[str] = None,
-                      show_labels: bool = False, show_npcet: bool = False,
-                      indexes: Optional[List[int]] = None, frame: bool = True,
-                      y_decimals: Optional[int] = None) -> plt.Axes:
+
+def beautify_pes_plot(
+    ax: plt.Axes,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    zero: bool = True,
+    leg: bool = False,
+    fs: int = 12,
+    data: Optional[pd.DataFrame] = None,
+    label_col: Optional[str] = None,
+    type_col: Optional[str] = None,
+    npcet_col: Optional[str] = None,
+    show_labels: bool = False,
+    show_npcet: bool = False,
+    indexes: Optional[List[int]] = None,
+    frame: bool = True,
+    y_decimals: Optional[int] = None,
+) -> plt.Axes:
     """
     Beautify a PES plot by removing unnecessary spines and adding optional labels.
 
@@ -289,21 +362,22 @@ def beautify_pes_plot(ax: plt.Axes, xlim: Optional[Tuple[float, float]] = None,
         npcet_col = DEFAULT_NPCET_COL
 
     if not frame:
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
     ax.get_xaxis().set_ticks([])
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    ax.tick_params(axis='both', labelsize=fs)
+    ax.tick_params(axis="both", labelsize=fs)
 
     # Set y-axis decimal formatting
     if y_decimals is not None:
         from matplotlib.ticker import FormatStrFormatter
-        ax.yaxis.set_major_formatter(FormatStrFormatter(f'%.{y_decimals}f'))
+
+        ax.yaxis.set_major_formatter(FormatStrFormatter(f"%.{y_decimals}f"))
 
     if zero:
-        ax.plot(ax.get_xlim(), [0, 0], '--', color='lightgray', linewidth=1)
+        ax.plot(ax.get_xlim(), [0, 0], "--", color="lightgray", linewidth=1)
     if leg:
         ax.legend(fontsize=fs)
 
@@ -326,7 +400,7 @@ def beautify_pes_plot(ax: plt.Axes, xlim: Optional[Tuple[float, float]] = None,
             if pd.isnull(t):
                 count += 1
                 continue
-            if t == 'M':
+            if t == "M":
                 if indexes is None:
                     x = count * 2 + 1.5  # Center of the horizontal line
                 else:
@@ -342,13 +416,13 @@ def beautify_pes_plot(ax: plt.Axes, xlim: Optional[Tuple[float, float]] = None,
                     if not pd.isnull(npcet_val):
                         label_parts.append(f"n={int(npcet_val)}")
 
-                tick_labels.append('\n'.join(label_parts))
+                tick_labels.append("\n".join(label_parts))
                 count += 1
 
         # Set ticks and labels
         ax.set_xticks(tick_positions)
-        ax.set_xticklabels(tick_labels, fontsize=fs-2)
-        ax.spines['bottom'].set_visible(False)
-        ax.tick_params(axis='x', length=0)
+        ax.set_xticklabels(tick_labels, fontsize=fs - 2)
+        ax.spines["bottom"].set_visible(False)
+        ax.tick_params(axis="x", length=0)
 
     return ax

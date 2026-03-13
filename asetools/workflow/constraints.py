@@ -71,22 +71,16 @@ class ConstraintManager:
             raise FileNotFoundError(f"Constraint configuration file not found: {json_file}")
 
         try:
-            with open(json_path, 'r') as f:
+            with open(json_path, "r") as f:
                 config = json.load(f)
             logger.info(f"Loaded constraint configuration from {json_file}")
             return config
         except json.JSONDecodeError as e:
             raise json.JSONDecodeError(
-                f"Failed to parse JSON file {json_file}: {e.msg}",
-                e.doc, e.pos
+                f"Failed to parse JSON file {json_file}: {e.msg}", e.doc, e.pos
             )
 
-    def calculate_bond_distance(
-        self,
-        atoms: Atoms,
-        idx1: int,
-        idx2: int
-    ) -> float:
+    def calculate_bond_distance(self, atoms: Atoms, idx1: int, idx2: int) -> float:
         """
         Calculate equilibrium bond distance based on covalent radii.
 
@@ -114,7 +108,7 @@ class ConstraintManager:
         atoms: Atoms,
         pairs: List[Tuple[int, int]],
         k: float = 20.0,
-        distance_factor: Optional[float] = None
+        distance_factor: Optional[float] = None,
     ) -> List[Hookean]:
         """
         Create Hookean spring constraints from atom index pairs.
@@ -148,9 +142,9 @@ class ConstraintManager:
         for idx1, idx2 in pairs:
             # Validate indices
             if idx1 < 0 or idx1 >= len(atoms):
-                raise ValueError(f"Atom index {idx1} out of range [0, {len(atoms)-1}]")
+                raise ValueError(f"Atom index {idx1} out of range [0, {len(atoms) - 1}]")
             if idx2 < 0 or idx2 >= len(atoms):
-                raise ValueError(f"Atom index {idx2} out of range [0, {len(atoms)-1}]")
+                raise ValueError(f"Atom index {idx2} out of range [0, {len(atoms) - 1}]")
 
             # Get atomic symbols and radii
             symbol1 = atoms[idx1].symbol
@@ -164,7 +158,7 @@ class ConstraintManager:
             logger.info(
                 f"Hookean constraint: {symbol1}({idx1})—{symbol2}({idx2}), "
                 f"r0={r0:.3f} Å, k={k:.1f} eV/Å² "
-                f"(radii: {radius1:.3f} + {radius2:.3f} = {radius1+radius2:.3f} Å)"
+                f"(radii: {radius1:.3f} + {radius2:.3f} = {radius1 + radius2:.3f} Å)"
             )
 
             # Create Hookean constraint
@@ -203,11 +197,7 @@ class ConstraintManager:
 
         return sorted(set(fix_indices))
 
-    def merge_constraints(
-        self,
-        atoms: Atoms,
-        new_constraints: List
-    ) -> None:
+    def merge_constraints(self, atoms: Atoms, new_constraints: List) -> None:
         """
         Merge new constraints with existing constraints on atoms object.
 
@@ -251,11 +241,7 @@ class ConstraintManager:
         logger.info(f"Total constraints applied: {len(combined_constraints)}")
 
     def apply_from_json(
-        self,
-        atoms: Atoms,
-        json_file: str,
-        k: float = 20.0,
-        distance_factor: Optional[float] = None
+        self, atoms: Atoms, json_file: str, k: float = 20.0, distance_factor: Optional[float] = None
     ) -> None:
         """
         Load and apply Hookean constraints from JSON configuration file.
@@ -283,27 +269,27 @@ class ConstraintManager:
         config = self.load_constraint_config(json_file)
 
         # Extract pairs
-        if 'pairs' not in config:
+        if "pairs" not in config:
             raise RuntimeError(
                 f"JSON file {json_file} missing required 'pairs' key. "
-                "Expected format: {{\"pairs\": [[idx1, idx2], ...]}}"
+                'Expected format: {{"pairs": [[idx1, idx2], ...]}}'
             )
 
-        pairs = config['pairs']
+        pairs = config["pairs"]
         if not pairs:
             raise RuntimeError(f"Empty pairs list in {json_file}")
 
         logger.info(f"Applying {len(pairs)} Hookean constraints from {json_file}")
 
         # Override spring constant if specified in JSON metadata
-        if 'metadata' in config and 'spring_constant' in config['metadata']:
-            k = config['metadata']['spring_constant']
+        if "metadata" in config and "spring_constant" in config["metadata"]:
+            k = config["metadata"]["spring_constant"]
             logger.info(f"Using spring constant from JSON: k={k:.1f} eV/Å²")
 
         # Override distance factor if specified in JSON metadata
         if distance_factor is None:
-            if 'metadata' in config and 'distance_factor' in config['metadata']:
-                distance_factor = config['metadata']['distance_factor']
+            if "metadata" in config and "distance_factor" in config["metadata"]:
+                distance_factor = config["metadata"]["distance_factor"]
                 logger.info(f"Using distance factor from JSON: {distance_factor:.3f}")
             else:
                 distance_factor = self.distance_factor
@@ -318,11 +304,7 @@ class ConstraintManager:
 
         logger.info(f"Successfully applied constraints from {json_file}")
 
-    def apply_stage_constraints(
-        self,
-        atoms: Atoms,
-        constraint_config: Dict[str, Any]
-    ) -> None:
+    def apply_stage_constraints(self, atoms: Atoms, constraint_config: Dict[str, Any]) -> None:
         """
         Apply constraints from stage configuration (YAML workflow).
 
@@ -341,19 +323,19 @@ class ConstraintManager:
                 'distance_factor': 1.134
             }
         """
-        constraint_type = constraint_config.get('type', 'hookean')
+        constraint_type = constraint_config.get("type", "hookean")
 
-        if constraint_type != 'hookean':
+        if constraint_type != "hookean":
             raise ValueError(
                 f"Unsupported constraint type: {constraint_type}. "
                 "Currently only 'hookean' is supported."
             )
 
-        config_file = constraint_config.get('config_file')
+        config_file = constraint_config.get("config_file")
         if not config_file:
             raise ValueError("Missing 'config_file' in constraint configuration")
 
-        k = constraint_config.get('spring_constant', 20.0)
-        distance_factor = constraint_config.get('distance_factor')
+        k = constraint_config.get("spring_constant", 20.0)
+        distance_factor = constraint_config.get("distance_factor")
 
         self.apply_from_json(atoms, config_file, k=k, distance_factor=distance_factor)

@@ -7,31 +7,35 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+
 class VASPConfigurationFromYAML:
-    def __init__(self, config_file: str, system: str = 'default'):
+    def __init__(self, config_file: str, system: str = "default"):
         self.config = load_yaml_config(config_file)
         self.system = system
-        self.basic_config = self.config['basic']
-        self.workflows = self.config['workflows']
-        self.globals = self.config['globals']
+        self.basic_config = self.config["basic"]
+        self.workflows = self.config["workflows"]
+        self.globals = self.config["globals"]
 
         self.initial_magmom_data = self.initial_magmom()
 
         # Remove the magmom shorthand so it won't sneak into system_config
-        systems = self.config.get('systems', {})
+        systems = self.config.get("systems", {})
         if system in systems and systems[system] is not None:
-            systems[system].pop('magmom', None)
-
+            systems[system].pop("magmom", None)
 
     @property
     def system_config(self) -> dict:
         try:
-            system_dict = self.config['systems'][self.system]
+            system_dict = self.config["systems"][self.system]
             if system_dict is None:
-                logger.warning(f"System configuration for '{self.system}' is None. Returning an empty dictionary.")
+                logger.warning(
+                    f"System configuration for '{self.system}' is None. Returning an empty dictionary."
+                )
                 return {}
         except KeyError:
-            logger.warning(f"System configuration for '{self.system}' not found. Returning an empty dictionary.")
+            logger.warning(
+                f"System configuration for '{self.system}' not found. Returning an empty dictionary."
+            )
             return {}
         return system_dict
 
@@ -39,12 +43,13 @@ class VASPConfigurationFromYAML:
         system_config = self.system_config
         if system_config is None:
             return {}
-        if 'magmom' in system_config:
-            return system_config['magmom']
-        elif 'initial_magmom' in system_config:
-            return system_config['initial_magmom']
+        if "magmom" in system_config:
+            return system_config["magmom"]
+        elif "initial_magmom" in system_config:
+            return system_config["initial_magmom"]
         else:
             return {}
+
 
 def load_yaml_config(config_file: str) -> dict:
     """
@@ -56,16 +61,18 @@ def load_yaml_config(config_file: str) -> dict:
                - each workflow should have 'stages' containing a name and a dict with overrides
            - globals: to define settings like VASP_PP_PATH or initial_conf_pattern
     """
-    with open(config_file, 'r') as file:
+    with open(config_file, "r") as file:
         cfg = yaml.safe_load(file)
-    verify_configuration_keys(cfg)   # Verify keys
+    verify_configuration_keys(cfg)  # Verify keys
     return cfg
 
+
 def verify_configuration_keys(cfg: dict) -> None:
-    required_keys = ['basic', 'systems', 'workflows', 'globals']
+    required_keys = ["basic", "systems", "workflows", "globals"]
     for key in required_keys:
         if key not in cfg:
             raise KeyError(f"Configuration file is missing required key: '{key}'")
+
 
 def deep_update(base: dict, override: dict):
     """
@@ -79,6 +86,7 @@ def deep_update(base: dict, override: dict):
         else:
             base[k] = v
     return base
+
 
 def setup_initial_magmom(atoms, magmom_data):
     """
@@ -132,15 +140,12 @@ def setup_initial_magmom(atoms, magmom_data):
         logger.info(f"Applied element-based magnetic moments from dict: {magmom_data}")
 
     # Handle None or empty containers
-    elif magmom_data is None or (hasattr(magmom_data, '__len__') and len(magmom_data) == 0):
+    elif magmom_data is None or (hasattr(magmom_data, "__len__") and len(magmom_data) == 0):
         for at in atoms:
             at.magmom = 0.0
         logger.info("No magnetic moments specified, set all to 0.0")
 
     else:
-        raise TypeError(
-            f"magmom_data must be dict, list, or None. Got {type(magmom_data)}"
-        )
+        raise TypeError(f"magmom_data must be dict, list, or None. Got {type(magmom_data)}")
 
     return atoms
-

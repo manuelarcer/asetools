@@ -7,7 +7,7 @@ from .plots import (
 )
 
 __all__ = [
-    'add_line_to_pes',
-    'beautify_pes_plot',
-    'validate_columns',
+    "add_line_to_pes",
+    "beautify_pes_plot",
+    "validate_columns",
 ]

@@ -21,7 +21,8 @@ from ase.mep import DimerControl, MinModeAtoms
 
 logger = logging.getLogger(__name__)
 
-def read_modecar(filename: str = 'MODECAR') -> np.ndarray:
+
+def read_modecar(filename: str = "MODECAR") -> np.ndarray:
     """
     Read displacement vector from MODECAR file.
 
@@ -44,7 +45,7 @@ def read_modecar(filename: str = 'MODECAR') -> np.ndarray:
 
     try:
         # Read MODECAR using ASE's POSCAR reader, but interpret as displacement vectors
-        modecar_atoms = read(filename, format='vasp')
+        modecar_atoms = read(filename, format="vasp")
         displacement_vector = modecar_atoms.get_positions()
 
         # Normalize the displacement vector to unit magnitude
@@ -66,7 +67,7 @@ def read_modecar(filename: str = 'MODECAR') -> np.ndarray:
         raise
 
 
-def write_modecar(displacement_vector: np.ndarray, atoms: Atoms, filename: str = 'MODECAR') -> None:
+def write_modecar(displacement_vector: np.ndarray, atoms: Atoms, filename: str = "MODECAR") -> None:
     """
     Write displacement vector to MODECAR file.
 
@@ -85,7 +86,7 @@ def write_modecar(displacement_vector: np.ndarray, atoms: Atoms, filename: str =
         modecar_atoms.set_positions(displacement_vector)
 
         # Write in VASP format
-        write(filename, modecar_atoms, format='vasp')
+        write(filename, modecar_atoms, format="vasp")
         logger.info(f"Successfully wrote MODECAR to {filename}")
 
     except Exception as e:
@@ -93,7 +94,12 @@ def write_modecar(displacement_vector: np.ndarray, atoms: Atoms, filename: str =
         raise
 
 
-def generate_displacement_vector(atoms: Atoms, method: str = 'random', direction: Optional[np.ndarray] = None, magnitude: float = 0.01) -> np.ndarray:
+def generate_displacement_vector(
+    atoms: Atoms,
+    method: str = "random",
+    direction: Optional[np.ndarray] = None,
+    magnitude: float = 0.01,
+) -> np.ndarray:
     """
     Generate initial displacement vector for dimer calculation.
 
@@ -115,27 +121,29 @@ def generate_displacement_vector(atoms: Atoms, method: str = 'random', direction
     """
     n_atoms = len(atoms)
 
-    if method == 'modecar':
+    if method == "modecar":
         # Try to read from MODECAR file
         try:
-            return read_modecar('MODECAR')
+            return read_modecar("MODECAR")
         except FileNotFoundError:
             logger.warning("MODECAR file not found, falling back to random displacement")
-            method = 'random'
+            method = "random"
 
-    if method == 'random':
+    if method == "random":
         # Generate random displacement vector
         displacement_vector = np.random.random((n_atoms, 3)) - 0.5
         displacement_vector = displacement_vector / np.linalg.norm(displacement_vector) * magnitude
         logger.info(f"Generated random displacement vector with magnitude {magnitude}")
 
-    elif method == 'direction':
+    elif method == "direction":
         if direction is None:
             raise ValueError("Direction vector must be provided for 'direction' method")
 
         direction = np.array(direction)
         if direction.shape != (n_atoms, 3):
-            raise ValueError(f"Direction shape {direction.shape} doesn't match atoms shape ({n_atoms}, 3)")
+            raise ValueError(
+                f"Direction shape {direction.shape} doesn't match atoms shape ({n_atoms}, 3)"
+            )
 
         displacement_vector = direction / np.linalg.norm(direction) * magnitude
         logger.info(f"Generated directional displacement vector with magnitude {magnitude}")
@@ -146,7 +154,11 @@ def generate_displacement_vector(atoms: Atoms, method: str = 'random', direction
     return displacement_vector
 
 
-def setup_dimer_atoms(atoms: Atoms, displacement_vector: Optional[np.ndarray] = None, dimer_control_kwargs: Optional[Dict[str, Any]] = None) -> MinModeAtoms:
+def setup_dimer_atoms(
+    atoms: Atoms,
+    displacement_vector: Optional[np.ndarray] = None,
+    dimer_control_kwargs: Optional[Dict[str, Any]] = None,
+) -> MinModeAtoms:
     """
     Set up MinModeAtoms object for dimer calculation.
 
@@ -169,10 +181,10 @@ def setup_dimer_atoms(atoms: Atoms, displacement_vector: Optional[np.ndarray] = 
 
     # Set default dimer control parameters
     default_control_kwargs = {
-        'initial_eigenmode_method': 'displacement',
-        'displacement_method': 'vector',
-        'logfile': 'dimer.log',
-        'mask': None,  # None means all atoms participate
+        "initial_eigenmode_method": "displacement",
+        "displacement_method": "vector",
+        "logfile": "dimer.log",
+        "mask": None,  # None means all atoms participate
     }
     default_control_kwargs.update(dimer_control_kwargs)
 
@@ -186,11 +198,11 @@ def setup_dimer_atoms(atoms: Atoms, displacement_vector: Optional[np.ndarray] = 
     if displacement_vector is None:
         # Try to read from MODECAR, fall back to random
         try:
-            displacement_vector = read_modecar('MODECAR')
+            displacement_vector = read_modecar("MODECAR")
             logger.info("Using displacement vector from MODECAR file")
         except FileNotFoundError:
             logger.info("No MODECAR found, generating random displacement vector")
-            displacement_vector = generate_displacement_vector(atoms, method='random')
+            displacement_vector = generate_displacement_vector(atoms, method="random")
 
     # Apply displacement vector
     d_atoms.displace(displacement_vector=displacement_vector)
@@ -201,7 +213,9 @@ def setup_dimer_atoms(atoms: Atoms, displacement_vector: Optional[np.ndarray] = 
     return d_atoms
 
 
-def check_dimer_convergence(d_atoms: MinModeAtoms, force_threshold: float = 0.01, eigenvalue_threshold: float = -0.01) -> Dict[str, Any]:
+def check_dimer_convergence(
+    d_atoms: MinModeAtoms, force_threshold: float = 0.01, eigenvalue_threshold: float = -0.01
+) -> Dict[str, Any]:
     """
     Check convergence criteria for dimer calculation.
 
@@ -224,7 +238,7 @@ def check_dimer_convergence(d_atoms: MinModeAtoms, force_threshold: float = 0.01
         max_force = np.max(np.linalg.norm(forces, axis=1))
 
         # Get eigenvalue if available
-        eigenvalue = getattr(d_atoms, 'eigenvalue', None)
+        eigenvalue = getattr(d_atoms, "eigenvalue", None)
 
         force_converged = max_force < force_threshold
         eigenvalue_converged = eigenvalue is not None and eigenvalue < eigenvalue_threshold
@@ -232,13 +246,13 @@ def check_dimer_convergence(d_atoms: MinModeAtoms, force_threshold: float = 0.01
         converged = force_converged and (eigenvalue is None or eigenvalue_converged)
 
         convergence_info = {
-            'converged': converged,
-            'max_force': max_force,
-            'force_threshold': force_threshold,
-            'force_converged': force_converged,
-            'eigenvalue': eigenvalue,
-            'eigenvalue_threshold': eigenvalue_threshold,
-            'eigenvalue_converged': eigenvalue_converged,
+            "converged": converged,
+            "max_force": max_force,
+            "force_threshold": force_threshold,
+            "force_converged": force_converged,
+            "eigenvalue": eigenvalue,
+            "eigenvalue_threshold": eigenvalue_threshold,
+            "eigenvalue_converged": eigenvalue_converged,
         }
 
         logger.info(f"Dimer convergence check: max_force={max_force:.4f}, eigenvalue={eigenvalue}")
@@ -247,7 +261,7 @@ def check_dimer_convergence(d_atoms: MinModeAtoms, force_threshold: float = 0.01
 
     except Exception as e:
         logger.error(f"Error checking dimer convergence: {e}")
-        return {'converged': False, 'error': str(e)}
+        return {"converged": False, "error": str(e)}
 
 
 def extract_saddle_point_info(d_atoms: MinModeAtoms) -> Dict[str, Any]:
@@ -271,17 +285,17 @@ def extract_saddle_point_info(d_atoms: MinModeAtoms) -> Dict[str, Any]:
         max_force = np.max(np.linalg.norm(forces, axis=1))
 
         # Get dimer-specific information
-        eigenvalue = getattr(d_atoms, 'eigenvalue', None)
-        eigenvector = getattr(d_atoms, 'eigenvector', None)
+        eigenvalue = getattr(d_atoms, "eigenvalue", None)
+        eigenvector = getattr(d_atoms, "eigenvector", None)
 
         saddle_info = {
-            'energy': energy,
-            'max_force': max_force,
-            'eigenvalue': eigenvalue,
-            'eigenvector': eigenvector,
-            'positions': atoms.get_positions().copy(),
-            'cell': atoms.get_cell().copy(),
-            'symbols': atoms.get_chemical_symbols(),
+            "energy": energy,
+            "max_force": max_force,
+            "eigenvalue": eigenvalue,
+            "eigenvector": eigenvector,
+            "positions": atoms.get_positions().copy(),
+            "cell": atoms.get_cell().copy(),
+            "symbols": atoms.get_chemical_symbols(),
         }
 
         logger.info(f"Extracted saddle point: E={energy:.6f} eV, eigenvalue={eigenvalue}")
@@ -290,10 +304,10 @@ def extract_saddle_point_info(d_atoms: MinModeAtoms) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error extracting saddle point info: {e}")
-        return {'error': str(e)}
+        return {"error": str(e)}
 
 
-def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = 'dimer_trajectory.traj') -> None:
+def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = "dimer_trajectory.traj") -> None:
     """
     Save dimer calculation trajectory.
 
@@ -308,12 +322,12 @@ def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = 'dimer_trajecto
         from ase.io import Trajectory
 
         # Check if trajectory is already being saved
-        if hasattr(d_atoms, 'trajectory') and d_atoms.trajectory is not None:
+        if hasattr(d_atoms, "trajectory") and d_atoms.trajectory is not None:
             logger.info("Trajectory already being saved by optimizer")
             return
 
         # Create new trajectory
-        traj = Trajectory(filename, 'w')
+        traj = Trajectory(filename, "w")
         traj.write(d_atoms.atoms)
         traj.close()
 
@@ -325,7 +339,10 @@ def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = 'dimer_trajecto
 
 # Utility functions for integration with workflow manager
 
-def validate_dimer_kwargs(optimizer_kwargs: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+
+def validate_dimer_kwargs(
+    optimizer_kwargs: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
     Validate and process dimer-specific optimizer kwargs.
 
@@ -341,15 +358,18 @@ def validate_dimer_kwargs(optimizer_kwargs: Dict[str, Any]) -> Tuple[Dict[str, A
     """
     # Separate dimer-specific parameters
     dimer_control_params = {
-        'initial_eigenmode_method', 'displacement_method', 'mask',
-        'logfile', 'displacement_vector'
+        "initial_eigenmode_method",
+        "displacement_method",
+        "mask",
+        "logfile",
+        "displacement_vector",
     }
 
     # Parameters that go to optimizer initialization
-    optimizer_init_params = {'logfile', 'trajectory'}
+    optimizer_init_params = {"logfile", "trajectory"}
 
     # Parameters that go to optimizer run method
-    optimizer_run_params = {'fmax', 'steps'}
+    optimizer_run_params = {"fmax", "steps"}
 
     dimer_control_kwargs = {}
     optimizer_init_kwargs = {}
@@ -357,7 +377,7 @@ def validate_dimer_kwargs(optimizer_kwargs: Dict[str, Any]) -> Tuple[Dict[str, A
 
     for key, value in optimizer_kwargs.items():
         if key in dimer_control_params:
-            if key != 'displacement_vector':  # Handle separately
+            if key != "displacement_vector":  # Handle separately
                 dimer_control_kwargs[key] = value
         elif key in optimizer_init_params:
             optimizer_init_kwargs[key] = value
@@ -368,10 +388,10 @@ def validate_dimer_kwargs(optimizer_kwargs: Dict[str, Any]) -> Tuple[Dict[str, A
             optimizer_run_kwargs[key] = value
 
     # Set defaults
-    if 'fmax' not in optimizer_run_kwargs:
-        optimizer_run_kwargs['fmax'] = 0.01
+    if "fmax" not in optimizer_run_kwargs:
+        optimizer_run_kwargs["fmax"] = 0.01
 
-    if 'logfile' not in optimizer_init_kwargs:
-        optimizer_init_kwargs['logfile'] = 'dimer_optimization.log'
+    if "logfile" not in optimizer_init_kwargs:
+        optimizer_init_kwargs["logfile"] = "dimer_optimization.log"
 
     return dimer_control_kwargs, optimizer_init_kwargs, optimizer_run_kwargs

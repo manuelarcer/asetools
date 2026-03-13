@@ -45,7 +45,7 @@ def process_single_calc(path, initial_pattern, verbose):
     abs_path = os.path.abspath(path)
 
     # Check OUTCAR exists
-    outcar_path = os.path.join(abs_path, 'OUTCAR')
+    outcar_path = os.path.join(abs_path, "OUTCAR")
     if not os.path.exists(outcar_path):
         raise FileNotFoundError(f"OUTCAR not found in {path}")
 
@@ -71,8 +71,8 @@ def process_single_calc(path, initial_pattern, verbose):
     # Load final structure from OUTCAR
     final_atoms = None
     try:
-        final_atoms = read(outcar_path, format='vasp-out', index=-1)
-        if verbose and metadata.get('Energy') is not None:
+        final_atoms = read(outcar_path, format="vasp-out", index=-1)
+        if verbose and metadata.get("Energy") is not None:
             print(f"  Final: OUTCAR (E={metadata['Energy']:.3f} eV)")
         elif verbose:
             print("  Final: OUTCAR")
@@ -82,17 +82,17 @@ def process_single_calc(path, initial_pattern, verbose):
 
     # Build record
     record = {
-        'Path': path,
-        'AbsPath': abs_path,
-        'InitialStructure': initial_atoms,
-        'FinalStructure': final_atoms,
-        **metadata  # Unpack all metadata fields
+        "Path": path,
+        "AbsPath": abs_path,
+        "InitialStructure": initial_atoms,
+        "FinalStructure": final_atoms,
+        **metadata,  # Unpack all metadata fields
     }
 
     return record
 
 
-def build_database(paths, initial_pattern='*.vasp', verbose=False, skip_errors=False):
+def build_database(paths, initial_pattern="*.vasp", verbose=False, skip_errors=False):
     """
     Build pandas DataFrame from VASP calculation directories.
 
@@ -110,7 +110,7 @@ def build_database(paths, initial_pattern='*.vasp', verbose=False, skip_errors=F
 
     for i, path in enumerate(paths):
         if verbose:
-            print(f"[{i+1}/{len(paths)}] Processing: {path}")
+            print(f"[{i + 1}/{len(paths)}] Processing: {path}")
 
         try:
             record = process_single_calc(path, initial_pattern, verbose)
@@ -126,11 +126,11 @@ def build_database(paths, initial_pattern='*.vasp', verbose=False, skip_errors=F
 
     # Print summary of skipped folders
     if skipped:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Skipped {len(skipped)} folder(s) due to errors:")
         for err in skipped:
             print(f"  - {err}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
     df = pd.DataFrame(records)
     return df
@@ -146,18 +146,18 @@ def add_relative_energies(df):
     Returns:
         pd.DataFrame: DataFrame with added 'Rel.E' column
     """
-    energies = df['Energy'].values
+    energies = df["Energy"].values
 
     # Filter out None or invalid values
     valid_energies = [e for e in energies if e is not None and isinstance(e, (int, float))]
 
     if valid_energies:
         min_energy = min(valid_energies)
-        df['Rel.E'] = df['Energy'].apply(
+        df["Rel.E"] = df["Energy"].apply(
             lambda x: x - min_energy if (x is not None and isinstance(x, (int, float))) else None
         )
     else:
-        df['Rel.E'] = None
+        df["Rel.E"] = None
 
     return df
 
@@ -171,7 +171,7 @@ def save_database(df, output_path, verbose):
         output_path: Output pickle file path
         verbose: Print file size information
     """
-    with open(output_path, 'wb') as f:
+    with open(output_path, "wb") as f:
         pickle.dump(df, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     if verbose:
@@ -187,28 +187,28 @@ def print_summary(df):
     Args:
         df: DataFrame to summarize
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Database Summary")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Total calculations: {len(df)}")
 
     # Calculation types
-    if 'CalcType' in df.columns:
+    if "CalcType" in df.columns:
         print("\nCalculation types:")
-        calc_types = df['CalcType'].value_counts()
+        calc_types = df["CalcType"].value_counts()
         for calc_type, count in calc_types.items():
             print(f"  {calc_type}: {count}")
 
     # Convergence status
-    if 'Converged' in df.columns:
+    if "Converged" in df.columns:
         print("\nConvergence status:")
-        conv_counts = df['Converged'].value_counts()
+        conv_counts = df["Converged"].value_counts()
         for status, count in conv_counts.items():
             print(f"  {status}: {count}")
 
     # Energy range
-    if 'Energy' in df.columns:
-        valid_energies = df['Energy'].dropna()
+    if "Energy" in df.columns:
+        valid_energies = df["Energy"].dropna()
         if len(valid_energies) > 0:
             print("\nEnergy range:")
             print(f"  Min: {valid_energies.min():.3f} eV")
@@ -216,18 +216,18 @@ def print_summary(df):
             print(f"  Range: {valid_energies.max() - valid_energies.min():.3f} eV")
 
     # Relative energies if present
-    if 'Rel.E' in df.columns:
-        valid_rel_e = df['Rel.E'].dropna()
+    if "Rel.E" in df.columns:
+        valid_rel_e = df["Rel.E"].dropna()
         if len(valid_rel_e) > 0:
             print("\nRelative energy range:")
             print(f"  Max: {valid_rel_e.max():.3f} eV")
 
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Extract VASP calculation data to pandas DataFrame (pickle format)',
+        description="Extract VASP calculation data to pandas DataFrame (pickle format)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -248,56 +248,46 @@ Loading the database:
 
   # View summary
   print(df[['Path', 'CalcType', 'Energy', 'Converged', 'Rel.E']])
-        """
+        """,
     )
 
     parser.add_argument(
-        '--paths',
-        nargs='+',
+        "--paths",
+        nargs="+",
         required=True,
-        help='List of calculation directories (relative or absolute paths)'
+        help="List of calculation directories (relative or absolute paths)",
     )
 
     parser.add_argument(
-        '--output', '-o',
-        required=True,
-        help='Output pickle file path (e.g., database.pkl)'
+        "--output", "-o", required=True, help="Output pickle file path (e.g., database.pkl)"
     )
 
     parser.add_argument(
-        '--initial-pattern',
-        default='*.vasp',
-        help='Glob pattern for initial structure files (default: *.vasp)'
+        "--initial-pattern",
+        default="*.vasp",
+        help="Glob pattern for initial structure files (default: *.vasp)",
     )
 
     parser.add_argument(
-        '--relative-energy', '-r',
-        action='store_true',
-        help='Calculate relative energies (subtract minimum)'
+        "--relative-energy",
+        "-r",
+        action="store_true",
+        help="Calculate relative energies (subtract minimum)",
     )
 
     parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Verbose output showing progress'
+        "--verbose", "-v", action="store_true", help="Verbose output showing progress"
     )
 
     parser.add_argument(
-        '--skip-errors',
-        action='store_true',
-        help='Skip folders with errors instead of stopping'
+        "--skip-errors", action="store_true", help="Skip folders with errors instead of stopping"
     )
 
     args = parser.parse_args()
 
     # Build database
     print(f"Scanning {len(args.paths)} folder(s)...")
-    df = build_database(
-        args.paths,
-        args.initial_pattern,
-        args.verbose,
-        args.skip_errors
-    )
+    df = build_database(args.paths, args.initial_pattern, args.verbose, args.skip_errors)
 
     if len(df) == 0:
         print("ERROR: No calculations successfully processed!")

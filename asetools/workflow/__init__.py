@@ -5,8 +5,8 @@ from .constraints import ConstraintManager
 from .manager import make_calculator, run_workflow
 
 __all__ = [
-    'ConstraintManager',
-    'VASPConfigurationFromYAML',
-    'make_calculator',
-    'run_workflow',
+    "ConstraintManager",
+    "VASPConfigurationFromYAML",
+    "make_calculator",
+    "run_workflow",
 ]

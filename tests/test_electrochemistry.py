@@ -9,14 +9,17 @@ class TestAppliedPotentialImports:
 
     def test_import_module(self):
         from asetools.electrochemistry import appliedpotential
+
         assert appliedpotential is not None
 
     def test_ushe_constant(self):
         from asetools.electrochemistry.appliedpotential import U_SHE
+
         assert U_SHE == pytest.approx(4.43)
 
     def test_valences_dict(self):
         from asetools.electrochemistry.appliedpotential import VALANCES
+
         assert "Cu" in VALANCES
         assert "H" in VALANCES
         assert VALANCES["H"] == 1
@@ -27,6 +30,7 @@ class TestPureFunctions:
 
     def test_custom_polynomial(self):
         from asetools.electrochemistry.appliedpotential import custom_polynomial
+
         # y = fixed_constant + beta[0]*x + beta[1]*x^2
         beta = [2.0, 3.0]
         x = np.array([0.0, 1.0, 2.0])
@@ -36,6 +40,7 @@ class TestPureFunctions:
 
     def test_custom_polynomial_zero(self):
         from asetools.electrochemistry.appliedpotential import custom_polynomial
+
         beta = [1.0]
         result = custom_polynomial(beta, 0.0, fixed_constant=5.0)
         assert result == pytest.approx(5.0)
