@@ -61,8 +61,8 @@ Branch: feature/type-hints, commit 40f8da5.
 ### E — Code quality tooling ✅ DONE (2026-03-13)
 Added ruff config to pyproject.toml with rule sets E/W/F/I/UP/B/SIM/RUF. Auto-fixed 672 issues (whitespace, import sorting, f-strings, pyupgrade). Manual fixes for unused vars and collapsible ifs. Legacy patterns (bare except, unicode math, mutable class defaults) documented as ignored with rationale. ruff format deferred (44 files would change — could be a follow-up). Added ruff to dev deps. Branch: feature/code-quality-tooling, commit d59093b.
 
-### F — Documentation refresh ✅ PENDING
-Update docs/ to reflect the reorganized package structure. Ensure all CLI tools are documented.
+### F — Documentation refresh ✅ DONE (2026-03-16)
+Added docs/index.md (package overview, structure, installation, quick start), docs/cli_reference.md (all 17 CLI tools with usage, flags, examples), and docs/api_reference.md (module-level Python API for all 11 subpackages). Existing docs (thermodynamics, constraints, VASP guide) linked from index. Branch: feature/documentation-refresh, commit e257de8.
 
 ### G — CI setup ✅ PENDING
 GitHub Actions workflow for pytest + ruff on push/PR.
