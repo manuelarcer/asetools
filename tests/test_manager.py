@@ -1,8 +1,10 @@
 import os
 import shutil
 import tempfile
+
 import pytest
-from ase.io import read, write
+from ase.io import read
+
 from asetools.workflow.manager import load_structure
 
 
@@ -112,7 +114,7 @@ class TestLoadStructure:
 
         # Verify it loaded from OUTCAR (not CONTCAR)
         expected_outcar = read("OUTCAR", format="vasp-out", index=-1)
-        expected_contcar = read("CONTCAR", format="vasp")
+        read("CONTCAR", format="vasp")
 
         # Should match OUTCAR
         assert len(atoms) == len(expected_outcar)

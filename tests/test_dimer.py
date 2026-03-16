@@ -6,11 +6,10 @@ This script tests the complete dimer workflow including YAML configuration,
 constraint handling, and convergence checking.
 """
 
-import os
-import sys
-import numpy as np
-from pathlib import Path
 import logging
+import os
+
+import numpy as np
 import pytest
 
 # Set up logging
@@ -22,8 +21,7 @@ logger = logging.getLogger(__name__)
 
 def create_test_structure():
     """Create a test structure for dimer calculation."""
-    from ase import Atoms
-    from ase.build import fcc111, add_adsorbate
+    from ase.build import add_adsorbate, fcc111
     from ase.constraints import FixAtoms
     from ase.io import write
 
@@ -208,14 +206,14 @@ def test_dimer_utilities():
     """Test dimer utility functions."""
     logger.info("=== Testing Dimer Utilities ===")
 
-    from asetools.pathways.dimer import (
-        read_modecar,
-        write_modecar,
-        generate_displacement_vector,
-        validate_dimer_kwargs,
-        check_dimer_convergence,
-    )
     from ase.io import read
+
+    from asetools.pathways.dimer import (
+        generate_displacement_vector,
+        read_modecar,
+        validate_dimer_kwargs,
+        write_modecar,
+    )
 
     # Load test structure
     atoms = read("POSCAR")
@@ -270,9 +268,10 @@ def test_emt_dimer():
 
     try:
         from ase.calculators.emt import EMT
-        from ase.mep import DimerControl, MinModeAtoms, MinModeTranslate
-        from asetools.pathways.dimer import setup_dimer_atoms, check_dimer_convergence
         from ase.io import read
+        from ase.mep import DimerControl, MinModeAtoms, MinModeTranslate  # noqa: F401
+
+        from asetools.pathways.dimer import check_dimer_convergence, setup_dimer_atoms
 
         # Load structure and set EMT calculator
         atoms = read("POSCAR")
@@ -323,8 +322,8 @@ def test_workflow_manager():
     logger.info("=== Testing Workflow Manager Integration ===")
 
     try:
-        from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
         from asetools.pathways.dimer import validate_dimer_kwargs
+        from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
 
         # Test YAML loading
         cfg = VASPConfigurationFromYAML("dimer_test_config.yaml", "Al_CO")
@@ -346,7 +345,7 @@ def test_workflow_manager():
 
         # Test kwargs validation
         optimizer_kwargs = dimer_step["optimizer_kwargs"]
-        dimer_kwargs, init_kwargs, run_kwargs = validate_dimer_kwargs(optimizer_kwargs)
+        dimer_kwargs, _init_kwargs, run_kwargs = validate_dimer_kwargs(optimizer_kwargs)
 
         assert "fmax" in run_kwargs
         assert "initial_eigenmode_method" in dimer_kwargs
@@ -366,9 +365,10 @@ def test_vaspinteractive_setup():
     logger.info("=== Testing VaspInteractive Setup ===")
 
     try:
-        from vasp_interactive import VaspInteractive
-        from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
         from ase.io import read
+        from vasp_interactive import VaspInteractive  # noqa: F401
+
+        from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
 
         # Load configuration
         cfg = VASPConfigurationFromYAML("dimer_test_config.yaml", "Al_CO")
@@ -378,7 +378,7 @@ def test_vaspinteractive_setup():
         vasp_kwargs.update(cfg.system_config)
 
         # Test VaspInteractive parameter setup
-        atoms = read("POSCAR")
+        read("POSCAR")
 
         logger.info("VaspInteractive parameters:")
         for key, value in vasp_kwargs.items():
@@ -398,7 +398,6 @@ def analyze_convergence():
     """Analyze convergence after dimer calculation."""
     logger.info("=== Analyzing Convergence ===")
 
-    from asetools.pathways.dimer import check_dimer_convergence, extract_saddle_point_info
     from ase.io import Trajectory
 
     # Check if trajectory exists
@@ -468,7 +467,7 @@ def main():
         # Setup
         logger.info("Setting up test environment...")
         atoms = create_test_structure()
-        displacement_vector = create_test_modecar(atoms)
+        create_test_modecar(atoms)
         create_dimer_yaml()
 
         # Run tests

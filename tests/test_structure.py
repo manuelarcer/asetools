@@ -1,8 +1,7 @@
 """Tests for asetools.structure module."""
 
 import pytest
-import numpy as np
-from ase.build import fcc111, add_adsorbate
+from ase.build import fcc111
 
 
 class TestSurfaceAnalyzer:
@@ -57,14 +56,13 @@ class TestBondValence:
     """Tests for bond valence module."""
 
     def test_import(self):
-        from asetools.structure.bond_valence import BondValenceSum, BondValenceParameters
+        from asetools.structure.bond_valence import BondValenceParameters, BondValenceSum
 
         assert BondValenceSum is not None
         assert BondValenceParameters is not None
 
     def test_bvparm_data_exists(self):
         """Ensure the BV parameter data file is accessible."""
-        import importlib.resources
 
         # The data file should be bundled
         from pathlib import Path

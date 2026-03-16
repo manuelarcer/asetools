@@ -2,11 +2,11 @@
 Tests for bond valence sum calculations.
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 from ase import Atoms
-from ase.build import bulk
+
 from asetools.structure.bond_valence import BondValenceParameters, BondValenceSum
 
 
@@ -367,7 +367,7 @@ class TestBondValenceIntegration:
         assert len(allowed_pairs) == 1
 
         # Calculate BVS - should only consider Ti-O bonds
-        bvs_results = bvs_calc.calculate_bvs()
+        bvs_calc.calculate_bvs()
 
         # Check bond details for Ti atom (index 0)
         ti_bonds = bvs_calc.get_bond_details(0)
@@ -404,11 +404,11 @@ class TestBondValenceIntegration:
             atoms, valence_states=valence_states, exclude_same_element=False, distance_cutoff=2.5
         )
 
-        allowed_pairs_include = bvs_calc_include.get_allowed_pairs()
+        bvs_calc_include.get_allowed_pairs()
         # Note: Ti-Ti might still not be included if no bond valence parameters exist
 
         # Calculate BVS and check that Ti-Ti bonds are not considered in first case
-        bvs_results = bvs_calc.calculate_bvs()
+        bvs_calc.calculate_bvs()
         ti_bonds = bvs_calc.get_bond_details(0)  # First Ti atom
 
         # Should not have Ti-Ti bonds in excluded case
@@ -438,7 +438,7 @@ class TestBondValenceIntegration:
         assert ("H", "Ti") not in allowed_pairs
 
         # Calculate BVS for Ti atom
-        bvs_results = bvs_calc.calculate_bvs()
+        bvs_calc.calculate_bvs()
         ti_bonds = bvs_calc.get_bond_details(0)  # Ti atom
 
         # Ti should only bond to O, not H
@@ -482,7 +482,7 @@ class TestBondValenceIntegration:
         )
 
         # Calculate BVS (should trigger auto-determination)
-        bvs_results = bvs_calc.calculate_bvs()
+        bvs_calc.calculate_bvs()
 
         # Check that Ti valence was optimized
         assert hasattr(bvs_calc, "optimized_valences")
@@ -628,9 +628,9 @@ class TestBondValenceIntegration:
         )
 
         # Test metal detection
-        assert bvs_calc._is_metal_element("Ti") == True
-        assert bvs_calc._is_metal_element("O") == False
-        assert bvs_calc._is_metal_element("H") == False
+        assert bvs_calc._is_metal_element("Ti")
+        assert not bvs_calc._is_metal_element("O")
+        assert not bvs_calc._is_metal_element("H")
 
         # Only Ti should be optimized
         opt_results = bvs_calc.get_valence_optimization_results()
@@ -675,7 +675,7 @@ class TestBondValenceIntegration:
         # Ti should be optimized (if parameters exist)
         if "Ti" in opt_results:
             assert len(opt_results["Ti"]) > 0
-            ti_result = list(opt_results["Ti"].values())[0]
+            ti_result = next(iter(opt_results["Ti"].values()))
             assert "best_valence" in ti_result
             assert "best_deviation" in ti_result
             assert "optimization_results" in ti_result

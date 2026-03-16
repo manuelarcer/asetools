@@ -10,8 +10,6 @@ This script demonstrates:
 """
 
 import pickle
-import pandas as pd
-from ase.io import write
 
 # ============================================================
 # Part 1: Creating the database (command-line)
@@ -82,7 +80,7 @@ try:
 
     # Energy statistics
     if "Energy" in df.columns:
-        print(f"\nEnergy statistics:")
+        print("\nEnergy statistics:")
         print(f"  Mean: {df['Energy'].mean():.3f} eV")
         print(f"  Std:  {df['Energy'].std():.3f} eV")
         print(f"  Min:  {df['Energy'].min():.3f} eV")
@@ -118,7 +116,7 @@ write('structure.vasp', final_atoms, format='vasp', direct=True)
 
     if "FinalStructure" in df.columns and df.loc[0, "FinalStructure"] is not None:
         final_atoms = df.loc[0, "FinalStructure"]
-        print(f"\nExample: First calculation")
+        print("\nExample: First calculation")
         print(f"  Number of atoms: {len(final_atoms)}")
         print(f"  Chemical formula: {final_atoms.get_chemical_formula()}")
         print(f"  Cell volume: {final_atoms.get_volume():.2f} Å³")
@@ -132,7 +130,7 @@ write('structure.vasp', final_atoms, format='vasp', direct=True)
 
     # Filter converged calculations
     if "Converged" in df.columns:
-        converged_df = df[df["Converged"] == True]
+        converged_df = df[df["Converged"]]
         print(f"\nConverged calculations: {len(converged_df)}/{len(df)}")
 
     # Find lowest energy configuration
@@ -140,7 +138,7 @@ write('structure.vasp', final_atoms, format='vasp', direct=True)
         min_idx = df["Energy"].idxmin()
         min_energy_path = df.loc[min_idx, "Path"]
         min_energy = df.loc[min_idx, "Energy"]
-        print(f"\nLowest energy configuration:")
+        print("\nLowest energy configuration:")
         print(f"  Path: {min_energy_path}")
         print(f"  Energy: {min_energy:.3f} eV")
 
@@ -193,7 +191,7 @@ for pp in potcar_info:
 
     # Show POTCAR info example
     if "POTCAR_info" in df.columns and df.loc[0, "POTCAR_info"]:
-        print(f"\nPseudopotentials in first calculation:")
+        print("\nPseudopotentials in first calculation:")
         for pp in df.loc[0, "POTCAR_info"][:5]:  # Show first 5
             print(f"  {pp}")
         if len(df.loc[0, "POTCAR_info"]) > 5:

@@ -1,13 +1,13 @@
-import pytest
 import numpy as np
+import pytest
 
 
 def test_doscar_module():
 
     from asetools.electronic.doscar import (
         extract_dos,
-        extract_pdos_perstate,
         extract_pdos_perorbital,
+        extract_pdos_perstate,
     )
 
     doscar = "tests/data/DOSCAR_fe3o4_Feoct_2x2.doscar"
@@ -30,7 +30,7 @@ def test_dos_class_basic():
     dos = DOS(doscar)
 
     # Test basic properties
-    assert dos.has_partial_dos == True
+    assert dos.has_partial_dos
     assert dos.natoms > 0
     assert dos.fermi_energy is not None
     assert len(dos.energy) > 0

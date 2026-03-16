@@ -11,10 +11,10 @@ This example shows how to:
 """
 
 import os
+
 import numpy as np
-from ase import Atoms
-from ase.io import read, write
 from ase.constraints import FixAtoms
+from ase.io import read, write
 
 
 # Example 1: Direct dimer calculation (requires VaspInteractive)
@@ -57,8 +57,9 @@ def example_direct_dimer():
         atoms.calc = calc
 
         # Set up and run dimer calculation
-        from asetools.dimer import setup_dimer_atoms
         from ase.mep import MinModeTranslate
+
+        from asetools.dimer import setup_dimer_atoms
 
         # MODECAR will be used if present, otherwise random displacement
         d_atoms = setup_dimer_atoms(atoms)
@@ -138,7 +139,7 @@ def example_modecar_usage():
 
     print("=== Example 3: MODECAR File Handling ===")
 
-    from asetools.dimer import read_modecar, write_modecar, generate_displacement_vector
+    from asetools.dimer import generate_displacement_vector, read_modecar, write_modecar
 
     atoms = read("POSCAR")
 
@@ -187,14 +188,14 @@ def example_advanced_constraints():
     symbols = atoms.get_chemical_symbols()
     substrate_elements = ["Al", "Ni"]  # Example substrate
     mask_elements = np.array([s in substrate_elements for s in symbols])
-    constraint_elements = FixAtoms(mask=mask_elements)
+    FixAtoms(mask=mask_elements)
     print(f"Element constraint: fixing {np.sum(mask_elements)} substrate atoms")
 
     # 3. Fix by distance from a point (e.g., center of surface)
     center = np.mean(positions, axis=0)
     distances = np.linalg.norm(positions - center, axis=1)
     mask_distance = distances > 5.0  # Fix atoms more than 5 Å from center
-    constraint_distance = FixAtoms(mask=mask_distance)
+    FixAtoms(mask=mask_distance)
     print(f"Distance constraint: fixing {np.sum(mask_distance)} atoms far from center")
 
     # Apply one of the constraints
@@ -218,7 +219,6 @@ def example_dimer_analysis():
 
     print("=== Example 5: Dimer Result Analysis ===")
 
-    from asetools.dimer import check_dimer_convergence, extract_saddle_point_info
     from ase.io import Trajectory
 
     # Analyze completed dimer calculation
@@ -260,7 +260,7 @@ def main():
     if not os.path.exists("POSCAR"):
         print("No POSCAR file found. Creating example files...")
         # Create a simple example structure
-        from ase.build import fcc111, add_adsorbate
+        from ase.build import add_adsorbate, fcc111
 
         slab = fcc111("Al", size=(2, 2, 2), vacuum=7.0)
         add_adsorbate(slab, "O", height=2.0, position="hcp")
