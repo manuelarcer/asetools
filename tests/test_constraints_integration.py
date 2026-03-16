@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ase.build import molecule
 from ase.constraints import FixAtoms
+
 from asetools.workflow.constraints import ConstraintManager
 
 
@@ -58,7 +59,7 @@ def test_constraint_with_fixatoms():
 
     # Add FixAtoms constraint (fix first atom)
     atoms.set_constraint(FixAtoms(indices=[0]))
-    print(f"\nAdded FixAtoms constraint for atom 0")
+    print("\nAdded FixAtoms constraint for atom 0")
 
     # Create temporary JSON file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -108,7 +109,7 @@ def test_stage_constraint_config():
         "distance_factor": 1.15,
     }
 
-    print(f"\nStage configuration:")
+    print("\nStage configuration:")
     for key, value in stage_config.items():
         print(f"  {key}: {value}")
 
@@ -136,7 +137,7 @@ def test_covalent_radii_calculation():
     # Calculate O-H bond distance
     r0 = cm.calculate_bond_distance(atoms, 0, 1)  # O-H
 
-    print(f"\nH2O molecule:")
+    print("\nH2O molecule:")
     print(f"  Atom 0: {atoms[0].symbol}")
     print(f"  Atom 1: {atoms[1].symbol}")
     print(f"  Calculated r0: {r0:.3f} Å")
@@ -156,8 +157,8 @@ def test_real_world_scenario():
     print("=" * 60)
 
     # Simulate a larger system (like NiOOH surface)
-    from ase.build import bulk
     from ase import Atom
+    from ase.build import bulk
 
     # Create simple slab
     slab = bulk("Ni", "fcc", a=3.52).repeat((3, 3, 4))
@@ -167,7 +168,7 @@ def test_real_world_scenario():
     fix_indices = [i for i in range(len(slab)) if slab[i].position[2] < 2 * layer_height]
     slab.set_constraint(FixAtoms(indices=fix_indices))
 
-    print(f"\nCreated Ni slab:")
+    print("\nCreated Ni slab:")
     print(f"  Total atoms: {len(slab)}")
     print(f"  Fixed atoms: {len(fix_indices)} (bottom layers)")
 
@@ -182,7 +183,7 @@ def test_real_world_scenario():
     o2_idx = len(slab) - 2
     h2_idx = len(slab) - 1
 
-    print(f"  Added adsorbates:")
+    print("  Added adsorbates:")
     print(f"    O at index {o1_idx}")
     print(f"    H at index {h1_idx}")
     print(f"    O at index {o2_idx}")
@@ -205,7 +206,7 @@ def test_real_world_scenario():
     cm = ConstraintManager()
     cm.apply_from_json(slab, json_file, k=20.0)
 
-    print(f"\nFinal constraint setup:")
+    print("\nFinal constraint setup:")
     print(f"  Total constraints: {len(slab.constraints)}")
 
     fixatoms_found = False

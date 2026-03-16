@@ -1,7 +1,7 @@
 """Tests for asetools.electrochemistry module."""
 
-import pytest
 import numpy as np
+import pytest
 
 
 class TestAppliedPotentialImports:
@@ -49,6 +49,7 @@ class TestPureFunctions:
         """Test electron counting with a simple structure."""
         from ase import Atoms
         from ase.io import write
+
         from asetools.electrochemistry.appliedpotential import get_sum_electrons
 
         # Create a simple Cu2 structure

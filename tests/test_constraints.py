@@ -3,13 +3,11 @@ Tests for the constraints module.
 """
 
 import json
-import pytest
-import tempfile
-from pathlib import Path
 
+import pytest
 from ase import Atoms
-from ase.constraints import FixAtoms, Hookean
 from ase.build import bulk
+from ase.constraints import FixAtoms, Hookean
 
 from asetools.workflow.constraints import ConstraintManager
 

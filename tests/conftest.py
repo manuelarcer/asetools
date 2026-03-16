@@ -1,8 +1,8 @@
 """Shared fixtures for asetools test suite."""
 
-import os
-import pytest
 from pathlib import Path
+
+import pytest
 
 TESTS_DIR = Path(__file__).parent
 DATA_DIR = TESTS_DIR / "data"

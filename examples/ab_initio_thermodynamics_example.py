@@ -6,13 +6,13 @@ This script demonstrates both interpolation and lattice gas models
 for calculating equilibrium adsorbate coverage and surface energies.
 """
 
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
+
 from asetools.ab_initio_thermodynamics import (
-    ThermodynamicsCalculator,
     AdsorbateSpecies,
     SurfaceProperties,
+    ThermodynamicsCalculator,
 )
 
 
@@ -167,7 +167,7 @@ def plot_results(results, title="Thermodynamics Results"):
     Simple plotting function for results visualization.
     """
     try:
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        _fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
         # Plot coverage vs temperature
         for col in results.columns:
