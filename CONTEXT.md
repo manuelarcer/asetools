@@ -64,8 +64,8 @@ Added ruff config to pyproject.toml with rule sets E/W/F/I/UP/B/SIM/RUF. Auto-fi
 ### F — Documentation refresh ✅ DONE (2026-03-16)
 Added docs/index.md (package overview, structure, installation, quick start), docs/cli_reference.md (all 17 CLI tools with usage, flags, examples), and docs/api_reference.md (module-level Python API for all 11 subpackages). Existing docs (thermodynamics, constraints, VASP guide) linked from index. Branch: feature/documentation-refresh, commit e257de8.
 
-### G — CI setup ✅ PENDING
-GitHub Actions workflow for pytest + ruff on push/PR.
+### G — CI setup ✅ DONE (2026-03-17)
+GitHub Actions workflow for pytest + ruff on push/PR. Lint job (ruff check + format --check, Python 3.12) and test matrix (pytest, Python 3.9–3.12). Fixed remaining 105 lint issues as part of this task. Branch: feature/ci-setup, commit 2154a6e.
 
 ## Priority Order
 A → B → C → D → E → F → G (one per morning dev session)
