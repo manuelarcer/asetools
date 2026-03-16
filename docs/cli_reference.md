@@ -1,6 +1,6 @@
 # CLI Reference
 
-ASEtools ships 17 command-line tools, all registered as console scripts via `pyproject.toml`. After `pip install -e .`, they are available on `PATH`.
+ASEtools ships 17 command-line tools, all registered as console scripts in `pyproject.toml`. After `pip install -e .` they are available on `PATH`.
 
 ---
 
@@ -8,68 +8,82 @@ ASEtools ships 17 command-line tools, all registered as console scripts via `pyp
 
 ### `getenergy`
 
-Quick convergence check and energy extraction from a single OUTCAR.
+Quick convergence check and energy/force extraction from a single OUTCAR.
 
 ```bash
 getenergy [OUTCAR]
 ```
 
-**Output:** Convergence status, max force (eV/Å), and total energy (eV).
+- `OUTCAR` — path to OUTCAR file. Defaults to `OUTCAR` in the current directory if omitted.
 
-**Example:**
+**Output:** Three-column table: Converged, MaxForce (eV/Å), Energy (eV).
+
 ```
 Converged   MaxForce      Energy
-True        0.015     -234.5678
+True           0.015   -234.5678
 ```
 
 ---
 
 ### `summaryfolders`
 
-Batch analysis across multiple calculation directories. Scans subdirectories for OUTCAR files, extracts convergence, energy, forces, and optionally magnetic moments.
+Batch analysis across subdirectories. Scans for OUTCAR files, extracts convergence status, ENCUT, EDIFFG (target fmax), max force, and energy. Caches results to `summary.log`.
 
 ```bash
-summaryfolders [-m] [-f] [-p] [--folders dir1 dir2 ...]
+summaryfolders [-m] [-f] [-p]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-m`, `--magmom` | Extract and display magnetic moments |
-| `-f`, `--fast` | Fast mode (reduced parsing) |
-| `-p`, `--pyatoms` | Pyatoms multi-step mode (reads step_* folders) |
-| `--folders` | Specific directories to process |
+| Flag | Long flag | Description |
+|------|-----------|-------------|
+| `-m` | `--magmom` | Extract and display total magnetic moments |
+| `-f` | `--fast` | Fast mode: reads `vasp.out` or `out.txt` instead of OUTCAR |
+| `-p` | `--pyatoms` | Pyatoms mode: analyze multi-step pyatoms calculations (reads `step_*/OUTCAR`) |
 
-**Output:** Formatted table (pandas DataFrame) with results per calculation.
+**Output columns (standard mode):** Config, ISIF, Converged, ENCUT, Target-fmax, MaxForce, Energy, Rel.E (and MagMom with `-m`).
+
+**Output columns (pyatoms mode):** Config, E_step0, E_step1, ..., MagMom, Converged, Rel.E. Also writes `summary_pyatoms.log`.
+
+Detects ASE optimizer log files (BFGS.log, FIRE.log, LBFGS.log, etc.) and uses their convergence status when present.
 
 ---
 
 ### `comparevaspparam`
 
-Side-by-side comparison of VASP parameters between two OUTCAR files.
+Side-by-side comparison of VASP parameters between two OUTCAR files. Interactive: prompts for file paths via stdin.
 
 ```bash
-comparevaspparam OUTCAR1 OUTCAR2
+comparevaspparam
 ```
 
-Compares INCAR parameters, k-points, basis set sizes, and other runtime settings. Highlights differences.
+No command-line arguments. Prompts:
+```
+Enter path to first OUTCAR file:
+Enter path to second OUTCAR file:
+```
+
+Compares all parameters found in both files and prints differences.
 
 ---
 
 ### `inputparam-from-outcar`
 
-Extract INCAR parameters from an OUTCAR file, organized by category (electronic, ionic, DOS, etc.).
+Extract VASP parameters from an OUTCAR file, grouped by category.
 
 ```bash
 inputparam-from-outcar OUTCAR
 ```
 
-Categories: StartParam, Electronic, IonicRelax, System, DOS, ElectronicRelax, Write, DipoleCorr, ExCorr, LinearResp.
+| Argument | Description |
+|----------|-------------|
+| `outcar_file` | Path to OUTCAR file (required positional) |
+
+**Categories reported:** StartParam (PREC, ISTART, ICHARG, ISPIN), Electronic (ENCUT, NELM, EDIFF, LREAL, LMAXMIX, VOSKOWN), IonicRelax (EDIFFG, NSW, IBRION, NFREE, ISIF, ISYM, LCORR, POTIM), System (POMASS, ZVAL, RWIGS, VCA, NELECT, NUPDOWN), DOS (EMIN, EMAX, EFERMI, ISMEAR, IALGO, SIGMA), ElectronicRelax (IALGO), Write (LWAVE, LCHARG, LVTOT, LVHAR, LELF, LORBIT), DipoleCorr (LMONO, LDIPOL, IDIPOL, EPSILON), ExCorr (GGA, VOSKOWN, LHFCALC, LHFONE, AEXX), LinearResp (LEPSILON).
 
 ---
 
 ### `outcar-extract`
 
-Extract a specific ionic step frame from an OUTCAR and write it as a structure file.
+Extract a structure frame from an OUTCAR and write it to a file.
 
 ```bash
 outcar-extract OUTCAR [index] [output_file] [format]
@@ -77,16 +91,16 @@ outcar-extract OUTCAR [index] [output_file] [format]
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `index` | `-1` (last) | Frame index to extract |
+| `OUTCAR` | — | Path to OUTCAR file (required) |
+| `index` | `-1` (last frame) | Frame index to extract |
 | `output_file` | `final.vasp` | Output file path |
-| `format` | auto-detect | ASE format string (e.g., `extxyz`) |
+| `format` | auto-detect from extension | ASE format string (e.g., `extxyz`) |
 
 **Examples:**
 ```bash
-outcar-extract OUTCAR                        # last frame → final.vasp
-outcar-extract OUTCAR 5                      # 5th frame → final.vasp
-outcar-extract OUTCAR 5 freq/CONTCAR.vasp    # 5th frame → specific file
-outcar-extract OUTCAR -1 final.extxyz extxyz # with explicit format
+outcar-extract OUTCAR                              # last frame → final.vasp
+outcar-extract OUTCAR 5                            # 5th frame → final.vasp
+outcar-extract OUTCAR -1 final.extxyz extxyz       # with explicit format
 ```
 
 ---
@@ -95,29 +109,66 @@ outcar-extract OUTCAR -1 final.extxyz extxyz # with explicit format
 
 ### `plotdos`
 
-Interactive DOS/PDOS plotting from VASP DOSCAR files. Supports total DOS, partial DOS with orbital projections, band center markers, and spin-resolved plots.
+Plot total DOS or partial DOS (PDOS) from a VASP DOSCAR file.
 
 ```bash
-plotdos [DOSCAR] [options]
+plotdos [options]
 ```
+
+**Input/output:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--doscar FILE` | `DOSCAR` | Path to DOSCAR file |
+| `-o FILE`, `--output FILE` | interactive | Output file path; format determined by extension (png, pdf, svg, etc.) |
+| `--save-data FILE` | — | Save plot data to CSV (`.csv`) or tab-separated (`.txt`) |
+
+**What to plot:**
 
 | Flag | Description |
 |------|-------------|
-| `--atoms SPEC` | Atom indices (`0,2,5` or `0-5` or `all`) |
-| `--orbitals TYPE` | Orbital type: `s`, `p`, `d`, `all-d`, `t2g`, `eg`, etc. |
-| `--states TYPE` | State groups: `s_states`, `p_states`, `d_states` |
-| `--range MIN,MAX` | Energy range for plot (eV) |
-| `--band-center` | Show band center marker |
-| `--spin separate` | Spin-resolved plotting |
-| `--save FILE` | Save plot to file instead of displaying |
-| `--fermi-shift` | Shift energies relative to Fermi level |
+| `--atoms SPEC` | Atom indices: `0`, `0,2,5`, `0-5`, or `all` |
+| `--orbitals TYPE` | Orbital(s): `s`, `p`, `d`, `t2g`, `eg`, `all` (comma-separated for multiple) |
+| `--total` | Plot total DOS (overrides `--atoms`/`--orbitals`) |
+| `--overlay` | Overlay multiple orbitals on the same axes (use with multiple `--orbitals`) |
+
+When neither `--atoms` nor `--orbitals` is given, total DOS is plotted.
+
+**Appearance:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--xlim MIN,MAX` | full range | Energy range in eV, e.g., `-5,5` |
+| `--ylim MIN,MAX` | auto | DOS range |
+| `--title TEXT` | auto | Plot title |
+| `--dpi N` | `300` | Resolution for saved figure |
+| `--figsize W,H` | `8,6` | Figure size in inches |
+| `--linewidth N` | `1.5` | Line width |
+| `--colors C1,C2,...` | auto | Custom colors (comma-separated) |
+| `--same-color-spins` | — | Use same color for spin-up and spin-down |
+| `--no-legend` | — | Disable legend |
+
+**Analysis:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--band-center` | — | Calculate and print band center (requires `--atoms` and `--orbitals`) |
+| `--energy-range MIN,MAX` | full range | Energy range for band center integration |
+| `--spin-treatment MODE` | `combined` | Spin handling: `combined`, `separate`, `up`, `down` |
+
+**Orbital names:** `s`, `p`, `d` are the primary interface (internally mapped to `all-s`, `all-p`, `all-d`). Also accepted: `t2g` (dxy+dyz+dxz), `eg` (dz2+dx2-y2), `all`.
 
 **Examples:**
 ```bash
-plotdos                                       # total DOS
-plotdos DOSCAR --atoms 0-5 --orbitals all-d   # d-band PDOS for atoms 0-5
-plotdos --atoms 0 --orbitals t2g,eg --band-center  # crystal field splitting
-plotdos --save dos.png --range -5,5           # save with energy window
+plotdos                                         # total DOS
+plotdos --atoms 0 --orbitals d                  # d PDOS for atom 0
+plotdos --atoms 0-5 --orbitals d                # d PDOS summed over atoms 0-5
+plotdos --atoms all --orbitals s,p,d --overlay  # overlay s/p/d for all atoms
+plotdos --atoms 0 --orbitals t2g,eg --overlay   # crystal field splitting
+plotdos --atoms 0 --orbitals d --band-center    # d-band center
+plotdos --atoms all --orbitals d --band-center --spin-treatment separate  # spin-resolved band center
+plotdos --atoms 0 --orbitals d --output dos.png --dpi 600
+plotdos --atoms all --orbitals p,d --overlay --save-data dos_data.csv
 ```
 
 ---
@@ -126,81 +177,102 @@ plotdos --save dos.png --range -5,5           # save with energy window
 
 ### `thermochem`
 
-Calculate Gibbs free energy corrections from vibrational frequency analysis (VASP frequency calculation OUTCAR).
+Calculate thermochemistry corrections (ZPE, CpT, entropy) from a VASP vibrational frequency OUTCAR. Uses ASE's `HarmonicThermo` for surface adsorbates.
 
 ```bash
 thermochem OUTCAR [options]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--temp T` | Temperature in K (default: 298.15) |
-| `--press P` | Pressure in Pa (default: 101325) |
-| `--atoms INDICES` | Specific atoms for partial Hessian |
-| `--gas` | Treat as ideal gas molecule |
-| `--geometry TYPE` | For gas: `linear` or `nonlinear` |
-| `--spin S` | Spin multiplicity for gas-phase |
-| `--symmetry N` | Symmetry number for gas-phase |
+| Argument/Flag | Default | Description |
+|---------------|---------|-------------|
+| `outcar` | — | Path to OUTCAR file (required positional) |
+| `--writevib {y,n}` | `n` | Write vibration trajectory files |
+| `--temp T` | `298` | Temperature in K |
+| `--gas BOOL` | `False` | Use `IdealGasThermo` for gas-phase molecules |
+| `--symnum N` | `2` | Symmetry number (for `--gas` mode) |
+| `--geom {monoatomic,linear,nonlinear}` | `linear` | Molecular geometry (for `--gas` mode) |
+| `--pressure P` | `1.0` | Gas pressure in bar (for `--gas` mode) |
+| `--select-atoms SPEC` | — | Atom indices for mode selection, e.g., `0-4` or `0,1,2` |
+| `--threshold N` | `0.5` | Minimum character fraction (0–1) for mode selection |
 
-Uses ASE's `HarmonicThermo` (surfaces) or `IdealGasThermo` (gas-phase molecules).
+**Output:** Frequency table, ZPE, thermal correction (CpT), entropy (S), harmonic limit via ASE HarmonicThermo. Results also logged to `FREQ_ANALYSIS_YYYYMMDD_HHMM.log`.
+
+**Examples:**
+```bash
+thermochem OUTCAR                              # all modes, T=298 K
+thermochem OUTCAR --temp 400                   # at 400 K
+thermochem OUTCAR --select-atoms 0-4           # only modes on atoms 0-4
+thermochem OUTCAR --select-atoms 0,1,2 --threshold 0.7
+thermochem OUTCAR --gas True --geom linear --symnum 1   # gas-phase CO
+```
 
 ---
 
 ### `gibbsFE`
 
-Alias/variant of `thermochem` with identical functionality. Calculate corrections to electronic energy for Gibbs free energy.
+Same functionality as `thermochem`. Calculate corrections to electronic energy for Gibbs free energy.
 
 ```bash
 gibbsFE OUTCAR [options]
 ```
 
-Same flags as `thermochem`.
+Accepts the same arguments as `thermochem`.
 
 ---
 
 ## Structure Manipulation
 
-### `reorder_atoms`
+### `reorder-atoms`
 
-Reorder atoms in a structure file by chemical symbol and optionally by z-coordinate. Preserves `FixAtoms` constraints.
+Reorder atoms in a structure file by element symbol and/or z-coordinate.
 
 ```bash
-reorder_atoms INPUT [options]
+reorder-atoms input_file [options]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--order EL1 EL2 ...` | Element ordering (e.g., `Cu O H`) |
-| `--z-order MODE` | `top-bottom` or `bottom-top` within each element |
-| `--output FILE` | Output file (default: overwrite input) |
-| `--format FMT` | ASE output format |
+| Argument/Flag | Default | Description |
+|---------------|---------|-------------|
+| `input_file` | — | Input structure file (required positional) |
+| `-o/--order EL1 EL2 ...` | — | Element ordering, e.g., `Cu O H` |
+| `-z/--z-order {top-bottom,bottom-top}` | — | Sort within each element by z-coordinate |
+| `-out/--output FILE` | `reordered_POSCAR` | Output file path |
+| `-f/--format FMT` | `vasp` | ASE output format |
 
-**Example:**
+**Examples:**
 ```bash
-reorder_atoms POSCAR --order Cu O H --z-order top-bottom
+reorder-atoms POSCAR --order Cu O H
+reorder-atoms POSCAR --order Cu O H --z-order top-bottom
+reorder-atoms POSCAR --z-order bottom-top --output sorted.vasp
 ```
 
 ---
 
 ### `asegui`
 
-Launch ASE GUI for structure visualization. Includes preprocessing to handle corrupted files with stray forward slashes.
+Open a VASP structure file in ASE GUI. Strips stray `/` characters from element symbols before loading.
 
 ```bash
-asegui FILE [FILE2 ...]
+asegui FILENAME
 ```
+
+| Argument | Description |
+|----------|-------------|
+| `FILENAME` | Path to structure file (POSCAR, CONTCAR, OUTCAR, etc.) |
 
 ---
 
 ### `remove-slashes`
 
-Remove all forward slashes from a file. Utility for repairing corrupted VASP files.
+Remove all `/` characters from a file. Used to repair VASP files with corrupted element symbols.
 
 ```bash
-remove-slashes INPUT [OUTPUT]
+remove-slashes input_file [output_file]
 ```
 
-If `OUTPUT` is omitted, the input file is overwritten in place.
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `input_file` | — | Input file (required) |
+| `output_file` | overwrites input | Output file path |
 
 ---
 
@@ -208,13 +280,21 @@ If `OUTPUT` is omitted, the input file is overwritten in place.
 
 ### `genpotentialdepcalc`
 
-Generate a set of calculation directories for potential-dependent DFT calculations. Creates folders with modified electron counts (NELECT) for applied potential studies.
+Generate calculation directories for potential-dependent DFT calculations by creating folders with modified electron counts (NELECT).
 
 ```bash
-genpotentialdepcalc [options]
+genpotentialdepcalc poscar pythonfile [--lower N] [--higher N] [--step N]
 ```
 
-Sets up folders with incrementally modified electron counts based on a reference POSCAR and valence electron configuration.
+| Argument/Flag | Default | Description |
+|---------------|---------|-------------|
+| `poscar` | — | Path to POSCAR file (required positional) |
+| `pythonfile` | — | Path to Python submission script (required positional) |
+| `--lower N` | `-1` | Lower bound of potential range |
+| `--higher N` | `1` | Upper bound of potential range |
+| `--step N` | `0.2` | Step size for potential range |
+
+Hardcoded valence electrons: Cu=11, Zn=12, C=4, O=6, H=1.
 
 ---
 
@@ -222,24 +302,36 @@ Sets up folders with incrementally modified electron counts based on a reference
 
 ### `vasp2db`
 
-Extract VASP calculation data from multiple directories into a pandas DataFrame, saved as a pickle file. Extracts structures, parameters, INCAR settings, POTCAR info.
+Extract VASP calculation data from multiple directories into a pandas DataFrame saved as a pickle file. Extracts structures, VASP parameters, energies, convergence status, INCAR content, and POTCAR info.
 
 ```bash
 vasp2db --paths DIR1 DIR2 ... --output DATABASE.pkl [options]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--paths` | Calculation directories to process |
-| `--output` | Output pickle file |
-| `-r`, `--relative-energy` | Calculate relative energies |
-| `-v`, `--verbose` | Verbose output |
-| `--skip-errors` | Continue on errors |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--paths DIR ...` | — | Calculation directories (required, one or more) |
+| `-o/--output FILE` | — | Output pickle file path (required) |
+| `--initial-pattern GLOB` | `*.vasp` | Glob pattern for initial structure files |
+| `-r/--relative-energy` | — | Add `Rel.E` column (relative to minimum energy) |
+| `-v/--verbose` | — | Print progress details |
+| `--skip-errors` | — | Skip folders with errors instead of stopping |
+
+**DataFrame columns:** Path, AbsPath, InitialStructure (ASE Atoms), FinalStructure (ASE Atoms), CalcType, Formula, ENCUT, KSPACING, EDIFF, EDIFFG, GGA, IBRION, ISPIN, NSW, ISIF, NFREE, Energy, TotMagMom, MaxForce, Converged, VASPVersion, INCAR_full, POTCAR_info, Rel.E (if `-r`).
+
+**Loading the database:**
+```python
+import pickle
+with open("database.pkl", "rb") as f:
+    df = pickle.load(f)
+print(df[["Path", "CalcType", "Energy", "Converged"]])
+```
 
 **Examples:**
 ```bash
-vasp2db --paths CuCu_2 NiCu_1 --output database.pkl
+vasp2db --paths CuCu_2 NiCu_1 NiCu_2 --output database.pkl
 vasp2db --paths */ --output all_calcs.pkl --relative-energy -v
+vasp2db --paths calc1 calc2 --output db.pkl --skip-errors
 ```
 
 ---
@@ -248,30 +340,32 @@ vasp2db --paths */ --output all_calcs.pkl --relative-energy -v
 
 ### `vaspbackup`
 
-Create backup of VASP calculation files with optional compression.
+Backup VASP calculation files into a named subdirectory, compressing large files with gzip.
 
 ```bash
-vaspbackup BACKUPNAME [-c] [-p PATTERN]
+vaspbackup backupname
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-c` | Compress backed-up files with gzip |
-| `-p PATTERN` | Custom glob pattern for files to backup |
+| Argument | Description |
+|----------|-------------|
+| `backupname` | Name for the backup directory (required positional) |
 
-Copies CONTCAR, POSCAR, KPOINTS, INCAR, OUTCAR, vasprun.xml, and CIF files to a named backup directory.
+Copies CONTCAR, POSCAR, KPOINTS, INCAR, and other VASP files; compresses OUTCAR and vasprun.xml with gzip.
 
 ---
 
 ### `vasp2arc`
 
-Convert VASP output files to ARC (DMol3) format.
+Convert a VASP structure or trajectory file to DMol3 ARC format.
 
 ```bash
-vasp2arc INPUT [OUTPUT]
+vasp2arc input_file [output_file]
 ```
 
-If `OUTPUT` is omitted, defaults to `INPUT.arc`.
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `input_file` | — | Input VASP file (required positional) |
+| `output_file` | — | Output ARC file (optional positional) |
 
 ---
 
@@ -279,19 +373,19 @@ If `OUTPUT` is omitted, defaults to `INPUT.arc`.
 
 ### `view-outcars`
 
-Batch visualization of structures from OUTCAR files across multiple directories.
+List and optionally visualize structures from OUTCAR files across subdirectories.
 
 ```bash
-view-outcars [options]
+view-outcars [--converged] [--folders DIR ...] [--pyatoms]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--converged` | Only show converged calculations |
-| `--folders DIR1 DIR2` | Specific directories |
-| `--pyatoms` | Pyatoms directory structure |
+| `--converged` | Only show/open converged calculations |
+| `-f/--folders DIR ...` | Specific directories to check (default: all subdirectories) |
+| `--pyatoms` | Pyatoms directory layout |
 
-Opens ASE GUI for each structure.
+Opens ASE GUI for each found structure.
 
 ---
 
@@ -299,19 +393,24 @@ Opens ASE GUI for each structure.
 
 ### `calculate-bader-charges`
 
-Run Bader charge analysis on VASP output. Extracts ZVAL from OUTCAR, reads Bader output (ACF.dat), and calculates atomic charges.
+Perform Bader charge analysis from VASP output files. Reads ZVAL from OUTCAR, reads Bader output (ACF.dat), and computes final atomic charges.
 
 ```bash
 calculate-bader-charges [options]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-s FILE` | Structure file (default: CONTCAR) |
-| `-o FILE` | OUTCAR file (default: OUTCAR) |
-| `--format FMT` | Output format: `table` (default) or `csv` |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-s/--structure FILE` | `CONTCAR` | Structure file |
+| `-o/--outcar FILE` | `OUTCAR` | OUTCAR file |
+| `-a/--acf FILE` | `ACF.dat` | Bader ACF.dat output file |
+| `--output FILE` | `bader_charges.txt` | Results output file |
+| `--format {table,csv,json}` | `table` | Output format |
+| `--skip-bader` | — | Skip running bader, use existing ACF.dat |
+| `-q/--quiet` | — | Suppress non-essential output |
+| `-v/--verbose` | — | Verbose output |
 
-Requires Bader analysis tools (`chgsum.pl`, `bader`) for initial ACF.dat generation.
+Requires external Bader analysis tools (`chgsum.pl`, `bader`) to have been run beforehand (or use `--skip-bader` to process an existing ACF.dat).
 
 ---
 
@@ -319,20 +418,20 @@ Requires Bader analysis tools (`chgsum.pl`, `bader`) for initial ACF.dat generat
 
 | Command | Purpose |
 |---------|---------|
-| `getenergy` | Quick energy/convergence from OUTCAR |
-| `summaryfolders` | Batch analysis across directories |
-| `comparevaspparam` | Compare VASP parameters between runs |
-| `inputparam-from-outcar` | Extract INCAR parameters from OUTCAR |
-| `outcar-extract` | Extract frames from OUTCAR |
-| `plotdos` | DOS/PDOS plotting |
-| `thermochem` | Gibbs free energy corrections |
-| `gibbsFE` | Gibbs free energy corrections (alias) |
-| `reorder_atoms` | Reorder atoms by element/z-coordinate |
-| `asegui` | ASE GUI launcher |
-| `remove-slashes` | File repair (remove `/` characters) |
-| `genpotentialdepcalc` | Generate potential-dependent calc folders |
-| `vasp2db` | Extract VASP data to pickle DataFrame |
-| `vaspbackup` | Backup VASP files |
-| `vasp2arc` | Convert VASP → ARC format |
-| `view-outcars` | Batch structure visualization |
+| `getenergy` | Quick energy/convergence/force from OUTCAR |
+| `summaryfolders` | Batch analysis across calculation directories |
+| `comparevaspparam` | Interactively compare VASP parameters between two OUTCARs |
+| `inputparam-from-outcar` | Extract categorized VASP parameters from OUTCAR |
+| `outcar-extract` | Extract a frame from OUTCAR to a structure file |
+| `plotdos` | Total or partial DOS/PDOS plotting with band center |
+| `thermochem` | Thermochemistry corrections (ZPE, CpT, entropy) |
+| `gibbsFE` | Gibbs free energy corrections (same as thermochem) |
+| `reorder-atoms` | Reorder atoms by element and/or z-coordinate |
+| `asegui` | Open VASP structure file in ASE GUI |
+| `remove-slashes` | Remove `/` characters from a file |
+| `genpotentialdepcalc` | Generate potential-dependent calculation folders |
+| `vasp2db` | Extract VASP calculations to pandas DataFrame pickle |
+| `vaspbackup` | Backup and compress VASP output files |
+| `vasp2arc` | Convert VASP structure to DMol3 ARC format |
+| `view-outcars` | Batch structure visualization from OUTCARs |
 | `calculate-bader-charges` | Bader charge analysis |

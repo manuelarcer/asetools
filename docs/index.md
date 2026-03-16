@@ -2,57 +2,68 @@
 
 **Python toolkit for computational materials science with VASP and ASE**
 
-Version: 0.1.0
+Version: 0.2.0
 
 ## Package Overview
 
-ASEtools provides analysis tools, workflow management, and utilities for researchers working with VASP density functional theory calculations, built on the Atomic Simulation Environment (ASE).
+ASEtools provides analysis tools, workflow management, and utilities for researchers working with VASP (Vienna Ab initio Simulation Package) density functional theory calculations, built on the Atomic Simulation Environment (ASE). It covers OUTCAR parsing, DOS analysis, thermochemistry corrections, structure manipulation, electrochemistry, and database integration.
 
 ## Package Structure
 
 ```
 asetools/
-├── analysis/          # VASP output analysis (convergence, energy, forces, symmetry)
-├── electronic/        # DOS, PDOS, orbital projections, band center calculations
-├── structure/         # SurfaceAnalyzer, bond valence sum analysis
-├── electrochemistry/  # Applied potential calculations with Fermi corrections
-├── pathways/          # NEB and dimer method for transition states
-├── thermodynamics/    # Ab initio thermodynamics (coverage, surface energy)
-├── workflow/          # YAML-based multi-stage workflow runner
-├── database/          # ASE database integration with deduplication
-├── plotting/          # PES and energy profile plotting
-├── parsers/           # OUTCAR parser
+├── analysis/          # VASP output analysis (convergence, energy, forces, metadata)
+│   ├── vasp.py        # Core analysis functions
+│   └── symmetry.py    # Symmetry analysis (requires spglib)
+├── electronic/        # Electronic structure
+│   └── doscar.py      # DOS class — total DOS, PDOS, orbital projections, band centers
+├── structure/         # Structure analysis
+│   ├── adsorbate.py   # SurfaceAnalyzer for adsorbate placement
+│   └── bond_valence.py# BondValenceSum, BondValenceParameters
+├── electrochemistry/  # Electrochemistry
+│   └── appliedpotential.py  # Potential-dependent calculations with Fermi corrections
+├── pathways/          # Reaction pathway methods
+│   ├── neb.py         # NEB pathway energy extraction
+│   └── dimer.py       # Dimer method for saddle point searches
+├── thermodynamics/    # Ab initio thermodynamics
+│   └── ab_initio.py   # ThermodynamicsCalculator and related classes
+├── workflow/          # Workflow management
+│   ├── manager.py     # YAML-based multi-stage workflow runner
+│   ├── calculatorsetuptools.py  # VASPConfigurationFromYAML, setup_initial_magmom
+│   ├── constraints.py # ConstraintManager (Hookean + FixAtoms)
+│   ├── logger.py      # Workflow logging
+│   └── sample_yaml/   # Example YAML configurations
+├── database/          # Database integration
+│   └── databases.py   # ASE-DB utilities with duplicate detection
+├── plotting/          # Visualization
+│   └── plots.py       # PES and energy profile plotting
+├── parsers/           # File parsers
+│   └── vasp_outcar.py # Extensible OUTCAR parser class hierarchy
 ├── cli/               # 17 command-line tools
-└── data/              # Runtime data (bvparm2020.cif, surface_properties.json)
+└── data/              # Runtime data files
+    ├── bvparm2020.cif
+    └── surface_properties.json
 ```
 
 ## Installation
 
 ```bash
-git clone https://github.com/manuelarcer/asetools.git
-cd asetools
-pip install -e ".[dev]"    # editable install with test deps
+# Editable install
+pip install -e .
+
+# With development tools (pytest, ruff)
+pip install -e ".[dev]"
+
+# With symmetry analysis (spglib)
+pip install -e ".[symmetry]"
+
+# With vasp-interactive support
+pip install -e ".[interactive]"
 ```
 
-### Requirements
+**Core requirements:** pandas, matplotlib, numpy, scipy, ase, pyyaml
 
-Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `ase`, `pyyaml`
-
-Optional:
-- `vasp-interactive` — required for ASE optimizer workflows (FIRE, BFGS) and dimer method
-- `spglib` — required for symmetry analysis
-- `pytest` — for running tests
-
-## Documentation Index
-
-| Document | Contents |
-|----------|----------|
-| [CLI Reference](cli_reference.md) | All 17 command-line tools with usage and examples |
-| [API Reference](api_reference.md) | Module-level Python API documentation |
-| [Ab Initio Thermodynamics](ab_initio_thermodynamics.md) | Thermodynamics module deep-dive |
-| [Constraint Management](constraints_quickstart.md) | Hookean constraint quick start |
-| [Constraint Migration Guide](constraints_migration.md) | Migrating from manual to YAML constraints |
-| [VASP Calculation Guide](vasp_calculation_guide.md) | Tips for spin-polarized and magnetic calculations |
+**Python:** >= 3.8
 
 ## Quick Start
 
@@ -61,8 +72,9 @@ Optional:
 ```python
 from asetools.analysis import check_outcar_convergence, check_energy_and_maxforce
 
-converged, version = check_outcar_convergence('OUTCAR')
-energy, max_force = check_energy_and_maxforce('OUTCAR')
+converged, vasp_version = check_outcar_convergence("OUTCAR")
+energy, maxforce = check_energy_and_maxforce("OUTCAR")
+print(f"Converged: {converged}, E={energy:.3f} eV, Fmax={maxforce:.4f} eV/Å")
 ```
 
 ### Analyze DOS
@@ -70,39 +82,74 @@ energy, max_force = check_energy_and_maxforce('OUTCAR')
 ```python
 from asetools.electronic.doscar import DOS
 
-dos = DOS('DOSCAR')
-d_center = dos.calculate_band_center([0], orbitals='all-d')
+dos = DOS("DOSCAR")
+print(f"Fermi energy: {dos.fermi_energy:.3f} eV, Atoms: {dos.natoms}")
+
+# d-band center for atoms 0-4
+center = dos.calculate_band_center(atoms=[0, 1, 2, 3, 4], orbitals="all-d")
 ```
 
-### Run a workflow
+### Apply Hookean constraints
 
 ```python
-from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
+from asetools.workflow.constraints import ConstraintManager
 from ase.io import read
 
-config = VASPConfigurationFromYAML('config.yaml')
-atoms = read('POSCAR')
-# run_workflow(atoms, config, 'optimization')
+atoms = read("CONTCAR")
+cm = ConstraintManager(distance_factor=1.134)
+cm.apply_from_json(atoms, "proton_mappings.json", k=20.0)
+```
+
+### Load YAML workflow configuration
+
+```python
+from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML, setup_initial_magmom
+from ase.io import read
+
+config = VASPConfigurationFromYAML("config.yaml", system="NCA")
+atoms = read("POSCAR")
+atoms = setup_initial_magmom(atoms, config.initial_magmom_data)
+```
+
+### Extract calculations to a DataFrame
+
+```python
+# Using ASE database
+from asetools.database.databases import db_to_pandas
+from ase.db import connect
+
+db = connect("calculations.db")
+df = db_to_pandas(db, columns=["name", "id", "energy", "free_energy", "magmom"])
 ```
 
 ### Command-line usage
 
 ```bash
-getenergy OUTCAR                        # quick convergence + energy
-summaryfolders -m                       # batch analysis with magmoms
-plotdos --atoms 0-5 --orbitals all-d    # d-band DOS plot
-reorder_atoms POSCAR --order Cu O H     # reorder by element
-thermochem OUTCAR --temp 298            # Gibbs free energy corrections
+getenergy OUTCAR                             # convergence + energy + max force
+summaryfolders -m                            # batch summary with magnetic moments
+plotdos --atoms 0-5 --orbitals d             # d-band PDOS for atoms 0-5
+reorder-atoms POSCAR --order Cu O H          # reorder by element
+thermochem OUTCAR --temp 298                 # Gibbs free energy corrections
 ```
+
+## Documentation Index
+
+| Document | Contents |
+|----------|----------|
+| [CLI Reference](cli_reference.md) | All 17 command-line tools with exact usage and flags |
+| [API Reference](api_reference.md) | Python API for all subpackages |
+| [Ab Initio Thermodynamics](ab_initio_thermodynamics.md) | Thermodynamics module deep-dive |
+| [Constraints Quickstart](constraints_quickstart.md) | Hookean constraint quick start |
+| [Constraints Migration](constraints_migration.md) | Migrating from manual to YAML constraints |
+| [VASP Calculation Guide](vasp_calculation_guide.md) | Tips for spin-polarized and magnetic calculations |
 
 ## Development
 
 ```bash
 pytest                  # run test suite
+pytest -v               # verbose
 ruff check asetools/    # lint
 ruff format asetools/   # format
 ```
 
-## License
-
-Open source. See repository for details.
+Test files live in `tests/`, test data in `tests/data/`. Configuration is in `pyproject.toml` under `[tool.pytest.ini_options]` and `[tool.ruff]`.
