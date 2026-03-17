@@ -102,6 +102,60 @@ summaryfolders -m
 reorder-atoms POSCAR --order Cu O H --z-order top-bottom
 ```
 
+## Workflow Management
+
+ASEtools includes a YAML-driven workflow system for multi-stage VASP calculations with support for ASE optimizers (FIRE, BFGS, LBFGS), dimer method, and Hookean constraints.
+
+### Configuration
+
+```yaml
+# config.yaml
+basic:
+  xc: PBE
+  encut: 500
+  kspacing: 0.6
+  ispin: 2
+  nsw: 500
+
+workflows:
+  optimization:
+    stages:
+      - name: rough_opt
+        overrides: { ediff: 1e-4, nsw: 100 }
+      - name: fine_opt
+        overrides: { ediff: 1e-6, nsw: 300 }
+        optimizer: FIRE
+        optimizer_kwargs: { fmax: 0.02 }
+```
+
+### Usage
+
+```python
+from asetools.workflow import (
+    VASPConfigurationFromYAML,
+    run_workflow,
+    make_calculator,
+    load_structure,
+    stages_to_run,
+)
+
+config = VASPConfigurationFromYAML('config.yaml')
+atoms = load_structure('POSCAR')
+run_workflow(atoms, config, 'optimization')
+```
+
+### Key features
+
+- **Multi-stage workflows** — chain relaxation stages with different VASP settings
+- **ASE optimizers** — FIRE, BFGS, LBFGS, GPMin via `vasp-interactive` (set `optimizer:` in YAML)
+- **Dimer method** — saddle point searches with `MinModeTranslate` (set `optimizer: dimer`)
+- **Hookean constraints** — automatic O-H pair detection from JSON config for PCET reactions
+- **Magmom handling** — per-element, per-atom, or dict-based initial magnetic moments with reorder tracking
+- **Restart support** — detects completed stages and resumes from last incomplete step
+- **Sample configs** — see `asetools/workflow/sample_yaml/` for working examples
+
+See [Constraints Quick Start](docs/constraints_quickstart.md) for constraint details.
+
 ## Documentation
 
 - [Package Overview & Quick Start](docs/index.md)
