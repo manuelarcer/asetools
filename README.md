@@ -3,7 +3,7 @@
 **Python toolkit for computational materials science with VASP and ASE**
 
 [![CI](https://github.com/manuelarcer/asetools/actions/workflows/ci.yml/badge.svg)](https://github.com/manuelarcer/asetools/actions/workflows/ci.yml)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 ## Overview
 
@@ -29,8 +29,10 @@ asetools/
 ├── thermodynamics/    # Ab initio thermodynamics
 │   └── ab_initio.py   # ThermodynamicsCalculator
 ├── workflow/          # YAML-based multi-stage workflow runner
-│   ├── manager.py     # VASPConfigurationFromYAML, run_workflow
-│   └── constraints.py # Hookean constraint management
+│   ├── manager.py     # run_workflow, make_calculator
+│   ├── calculatorsetuptools.py  # VASPConfigurationFromYAML, setup_initial_magmom
+│   ├── constraints.py # ConstraintManager (Hookean + FixAtoms)
+│   └── logger.py      # Workflow logging
 ├── database/          # ASE database integration
 │   └── databases.py
 ├── parsers/           # Low-level VASP output parsers
@@ -79,8 +81,8 @@ print(f"d-band center: {d_center:.3f} eV")
 | `getenergy` | Quick convergence/energy check from OUTCAR |
 | `summaryfolders` | Batch analysis across subdirectories |
 | `comparevaspparam` | Side-by-side VASP parameter comparison |
-| `outcar-extract` | Extract specific data from OUTCAR files |
-| `inputparam-from-outcar` | Reconstruct INCAR from OUTCAR |
+| `outcar-extract` | Extract a structure frame from OUTCAR |
+| `inputparam-from-outcar` | Extract categorized VASP parameters from OUTCAR |
 | `plotdos` | Plot DOS/PDOS from DOSCAR |
 | `gibbsFE` | Gibbs free energy from vibrational analysis |
 | `thermochem` | Thermochemistry corrections |
@@ -89,7 +91,7 @@ print(f"d-band center: {d_center:.3f} eV")
 | `reorder-atoms` | Reorder atoms by element/z-coordinate |
 | `asegui` | Enhanced ASE GUI launcher |
 | `view-outcars` | Batch structure visualization |
-| `vasp2db` | Import VASP results to ASE database |
+| `vasp2db` | Extract VASP results to pandas DataFrame pickle |
 | `vasp2arc` | VASP to .arc format conversion |
 | `vaspbackup` | Intelligent VASP file backup |
 | `remove-slashes` | Fix corrupted VASP files |

@@ -185,13 +185,29 @@ class DOS:
 
 **Per-atom PDOS channels** (in `data["at-N"]`): `s+`, `s-`, `py+`, `py-`, `pz+`, `pz-`, `px+`, `px-`, `dxy+`, `dxy-`, `dyz+`, `dyz-`, `dz2+`, `dz2-`, `dxz+`, `dxz-`, `dx2+`, `dx2-`.
 
+#### `get_pdos_by_states(atom, orbital)`
+
+Get PDOS for a single atom and a single orbital state.
+
+```python
+def get_pdos_by_states(
+    self, atom: int, orbital: str
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
+```
+
+- **`atom`** — 0-based atom index
+- **`orbital`** — one of: `"s"`, `"py"`, `"pz"`, `"px"`, `"dxy"`, `"dyz"`, `"dz2"`, `"dxz"`, `"dx2"`
+- **Returns** — `(energy, pdos_up, pdos_down)`
+
+---
+
 #### `get_pdos_by_orbitals(atoms, orbital)`
 
 Get summed PDOS over selected atoms for a given orbital group.
 
 ```python
 def get_pdos_by_orbitals(
-    atoms: List[int], orbital: str
+    self, atoms: List[int], orbital: str
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
 ```
 
@@ -201,19 +217,45 @@ def get_pdos_by_orbitals(
 
 ---
 
-#### `plot_total_dos(ax=None)`
+#### `get_individual_atom_pdos(atoms, orbital)`
 
-Plot total spin-up and spin-down DOS on axes.
+Get per-atom PDOS (not summed) for a list of atoms.
 
 ```python
-def plot_total_dos(self, ax=None)
+def get_individual_atom_pdos(
+    self, atoms: List[int], orbital: str
+) -> Dict[int, Tuple[np.ndarray, np.ndarray, np.ndarray]]
 ```
+
+- **Returns** — dict mapping atom index to `(energy, pdos_up, pdos_down)`
+
+---
+
+#### `plot_total_dos(ax=None, **kwargs)`
+
+Plot total spin-up and spin-down DOS on axes. Returns `ax`.
+
+```python
+def plot_total_dos(self, ax=None, **kwargs) -> plt.Axes
+```
+
+---
+
+#### `plot_pdos_by_states(atom, orbital, ax=None, same_color_spins=False, colors=None, linewidth=1.5, label=None)`
+
+Plot PDOS for a single atom and orbital state. Returns `ax`.
+
+---
+
+#### `plot_pdos_by_orbitals(atoms, orbital, ax=None, same_color_spins=False, colors=None, linewidth=1.5, label=None)`
+
+Plot summed PDOS for a list of atoms by orbital group. Returns `ax`.
 
 ---
 
 #### `plot_multi_atom_pdos(atoms, orbitals, ax, same_color_spins=False, colors=None, linewidth=1.5)`
 
-Plot summed PDOS for a list of atoms.
+Plot summed PDOS for a list of atoms with multiple orbital groups overlaid.
 
 ```python
 def plot_multi_atom_pdos(
@@ -246,6 +288,48 @@ def calculate_band_center(
 - **`energy_range`** — `(min_eV, max_eV)` for integration; `None` uses full range
 - **`spin_treatment`** — `"combined"` (default), `"separate"`, `"up"`, `"down"`
 - **Returns** — float when `spin_treatment != "separate"`, dict `{"up": float, "down": float}` when `"separate"`
+
+---
+
+#### `to_dataframe()`
+
+Export DOS data to a pandas DataFrame with energy, total DOS, and per-atom PDOS columns.
+
+```python
+def to_dataframe(self) -> pd.DataFrame
+```
+
+---
+
+### Module-level functions (`doscar.py`)
+
+#### `extract_dos(doscarfile)`
+
+Parse a DOSCAR file and return raw data as a dict.
+
+---
+
+#### `extract_fermi_e(doscarfile)`
+
+Extract the Fermi energy from a DOSCAR file.
+
+---
+
+#### `extract_pdos_perstate(doscarfile, atoms, state)`
+
+Extract PDOS for specific atoms and a single orbital state. Returns `(energy, pdos_up, pdos_down)`.
+
+---
+
+#### `extract_pdos_perorbital(doscarfile, atoms, orbital)`
+
+Extract summed PDOS for specific atoms by orbital group. Returns `(energy, pdos_up, pdos_down)`.
+
+---
+
+#### `calculate_band_center(doscarfile, atoms, orbital, energy_range=None)`
+
+Module-level band center calculation (wraps DOS class method).
 
 ---
 
@@ -292,30 +376,74 @@ Applied potential calculations with Fermi energy corrections.
 
 **Import:**
 ```python
-from asetools.electrochemistry.appliedpotential import (
+from asetools.electrochemistry import (
     extract_corrected_energy_fermie,
     fit_data,
     get_energy_at_givenpotential,
 )
 ```
 
+### Exported Functions
+
+#### `extract_corrected_energy_fermie(folders, poscar)`
+
+Extract Fermi-shift-corrected energies from a set of calculation folders. Returns arrays of potentials, energies, and net electron counts.
+
+---
+
+#### `fit_data(folders, poscar, fit_type="polynomial", degree=2)`
+
+Fit energy vs. potential data from a set of folders. Supports `"polynomial"` and `"spline"` fit types. Returns dict with fit results, errors, and interpolation functions.
+
+---
+
+#### `get_energy_at_givenpotential(results, potential)`
+
+Evaluate the fitted energy at a given applied potential (V vs. SHE). Takes the results dict from `fit_data`.
+
+---
+
+### Additional functions (not re-exported)
+
+`get_sum_electrons`, `get_num_elect`, `extract_fermi_shift`, `correct_energy_fermishift`, `fitenergy_polynomial`, `interpolate_new_x`, `plot_errors`, `plot_fit`, `print_results` — available via direct import from `asetools.electrochemistry.appliedpotential`.
+
 ---
 
 ## `asetools.pathways`
 
-Reaction pathway methods for transition state searches.
+Reaction pathway methods for transition state searches. All functions are lazily re-exported from the package level.
 
-### NEB
+**Import:**
+```python
+from asetools.pathways import extract_neb_data, setup_neb_calculation, setup_dimer_atoms
+```
 
-**Location:** `asetools/pathways/neb.py`
+### NEB (`asetools/pathways/neb.py`)
 
-NEB calculation support and energy extraction from image directories.
+| Function | Description |
+|----------|-------------|
+| `extract_neb_data(folder_path, final)` | Extract energies from NEB image directories. Returns DataFrame. |
+| `plot_nebs(list_dfs, font='large')` | Plot NEB energy profiles from DataFrames. |
+| `redistribute_images_evenly(images, mic=True)` | Redistribute NEB images evenly along the path. |
+| `interpolate_neb_images(initial, final, n_images, ...)` | Create interpolated NEB images between endpoints. |
+| `check_atomic_distances(images, min_distance, ...)` | Check for unreasonably short distances in NEB images. |
+| `check_neb_images_sanity(images, ...)` | Validate NEB image set (distances, ordering, symmetry). |
+| `setup_neb_calculation(initial, final, n_images, ...)` | Full NEB setup: interpolate images, validate, and return NEB object. |
 
-### Dimer
+### Dimer (`asetools/pathways/dimer.py`)
 
-**Location:** `asetools/pathways/dimer.py`
+Requires `vasp-interactive`: `pip install -e ".[interactive]"`.
 
-Dimer method for saddle point searches. Requires `vasp-interactive`: `pip install -e ".[interactive]"`.
+| Function | Description |
+|----------|-------------|
+| `read_modecar(filename='MODECAR')` | Read displacement vector from a MODECAR file. |
+| `write_modecar(displacement_vector, atoms, filename='MODECAR')` | Write displacement vector to MODECAR format. |
+| `generate_displacement_vector(atoms, ...)` | Generate initial displacement vector for dimer search. |
+| `setup_dimer_atoms(atoms, ...)` | Set up MinModeAtoms for a dimer calculation. |
+| `check_dimer_convergence(d_atoms, ...)` | Check convergence of a dimer calculation. |
+| `extract_saddle_point_info(d_atoms)` | Extract saddle point energy, forces, and curvature from converged dimer. |
+| `save_dimer_trajectory(d_atoms, filename='dimer_trajectory.traj')` | Save dimer trajectory to file. |
+| `validate_dimer_kwargs(kwargs)` | Validate keyword arguments for dimer setup. |
 
 ---
 
@@ -336,9 +464,12 @@ from asetools.thermodynamics.ab_initio import (
 )
 ```
 
-Key classes are also re-exported at the top level:
+All five classes are also re-exported at the top level:
 ```python
-from asetools import ThermodynamicsCalculator, AdsorbateSpecies, SurfaceProperties
+from asetools import (
+    ThermodynamicsCalculator, AdsorbateSpecies, SurfaceProperties,
+    InterpolationModel, LatticeGasModel,
+)
 ```
 
 | Class | Description |
@@ -357,6 +488,16 @@ See [ab_initio_thermodynamics.md](ab_initio_thermodynamics.md) for detailed docu
 
 YAML-based VASP workflow configuration and execution.
 
+**Import:**
+```python
+from asetools.workflow import (
+    VASPConfigurationFromYAML,
+    ConstraintManager,
+    make_calculator,
+    run_workflow,
+)
+```
+
 ### `VASPConfigurationFromYAML`
 
 **Location:** `asetools/workflow/calculatorsetuptools.py`
@@ -364,8 +505,6 @@ YAML-based VASP workflow configuration and execution.
 Load VASP calculator configuration from a YAML file.
 
 ```python
-from asetools.workflow.calculatorsetuptools import VASPConfigurationFromYAML
-
 config = VASPConfigurationFromYAML("config.yaml", system="NCA")
 ```
 
@@ -561,6 +700,55 @@ Apply constraints from a workflow stage configuration dict. Expected keys: `type
 
 ---
 
+### Workflow runner (`manager.py`)
+
+#### `make_calculator(cfg, run_overrides=None)`
+
+```python
+def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: Optional[dict] = None)
+```
+
+Create a VASP or VaspInteractive calculator from a configuration object. The calculator type is determined by `globals.calculator_type` in the YAML (`"vasp"` or `"vasp_interactive"`). `run_overrides` are merged on top of `basic` + `system` configs.
+
+---
+
+#### `run_workflow(atoms, cfg, workflow_name, run_overrides=None, dry_run=False, magmoms=None)`
+
+```python
+def run_workflow(
+    atoms: Atoms,
+    cfg: VASPConfigurationFromYAML,
+    workflow_name: str,
+    run_overrides: Optional[dict] = None,
+    dry_run: bool = False,
+    magmoms=None,
+)
+```
+
+Execute a named workflow from the YAML configuration. Runs stages sequentially, each containing one or more steps with VASP parameters. Supports ASE optimizers, VaspInteractive, dimer method, and stage-level constraints.
+
+---
+
+#### `load_structure(pattern_initial_default='POSCAR')`
+
+Load initial structure from the current directory. Tries glob pattern first, falls back to POSCAR.
+
+---
+
+#### `stages_to_run(cfg, workflow_name='default')`
+
+Return the list of stage dicts for a given workflow name.
+
+---
+
+### Logging (`logger.py`)
+
+#### `configure_logging(*, project_logger='asetools.manager', file_prefix='run', level=logging.INFO)`
+
+Set up dual logging (file + console). Creates a timestamped log file `{file_prefix}_YYYYMMDD_HHMM.log`.
+
+---
+
 ## `asetools.database`
 
 ASE database integration with duplicate detection.
@@ -569,7 +757,7 @@ ASE database integration with duplicate detection.
 
 **Import:**
 ```python
-from asetools.database.databases import check_if_exists_in_db, add_config_to_db, db_to_pandas
+from asetools.database import check_if_exists_in_db, add_config_to_db, db_to_pandas
 ```
 
 ### Functions
@@ -624,32 +812,47 @@ Energy profile and potential energy surface (PES) plotting.
 
 **Import:**
 ```python
-from asetools.plotting.plots import add_line_to_pes, beautify_pes_plot, validate_columns
+from asetools.plotting import add_line_to_pes, beautify_pes_plot, validate_columns
 ```
 
 Default column names expected in input DataFrames: `Label`, `Type-Conf`, `E`, `nPCET`.
 
 ### Functions
 
-#### `add_line_to_pes(ax, data, energy_col='E', type_col='Type-Conf', c='k', label=None, indexes=None, col=None, style='-', lw=2, lw_connector=0.5)`
+#### `add_line_to_pes(ax, data, energy_col=None, type_col=None, c='k', label=None, indexes=None, col=None, style='default', lw=None, lw_connector=None)`
 
 Add a line (energy profile) to a PES axes. Returns `ax`.
 
+- **`energy_col`** — column name for energy values (default: `'E'`)
+- **`type_col`** — column name for configuration type M/T (default: `'Type-Conf'`)
+- **`col`** — deprecated alias for `energy_col`
+- **`style`** — `'default'` (thick horizontal lines with diagonal connectors) or `'step'` (horizontal and vertical lines only)
+- **`lw`** — line width for energy levels (default: 3.5 for `'default'`, 1.5 for `'step'`)
+- **`lw_connector`** — line width for connectors (default: 0.75 for `'default'`)
+
 ---
 
-#### `beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=True, fs=12, data=None, label_col='Label', type_col='Type-Conf', npcet_col='nPCET', show_labels=True, show_npcet=False, indexes=None, frame=True, y_decimals=2)`
+#### `beautify_pes_plot(ax, xlim=None, ylim=None, zero=True, leg=False, fs=12, data=None, label_col=None, type_col=None, npcet_col=None, show_labels=False, show_npcet=False, indexes=None, frame=True, y_decimals=None)`
 
 Apply formatting and annotations to a PES plot. Returns `ax`.
 
+- **`leg`** — show legend (default: `False`)
+- **`label_col`** — column name for species labels (default: `'Label'`)
+- **`type_col`** — column name for M/T type (default: `'Type-Conf'`)
+- **`npcet_col`** — column name for nPCET values (default: `'nPCET'`)
+- **`show_labels`** — show species labels on x-axis (default: `False`)
+- **`frame`** — keep plot frame/spines visible (default: `True`); if `False`, removes top, right, and bottom spines
+- **`y_decimals`** — decimal places for y-axis labels; `None` uses matplotlib default
+
 ---
 
-#### `validate_columns(data, required_cols, optional_cols=[])`
+#### `validate_columns(data, required_cols, optional_cols=None)`
 
 ```python
-def validate_columns(data, required_cols, optional_cols=[]) -> bool
+def validate_columns(data, required_cols, optional_cols=None) -> bool
 ```
 
-Check that a DataFrame contains the required and optional columns.
+Check that a DataFrame contains the required columns. Warns if optional columns are missing. Raises `ValueError` if any required column is absent.
 
 ---
 
@@ -669,15 +872,21 @@ from asetools.parsers.vasp_outcar import (
 )
 ```
 
+**Public API** (via `from asetools.parsers import ...`): `VaspPropertyParser`, `read_constraints_from_file`
+
 ### Class Hierarchy
 
 ```
 VaspPropertyParser (ABC)
-├── SimpleProperty
-├── VaspChunkPropertyParser
-│   └── (concrete: Stress, Cell, PositionsAndForces, Magmom, Magmoms, EFermi, Energy, Kpoints)
-└── VaspHeaderPropertyParser
-    └── (concrete: Spinpol, SpeciesTypes, IonsPerSpecies, KpointHeader)
+├── SimpleProperty (ABC) ─ LINE_DELIMITER-based detection
+├── VaspChunkPropertyParser (ABC) ─ per-ionic-step parsing
+│   ├── SimpleVaspChunkParser (ABC) = VaspChunkPropertyParser + SimpleProperty
+│   │   └── (concrete: Stress, Cell, PositionsAndForces, Magmoms, EFermi, Energy)
+│   ├── Magmom ─ custom has_property check
+│   └── Kpoints ─ custom has_property check
+└── VaspHeaderPropertyParser (ABC) ─ OUTCAR header parsing
+    └── SimpleVaspHeaderParser (ABC) = VaspHeaderPropertyParser + SimpleProperty
+        └── (concrete: Spinpol, SpeciesTypes, IonsPerSpecies, KpointHeader)
 ```
 
 ### Top-level Parsers
@@ -688,13 +897,13 @@ VaspPropertyParser (ABC)
 
 ### Iterator
 
-#### `outcarchunks(fd, chunk_parser, header_parser)`
+#### `outcarchunks(fd, chunk_parser=None, header_parser=None)`
 
 ```python
-def outcarchunks(fd, chunk_parser, header_parser) -> Iterator[OUTCARChunk]
+def outcarchunks(fd, chunk_parser=None, header_parser=None) -> Iterator[OUTCARChunk]
 ```
 
-Iterate over ionic step chunks in an OUTCAR file.
+Iterate over ionic step chunks in an OUTCAR file. Uses default parsers when `None`.
 
 ### Concrete Parsers
 

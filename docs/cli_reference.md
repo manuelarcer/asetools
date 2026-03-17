@@ -365,7 +365,7 @@ vasp2arc input_file [output_file]
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `input_file` | — | Input VASP file (required positional) |
-| `output_file` | — | Output ARC file (optional positional) |
+| `output_file` | auto (`.arc` extension) | Output ARC file (optional positional) |
 
 ---
 
@@ -373,7 +373,7 @@ vasp2arc input_file [output_file]
 
 ### `view-outcars`
 
-List and optionally visualize structures from OUTCAR files across subdirectories.
+Visualize the last ionic configuration from OUTCAR files across subdirectories.
 
 ```bash
 view-outcars [--converged] [--folders DIR ...] [--pyatoms]
@@ -385,7 +385,7 @@ view-outcars [--converged] [--folders DIR ...] [--pyatoms]
 | `-f/--folders DIR ...` | Specific directories to check (default: all subdirectories) |
 | `--pyatoms` | Pyatoms directory layout |
 
-Opens ASE GUI for each found structure.
+Opens all found structures together in a single ASE GUI viewer.
 
 ---
 
@@ -410,7 +410,7 @@ calculate-bader-charges [options]
 | `-q/--quiet` | — | Suppress non-essential output |
 | `-v/--verbose` | — | Verbose output |
 
-Requires external Bader analysis tools (`chgsum.pl`, `bader`) to have been run beforehand (or use `--skip-bader` to process an existing ACF.dat).
+Requires external Bader analysis tools (`chgsum.pl`, `bader`) to be installed and on PATH. The tool runs them automatically unless `--skip-bader` is passed (which expects an existing ACF.dat).
 
 ---
 
