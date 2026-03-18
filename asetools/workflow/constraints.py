@@ -14,7 +14,7 @@ Example usage:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from ase import Atoms
 from ase.constraints import FixAtoms, Hookean
@@ -45,7 +45,7 @@ class ConstraintManager:
         """
         self.distance_factor = distance_factor
 
-    def load_constraint_config(self, json_file: str) -> Dict[str, Any]:
+    def load_constraint_config(self, json_file: str) -> dict[str, Any]:
         """
         Load constraint configuration from JSON file.
 
@@ -106,10 +106,10 @@ class ConstraintManager:
     def apply_hookean_from_pairs(
         self,
         atoms: Atoms,
-        pairs: List[Tuple[int, int]],
+        pairs: list[tuple[int, int]],
         k: float = 20.0,
         distance_factor: Optional[float] = None,
-    ) -> List[Hookean]:
+    ) -> list[Hookean]:
         """
         Create Hookean spring constraints from atom index pairs.
 
@@ -166,7 +166,7 @@ class ConstraintManager:
 
         return hookean_constraints
 
-    def get_existing_fix_indices(self, atoms: Atoms) -> List[int]:
+    def get_existing_fix_indices(self, atoms: Atoms) -> list[int]:
         """
         Extract existing FixAtoms constraint indices from atoms object.
 
@@ -197,7 +197,7 @@ class ConstraintManager:
 
         return sorted(set(fix_indices))
 
-    def merge_constraints(self, atoms: Atoms, new_constraints: List) -> None:
+    def merge_constraints(self, atoms: Atoms, new_constraints: list) -> None:
         """
         Merge new constraints with existing constraints on atoms object.
 
@@ -304,7 +304,7 @@ class ConstraintManager:
 
         logger.info(f"Successfully applied constraints from {json_file}")
 
-    def apply_stage_constraints(self, atoms: Atoms, constraint_config: Dict[str, Any]) -> None:
+    def apply_stage_constraints(self, atoms: Atoms, constraint_config: dict[str, Any]) -> None:
         """
         Apply constraints from stage configuration (YAML workflow).
 

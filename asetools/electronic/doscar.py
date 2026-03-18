@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -87,7 +87,7 @@ class DOS:
         # Convert to numpy arrays
         self._convert_to_arrays()
 
-    def _parse_dos_data(self, lines: List[str]):
+    def _parse_dos_data(self, lines: list[str]):
         """Parse DOS data from DOSCAR lines."""
         repline = lines[5]
         goDOS = False
@@ -148,8 +148,8 @@ class DOS:
         return self.dos_up + np.abs(self.dos_down)
 
     def get_pdos_by_states(
-        self, atoms: List[int], states: List[str]
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        self, atoms: list[int], states: list[str]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract projected DOS by orbital states.
 
         Args:
@@ -193,8 +193,8 @@ class DOS:
         return self.energy, sum_plus, sum_minus
 
     def get_pdos_by_orbitals(
-        self, atoms: List[int], orbitals: Union[List[str], str]
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        self, atoms: list[int], orbitals: Union[list[str], str]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract projected DOS by specific orbitals.
 
         Args:
@@ -265,10 +265,10 @@ class DOS:
 
     def get_individual_atom_pdos(
         self,
-        atoms: List[int],
-        states: Optional[List[str]] = None,
-        orbitals: Optional[Union[List[str], str]] = None,
-    ) -> Dict[int, Dict[str, np.ndarray]]:
+        atoms: list[int],
+        states: Optional[list[str]] = None,
+        orbitals: Optional[Union[list[str], str]] = None,
+    ) -> dict[int, dict[str, np.ndarray]]:
         """Get projected DOS data for individual atoms (not summed).
 
         Args:
@@ -328,15 +328,15 @@ class DOS:
 
     def plot_pdos_by_states(
         self,
-        atoms: List[int],
-        states: List[str],
+        atoms: list[int],
+        states: list[str],
         ax: Optional[plt.Axes] = None,
-        colors: Optional[List[str]] = None,
+        colors: Optional[list[str]] = None,
         same_color_spins: bool = False,
-        xlim: Optional[Tuple[float, float]] = None,
-        ylim: Optional[Tuple[float, float]] = None,
+        xlim: Optional[tuple[float, float]] = None,
+        ylim: Optional[tuple[float, float]] = None,
         linewidth: float = 1.5,
-        figsize: Tuple[float, float] = (8, 6),
+        figsize: tuple[float, float] = (8, 6),
         **kwargs,
     ) -> plt.Axes:
         """Plot projected DOS by orbital states.
@@ -403,15 +403,15 @@ class DOS:
 
     def plot_pdos_by_orbitals(
         self,
-        atoms: List[int],
-        orbitals: Union[List[str], str],
+        atoms: list[int],
+        orbitals: Union[list[str], str],
         ax: Optional[plt.Axes] = None,
-        colors: Optional[List[str]] = None,
+        colors: Optional[list[str]] = None,
         same_color_spins: bool = False,
-        xlim: Optional[Tuple[float, float]] = None,
-        ylim: Optional[Tuple[float, float]] = None,
+        xlim: Optional[tuple[float, float]] = None,
+        ylim: Optional[tuple[float, float]] = None,
         linewidth: float = 1.5,
-        figsize: Tuple[float, float] = (8, 6),
+        figsize: tuple[float, float] = (8, 6),
         **kwargs,
     ) -> plt.Axes:
         """Plot projected DOS by specific orbitals.
@@ -478,16 +478,16 @@ class DOS:
 
     def plot_multi_atom_pdos(
         self,
-        atoms: List[int],
-        states: Optional[List[str]] = None,
-        orbitals: Optional[Union[List[str], str]] = None,
-        colors: Optional[List[str]] = None,
+        atoms: list[int],
+        states: Optional[list[str]] = None,
+        orbitals: Optional[Union[list[str], str]] = None,
+        colors: Optional[list[str]] = None,
         same_color_spins: bool = True,
         ax: Optional[plt.Axes] = None,
-        xlim: Optional[Tuple[float, float]] = None,
-        ylim: Optional[Tuple[float, float]] = None,
+        xlim: Optional[tuple[float, float]] = None,
+        ylim: Optional[tuple[float, float]] = None,
         linewidth: float = 1.5,
-        figsize: Tuple[float, float] = (6, 4),
+        figsize: tuple[float, float] = (6, 4),
         **kwargs,
     ) -> plt.Axes:
         """Plot projected DOS for multiple atoms individually with automatic color assignment.
@@ -584,12 +584,12 @@ class DOS:
 
     def calculate_band_center(
         self,
-        atoms: List[int],
-        orbitals: Optional[Union[List[str], str]] = None,
-        states: Optional[List[str]] = None,
-        energy_range: Optional[Tuple[float, float]] = None,
+        atoms: list[int],
+        orbitals: Optional[Union[list[str], str]] = None,
+        states: Optional[list[str]] = None,
+        energy_range: Optional[tuple[float, float]] = None,
         spin_treatment: str = "combined",
-    ) -> Union[float, Dict[str, float]]:
+    ) -> Union[float, dict[str, float]]:
         """Calculate the band center (e.g., d-band center) for specific atoms and orbitals.
 
         The band center is calculated as the first moment of the projected DOS:
@@ -702,7 +702,7 @@ class DOS:
 
 
 # Backward compatibility functions
-def extract_dos(doscarfile: str) -> Dict:
+def extract_dos(doscarfile: str) -> dict:
     """Extract DOS data from DOSCAR file (legacy function).
 
     Args:
@@ -733,8 +733,8 @@ def extract_fermi_e(doscarfile):
 
 
 def extract_pdos_perstate(
-    data: Dict, atoms: List[int], states: List[str]
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    data: dict, atoms: list[int], states: list[str]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract projected DOS by orbital states (legacy function).
 
     Args:
@@ -778,8 +778,8 @@ def extract_pdos_perstate(
 
 
 def extract_pdos_perorbital(
-    data: Dict, atoms: List[int], orbitals: Union[List[str], str]
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    data: dict, atoms: list[int], orbitals: Union[list[str], str]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract projected DOS by specific orbitals (legacy function).
 
     Args:
@@ -838,12 +838,12 @@ def extract_pdos_perorbital(
 
 def calculate_band_center(
     doscarfile: str,
-    atoms: List[int],
-    orbitals: Optional[Union[List[str], str]] = None,
-    states: Optional[List[str]] = None,
-    energy_range: Optional[Tuple[float, float]] = None,
+    atoms: list[int],
+    orbitals: Optional[Union[list[str], str]] = None,
+    states: Optional[list[str]] = None,
+    energy_range: Optional[tuple[float, float]] = None,
     spin_treatment: str = "combined",
-) -> Union[float, Dict[str, float]]:
+) -> Union[float, dict[str, float]]:
     """Calculate the band center (e.g., d-band center) for specific atoms and orbitals (legacy function).
 
     This is a convenience function that wraps the DOS class method for backward compatibility.

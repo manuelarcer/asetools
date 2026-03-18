@@ -18,7 +18,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 from ase import Atoms
@@ -60,7 +60,7 @@ class BaderChargeAnalyzer:
 
         # Initialize data containers
         self.atoms: Optional[Atoms] = None
-        self.zval_dict: Dict[str, float] = {}
+        self.zval_dict: dict[str, float] = {}
         self.bader_charges: np.ndarray = np.array([])
         self.final_charges: np.ndarray = np.array([])
 
@@ -73,7 +73,7 @@ class BaderChargeAnalyzer:
             logger.error(f"Failed to load structure from {self.structure_file}: {e}")
             raise
 
-    def extract_zval_from_outcar(self) -> Dict[str, float]:
+    def extract_zval_from_outcar(self) -> dict[str, float]:
         """
         Extract valence electron information (ZVAL) from OUTCAR file.
 
@@ -259,7 +259,7 @@ class BaderChargeAnalyzer:
             raise
 
     def _write_table_format(
-        self, output_path: Path, symbols: List[str], positions: np.ndarray
+        self, output_path: Path, symbols: list[str], positions: np.ndarray
     ) -> None:
         """Write results in formatted table format."""
         with open(output_path, "w") as f:
@@ -277,7 +277,7 @@ class BaderChargeAnalyzer:
                 )
 
     def _write_csv_format(
-        self, output_path: Path, symbols: List[str], positions: np.ndarray
+        self, output_path: Path, symbols: list[str], positions: np.ndarray
     ) -> None:
         """Write results in CSV format."""
         import csv
@@ -300,7 +300,7 @@ class BaderChargeAnalyzer:
                 )
 
     def _write_json_format(
-        self, output_path: Path, symbols: List[str], positions: np.ndarray
+        self, output_path: Path, symbols: list[str], positions: np.ndarray
     ) -> None:
         """Write results in JSON format."""
         import json

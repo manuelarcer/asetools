@@ -12,7 +12,7 @@ This module provides utilities for dimer calculations including:
 
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 from ase import Atoms
@@ -157,7 +157,7 @@ def generate_displacement_vector(
 def setup_dimer_atoms(
     atoms: Atoms,
     displacement_vector: Optional[np.ndarray] = None,
-    dimer_control_kwargs: Optional[Dict[str, Any]] = None,
+    dimer_control_kwargs: Optional[dict[str, Any]] = None,
 ) -> MinModeAtoms:
     """
     Set up MinModeAtoms object for dimer calculation.
@@ -215,7 +215,7 @@ def setup_dimer_atoms(
 
 def check_dimer_convergence(
     d_atoms: MinModeAtoms, force_threshold: float = 0.01, eigenvalue_threshold: float = -0.01
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Check convergence criteria for dimer calculation.
 
@@ -264,7 +264,7 @@ def check_dimer_convergence(
         return {"converged": False, "error": str(e)}
 
 
-def extract_saddle_point_info(d_atoms: MinModeAtoms) -> Dict[str, Any]:
+def extract_saddle_point_info(d_atoms: MinModeAtoms) -> dict[str, Any]:
     """
     Extract information about the saddle point from converged dimer calculation.
 
@@ -341,8 +341,8 @@ def save_dimer_trajectory(d_atoms: MinModeAtoms, filename: str = "dimer_trajecto
 
 
 def validate_dimer_kwargs(
-    optimizer_kwargs: Dict[str, Any],
-) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    optimizer_kwargs: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """
     Validate and process dimer-specific optimizer kwargs.
 

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from ase import Atom, Atoms
@@ -11,7 +11,7 @@ class SurfaceAnalyzer:
         self.surface_neighbors = self.find_surface_neighbors()
         self.symbols = np.unique(self.atoms.get_chemical_symbols())
 
-    def find_surface_atoms(self) -> List[int]:
+    def find_surface_atoms(self) -> list[int]:
         z_max = self.atoms.positions[:, 2].max()  # Maximum z-coordinate
         surface_indices = []
         for i, atom in enumerate(self.atoms):
@@ -19,7 +19,7 @@ class SurfaceAnalyzer:
                 surface_indices.append(i)
         return surface_indices
 
-    def find_surface_neighbors(self, thr: float = 3.0) -> List[Tuple[int, int, int]]:
+    def find_surface_neighbors(self, thr: float = 3.0) -> list[tuple[int, int, int]]:
         surface_indices = sorted(self.surface_indices)
         surface_neighbors = []
         for i in range(len(surface_indices)):
@@ -39,7 +39,7 @@ class SurfaceAnalyzer:
                             )
         return surface_neighbors
 
-    def midpoint_three_atoms(self, three: Tuple[int, int, int]) -> np.ndarray:
+    def midpoint_three_atoms(self, three: tuple[int, int, int]) -> np.ndarray:
         # threeat is in (i, j, k) form detailing the indexes of atoms
         v_ij = self.atoms.get_distance(three[0], three[1], mic=True, vector=True)
         v_ik = self.atoms.get_distance(three[0], three[2], mic=True, vector=True)
@@ -54,7 +54,7 @@ class SurfaceAnalyzer:
 
     def add_adsorbate_to_mid(
         self,
-        three: Tuple[int, int, int],
+        three: tuple[int, int, int],
         adsorbate: str = "H",
         z_off: float = 1.0,
         thr: float = 4.4,
@@ -83,7 +83,7 @@ class SurfaceAnalyzer:
 
     def adsorbate_to_cluster_neighbors(
         self, thr: float = 4.4, prec: int = 3
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         dist_dic = {}
         for s in self.symbols:
             dist_neigh = self.adsorbatecluster.get_distances(

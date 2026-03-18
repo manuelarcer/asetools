@@ -1,7 +1,7 @@
 # Module for analysis of potential-dependent calculations
 
 import os
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,8 +53,8 @@ def correct_energy_fermishift(folder: str) -> float:
 
 
 def extract_corrected_energy_fermie(
-    listfolders: List[str], calc_zero: str
-) -> Dict[str, np.ndarray]:
+    listfolders: list[str], calc_zero: str
+) -> dict[str, np.ndarray]:
     results = {"nelect": [], "e": [], "fe": [], "U": []}
     ref_nelect = get_num_elect(os.path.join(calc_zero, "OUTCAR"))
 
@@ -96,7 +96,7 @@ def custom_polynomial(beta: np.ndarray, x: np.ndarray, fixed_constant: float = 0
 
 
 def fitenergy_polynomial(
-    results: Dict[str, np.ndarray],
+    results: dict[str, np.ndarray],
     order: int = 3,
     energy_ref: float = 0,
     plot: bool = False,
@@ -214,7 +214,7 @@ def interpolate_new_x(
 
 
 def get_energy_at_givenpotential(
-    results: Dict[str, np.ndarray],
+    results: dict[str, np.ndarray],
     fit_type: str = "polynomial",
     e_ref: Optional[float] = None,
     order: int = 2,
@@ -323,7 +323,7 @@ def plot_fit(
     return ax
 
 
-def print_results(results: Dict[str, np.ndarray]) -> None:
+def print_results(results: dict[str, np.ndarray]) -> None:
     # Input is the dictionary from "extract_corrected_energy_fermie"
     for i, nelec in enumerate(results["nelect"]):
         print(nelec, results["e"][i], results["fe"][i], results["U"][i])

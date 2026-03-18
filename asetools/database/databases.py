@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 from ase import Atoms
@@ -7,7 +7,7 @@ from ase.io import read
 from asetools.analysis import check_outcar_convergence
 
 
-def check_if_exists_in_db(db: Any, atoms: Atoms) -> Tuple[bool, Optional[int]]:
+def check_if_exists_in_db(db: Any, atoms: Atoms) -> tuple[bool, Optional[int]]:
 
     forces = atoms.get_forces(apply_constraint=False)
     indb = False
@@ -45,7 +45,7 @@ def add_config_to_db(
             return print("Config ALREADY in DB, skipped....")
 
 
-def db_to_pandas(db: Any, columns: Optional[List[str]] = None) -> pd.DataFrame:
+def db_to_pandas(db: Any, columns: Optional[list[str]] = None) -> pd.DataFrame:
     if columns is None:
         columns = ["name", "id", "energy", "free_energy", "magmom"]
     # db: must be a loaded ASE-DB

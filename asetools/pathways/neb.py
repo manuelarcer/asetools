@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,7 +33,7 @@ def extract_neb_data(folder_path: str, final: int) -> pd.DataFrame:
     return nebdf
 
 
-def plot_nebs(list_dfs: Optional[List[pd.DataFrame]] = None, font: str = "large") -> None:
+def plot_nebs(list_dfs: Optional[list[pd.DataFrame]] = None, font: str = "large") -> None:
     if list_dfs is None:
         list_dfs = []
     # list_dfs: list of pandas DataFrames with the NEB data
@@ -84,7 +84,7 @@ def plot_nebs(list_dfs: Optional[List[pd.DataFrame]] = None, font: str = "large"
     plt.show()
 
 
-def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[Atoms]:
+def redistribute_images_evenly(images: list[Atoms], mic: bool = True) -> list[Atoms]:
     """
     Redistribute images along the path to be more evenly spaced.
     Uses cumulative distance along the path to achieve equal spacing.
@@ -167,7 +167,7 @@ def redistribute_images_evenly(images: List[Atoms], mic: bool = True) -> List[At
 
 def interpolate_neb_images(
     initial_atoms: Atoms, final_atoms: Atoms, n_images: int, method: str = "idpp", mic: bool = True
-) -> List[Atoms]:
+) -> list[Atoms]:
     """
     Generate intermediate images between initial and final structures.
 
@@ -237,7 +237,7 @@ def interpolate_neb_images(
 
 def check_atomic_distances(
     atoms: Atoms, shrink_factor: float = 0.8, mic: bool = True
-) -> List[Tuple[int, int, float, float]]:
+) -> list[tuple[int, int, float, float]]:
     """
     Check for atoms that are too close to each other based on covalent radii.
 
@@ -291,7 +291,7 @@ def check_atomic_distances(
 
 def check_neb_images_sanity(
     output_dir: str, shrink_factor: float = 0.8, mic: bool = True
-) -> Dict[str, List[Tuple[int, int, float, float]]]:
+) -> dict[str, list[tuple[int, int, float, float]]]:
     """
     Check all NEB images for atoms that are too close to each other.
 

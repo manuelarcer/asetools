@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +15,7 @@ DEFAULT_NPCET_COL = "nPCET"
 
 
 def validate_columns(
-    data: pd.DataFrame, required_cols: List[str], optional_cols: Optional[List[str]] = None
+    data: pd.DataFrame, required_cols: list[str], optional_cols: Optional[list[str]] = None
 ) -> bool:
     """
     Validate that required columns exist in the DataFrame.
@@ -62,7 +62,7 @@ def add_line_to_pes(
     type_col: Optional[str] = None,
     c: str = "k",
     label: Optional[str] = None,
-    indexes: Optional[List[int]] = None,
+    indexes: Optional[list[int]] = None,
     col: Optional[str] = None,
     style: str = "default",
     lw: Optional[float] = None,
@@ -142,7 +142,7 @@ def _add_line_default_style(
     type_col: str,
     c: str,
     label: Optional[str],
-    indexes: Optional[List[int]],
+    indexes: Optional[list[int]],
     lw: Optional[float] = None,
     lw_connector: Optional[float] = None,
 ) -> plt.Axes:
@@ -230,7 +230,7 @@ def _add_line_step_style(
     type_col: str,
     c: str,
     label: Optional[str],
-    indexes: Optional[List[int]],
+    indexes: Optional[list[int]],
     lw: Optional[float] = None,
 ) -> plt.Axes:
     """Step style: horizontal and vertical lines only (no diagonal connectors)."""
@@ -295,8 +295,8 @@ def _add_line_step_style(
 
 def beautify_pes_plot(
     ax: plt.Axes,
-    xlim: Optional[Tuple[float, float]] = None,
-    ylim: Optional[Tuple[float, float]] = None,
+    xlim: Optional[tuple[float, float]] = None,
+    ylim: Optional[tuple[float, float]] = None,
     zero: bool = True,
     leg: bool = False,
     fs: int = 12,
@@ -306,7 +306,7 @@ def beautify_pes_plot(
     npcet_col: Optional[str] = None,
     show_labels: bool = False,
     show_npcet: bool = False,
-    indexes: Optional[List[int]] = None,
+    indexes: Optional[list[int]] = None,
     frame: bool = True,
     y_decimals: Optional[int] = None,
 ) -> plt.Axes:

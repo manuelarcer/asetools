@@ -15,7 +15,7 @@ Author: ASEtools development team
 """
 
 import os
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -62,7 +62,7 @@ class BondValenceParameters:
         # Parse parameter data
         self._parse_parameters(lines)
 
-    def _parse_references(self, lines: List[str]):
+    def _parse_references(self, lines: list[str]):
         """Parse the reference section of the CIF file."""
         in_ref_section = False
 
@@ -95,7 +95,7 @@ class BondValenceParameters:
                         ref_text = parts[1].rstrip("'")
                         self.references[ref_id] = ref_text
 
-    def _parse_parameters(self, lines: List[str]):
+    def _parse_parameters(self, lines: list[str]):
         """Parse the parameter data section of the CIF file."""
         in_param_section = False
 
@@ -162,7 +162,7 @@ class BondValenceParameters:
         valence2: int,
         most_reliable: bool = True,
         exclude_unchecked: bool = True,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> Union[dict, list[dict]]:
         """
         Get bond valence parameters for a given element pair.
 
@@ -209,7 +209,7 @@ class BondValenceParameters:
         else:
             return params
 
-    def list_available_pairs(self) -> List[Tuple[str, int, str, int]]:
+    def list_available_pairs(self) -> list[tuple[str, int, str, int]]:
         """
         List all available element pairs with their valence states.
 
@@ -218,7 +218,7 @@ class BondValenceParameters:
         """
         return list(self.parameters.keys())
 
-    def get_elements(self) -> List[str]:
+    def get_elements(self) -> list[str]:
         """
         Get list of all elements with bond valence parameters.
 
@@ -231,7 +231,7 @@ class BondValenceParameters:
             elements.add(element2)
         return sorted(list(elements))
 
-    def get_valence_states(self, element: str) -> List[int]:
+    def get_valence_states(self, element: str) -> list[int]:
         """
         Get available valence states for a given element.
 
@@ -261,10 +261,10 @@ class BondValenceSum:
     def __init__(
         self,
         atoms: Atoms,
-        valence_states: Optional[Dict[str, int]] = None,
-        custom_parameters: Optional[Dict[str, Dict[str, float]]] = None,
+        valence_states: Optional[dict[str, int]] = None,
+        custom_parameters: Optional[dict[str, dict[str, float]]] = None,
         distance_cutoff: float = 3.5,
-        allowed_pairs: Optional[List[Tuple[str, str]]] = None,
+        allowed_pairs: Optional[list[tuple[str, str]]] = None,
         exclude_same_element: bool = True,
         auto_determine_valence: bool = False,
         per_atom_valence: bool = False,
@@ -573,7 +573,7 @@ class BondValenceSum:
         pair = tuple(sorted([element1, element2]))
         return pair in self.allowed_pairs
 
-    def _get_possible_valences(self, element: str) -> List[int]:
+    def _get_possible_valences(self, element: str) -> list[int]:
         """
         Get possible valence states for an element from the bond valence parameter database.
 
@@ -660,7 +660,7 @@ class BondValenceSum:
         }
         return element in metals
 
-    def _determine_best_valence(self, atom_index: int, element: str) -> Tuple[int, float, Dict]:
+    def _determine_best_valence(self, atom_index: int, element: str) -> tuple[int, float, dict]:
         """
         Determine the best valence state for a metal atom by minimizing BVS deviation.
 
@@ -904,7 +904,7 @@ class BondValenceSum:
         bond_valence = np.exp((R0 - distance) / B)
         return bond_valence
 
-    def calculate_bvs(self) -> Dict[int, float]:
+    def calculate_bvs(self) -> dict[int, float]:
         """
         Calculate bond valence sums for all atoms.
 
@@ -1036,7 +1036,7 @@ class BondValenceSum:
 
         return pd.DataFrame(analysis_data)
 
-    def get_bond_details(self, atom_index: int) -> List[Dict]:
+    def get_bond_details(self, atom_index: int) -> list[dict]:
         """
         Get detailed bond information for a specific atom.
 
@@ -1051,7 +1051,7 @@ class BondValenceSum:
 
         return self.bond_data.get(atom_index, [])
 
-    def get_allowed_pairs(self) -> List[Tuple[str, str]]:
+    def get_allowed_pairs(self) -> list[tuple[str, str]]:
         """
         Get the list of element pairs that are considered in BVS calculations.
 
@@ -1070,7 +1070,7 @@ class BondValenceSum:
         if self.exclude_same_element:
             print("Note: Same-element pairs are excluded")
 
-    def get_valence_optimization_results(self) -> Dict:
+    def get_valence_optimization_results(self) -> dict:
         """
         Get detailed results from valence optimization.
 

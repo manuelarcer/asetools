@@ -25,7 +25,7 @@ import logging
 import math
 import os
 import random
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,7 @@ class AdsorbateSpecies:
     def __init__(
         self,
         name: str,
-        entropy_params: Optional[Dict[str, float]] = None,
+        entropy_params: Optional[dict[str, float]] = None,
         dissociative: Optional[bool] = None,
     ):
         """
@@ -139,11 +139,11 @@ class SurfaceProperties:
         """Get surface area per atom in Å²."""
         return self.surface_areas[metal][facet]
 
-    def get_available_metals(self) -> List[str]:
+    def get_available_metals(self) -> list[str]:
         """Get list of available metals."""
         return list(self.surface_energies.keys())
 
-    def get_available_facets(self, metal: str) -> List[str]:
+    def get_available_facets(self, metal: str) -> list[str]:
         """Get list of available facets for a metal."""
         return list(self.surface_energies[metal].keys())
 
@@ -224,7 +224,7 @@ class LatticeGasModel:
     Implements the approach from the Pd notebook with interaction parameters.
     """
 
-    def __init__(self, interaction_params: Dict):
+    def __init__(self, interaction_params: dict):
         """
         Initialize lattice gas model.
 
@@ -244,7 +244,7 @@ class LatticeGasModel:
         self.params = interaction_params
 
     def get_adsorption_energy(
-        self, catalyst: str, facet: str, adsorbate: str, coverages: Dict[str, float]
+        self, catalyst: str, facet: str, adsorbate: str, coverages: dict[str, float]
     ) -> float:
         """
         Calculate coverage-dependent adsorption energy using lattice gas model.
@@ -297,7 +297,7 @@ class ThermodynamicsCalculator:
     def __init__(
         self,
         metal: str,
-        adsorbates: List[str],
+        adsorbates: list[str],
         surface_properties: Optional[SurfaceProperties] = None,
     ):
         """
@@ -328,13 +328,13 @@ class ThermodynamicsCalculator:
         self.model = InterpolationModel(data_source)
         self.model_type = "interpolation"
 
-    def load_lattice_gas_model(self, interaction_params: Dict):
+    def load_lattice_gas_model(self, interaction_params: dict):
         """Load lattice gas model with interaction parameters."""
         self.model = LatticeGasModel(interaction_params)
         self.model_type = "lattice_gas"
 
     def _ads_energy(
-        self, adsorbate: str, facet: str, coverages: Union[Dict[str, float], float]
+        self, adsorbate: str, facet: str, coverages: Union[dict[str, float], float]
     ) -> float:
         """
         Calculate adsorption energy for given conditions.
@@ -407,10 +407,10 @@ class ThermodynamicsCalculator:
 
     def _system_equilibrium_multi(
         self,
-        coverages_list: List[float],
+        coverages_list: list[float],
         facet: str,
         temperature: float,
-        pressures: Dict[str, float],
+        pressures: dict[str, float],
     ) -> float:
         """
         Equilibrium equation for multi-adsorbate competitive adsorption.
@@ -463,7 +463,7 @@ class ThermodynamicsCalculator:
 
         return total_objective
 
-    def _constraint_total_coverage(self, coverages_list: List[float]) -> float:
+    def _constraint_total_coverage(self, coverages_list: list[float]) -> float:
         """Constraint: total coverage ≤ 1."""
         return 1.0 - sum(coverages_list)
 
@@ -471,9 +471,9 @@ class ThermodynamicsCalculator:
         self,
         facet: str,
         temperature: float,
-        pressures: Union[float, Dict[str, float]],
+        pressures: Union[float, dict[str, float]],
         max_iterations: int = 100,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Calculate equilibrium coverage for given conditions.
 
@@ -588,9 +588,9 @@ class ThermodynamicsCalculator:
     def calculate_surface_energy(
         self,
         facet: str,
-        coverages: Dict[str, float],
+        coverages: dict[str, float],
         temperature: float,
-        pressures: Union[float, Dict[str, float]],
+        pressures: Union[float, dict[str, float]],
     ) -> float:
         """
         Calculate surface energy including adsorbate contributions.
@@ -637,9 +637,9 @@ class ThermodynamicsCalculator:
 
     def calculate_equilibrium(
         self,
-        temperature_range: Tuple[float, float, float],
-        pressures: Union[float, Dict[str, float]],
-        facets: Optional[List[str]] = None,
+        temperature_range: tuple[float, float, float],
+        pressures: Union[float, dict[str, float]],
+        facets: Optional[list[str]] = None,
     ) -> pd.DataFrame:
         """
         Calculate equilibrium coverage and surface energies over temperature range.

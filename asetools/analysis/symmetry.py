@@ -12,7 +12,7 @@ Classes:
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from ase import Atoms
@@ -101,7 +101,7 @@ class SymmetryAnalyzer:
         self._symmetry_dataset = None
         self._surface_indices = None
 
-    def _get_spglib_cell(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_spglib_cell(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert ASE Atoms to spglib cell format."""
         lattice = np.array(self.atoms.get_cell())
         positions = self.atoms.get_scaled_positions()
@@ -183,7 +183,7 @@ class SymmetryAnalyzer:
         dataset = self._get_symmetry_dataset()
         return dataset["equivalent_atoms"]
 
-    def get_symmetry_operations(self) -> List[Tuple[np.ndarray, np.ndarray]]:
+    def get_symmetry_operations(self) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Get list of symmetry operations as (rotation, translation) pairs.
 
@@ -230,8 +230,8 @@ class SymmetryAnalyzer:
         return equiv[index1] == equiv[index2]
 
     def get_equivalent_groups(
-        self, element: Optional[str] = None, indices: Optional[List[int]] = None
-    ) -> Dict[int, List[int]]:
+        self, element: Optional[str] = None, indices: Optional[list[int]] = None
+    ) -> dict[int, list[int]]:
         """
         Group atoms by symmetry equivalence.
 
@@ -258,7 +258,7 @@ class SymmetryAnalyzer:
         symbols = self.atoms.get_chemical_symbols()
 
         # Build groups
-        groups: Dict[int, List[int]] = {}
+        groups: dict[int, list[int]] = {}
 
         for i in range(len(self.atoms)):
             # Filter by element if specified
@@ -282,7 +282,7 @@ class SymmetryAnalyzer:
 
         return dict(sorted(renumbered.items()))
 
-    def get_unique_sites(self, element: Optional[str] = None) -> List[int]:
+    def get_unique_sites(self, element: Optional[str] = None) -> list[int]:
         """
         Get one representative atom from each equivalence class.
 
@@ -318,7 +318,7 @@ class SymmetryAnalyzer:
 
     # === Surface-specific methods ===
 
-    def get_surface_indices(self) -> List[int]:
+    def get_surface_indices(self) -> list[int]:
         """
         Identify surface atom indices based on z-coordinate threshold.
 
@@ -335,7 +335,7 @@ class SymmetryAnalyzer:
             ]
         return self._surface_indices
 
-    def get_surface_equivalent_groups(self, element: Optional[str] = None) -> Dict[int, List[int]]:
+    def get_surface_equivalent_groups(self, element: Optional[str] = None) -> dict[int, list[int]]:
         """
         Get equivalence groups for surface atoms only.
 
@@ -356,7 +356,7 @@ class SymmetryAnalyzer:
         surface_indices = self.get_surface_indices()
         return self.get_equivalent_groups(element=element, indices=surface_indices)
 
-    def get_unique_adsorption_sites(self, element: Optional[str] = None) -> List[int]:
+    def get_unique_adsorption_sites(self, element: Optional[str] = None) -> list[int]:
         """
         Get unique surface sites for adsorption studies.
 
@@ -378,7 +378,7 @@ class SymmetryAnalyzer:
 
     # === Analysis methods ===
 
-    def analyze(self) -> Dict:
+    def analyze(self) -> dict:
         """
         Perform full symmetry analysis and return summary.
 

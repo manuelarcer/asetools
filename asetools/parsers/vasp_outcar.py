@@ -4,8 +4,9 @@ Module for parsing OUTCAR files.
 
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterator, Sequence
 from pathlib import Path, PurePath
-from typing import Any, Dict, Iterator, List, Optional, Sequence, TextIO, Union
+from typing import Any, Optional, TextIO, Union
 from warnings import warn
 
 import ase
@@ -20,10 +21,10 @@ from ase.io.utils import ImageChunk
 _OUTCAR_SCF_DELIM = "FREE ENERGIE OF THE ION-ELECTRON SYSTEM"
 
 # Some type aliases
-_HEADER = Dict[str, Any]
+_HEADER = dict[str, Any]
 _CURSOR = int
 _CHUNK = Sequence[str]
-_RESULT = Dict[str, Any]
+_RESULT = dict[str, Any]
 
 
 class NoNonEmptyLines(Exception):
@@ -206,13 +207,13 @@ class SpeciesTypes(SimpleVaspHeaderParser):
         super().__init__(*args, **kwargs)
 
     @property
-    def species(self) -> List[str]:
+    def species(self) -> list[str]:
         """Internal storage of each found line.
         Will contain the double counting.
         Use the get_species() method to get the un-doubled list."""
         return self._species
 
-    def get_species(self) -> List[str]:
+    def get_species(self) -> list[str]:
         """The OUTCAR will contain two 'POTCAR:' entries per species.
         This method only returns the first half,
         effectively removing the double counting.

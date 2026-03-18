@@ -1,13 +1,13 @@
 # File containing the functions to analyze OUTCARs and VASP runs
 
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from ase.io import read
 
 
-def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, str]:
+def check_outcar_convergence(outcar: str, verbose: bool = False) -> tuple[bool, str]:
     try:
         out = open(outcar, "r")
     except:
@@ -71,7 +71,7 @@ def check_outcar_convergence(outcar: str, verbose: bool = False) -> Tuple[bool, 
 
 def check_energy_and_maxforce(
     outcar: str, magmom: bool = False, verbose: bool = False
-) -> Union[Tuple[float, float], Tuple[float, float, float]]:
+) -> Union[tuple[float, float], tuple[float, float, float]]:
 
     _convergence, _vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
@@ -91,8 +91,8 @@ def check_energy_and_maxforce(
 
 
 def extract_magnetic_moments(
-    outcar: str, listatoms: List[int], verbose: bool = False
-) -> List[float]:
+    outcar: str, listatoms: list[int], verbose: bool = False
+) -> list[float]:
     # listatoms: is a list with the indexes of atoms of interest
     _convergence, _vasp = check_outcar_convergence(outcar, verbose=verbose)
     try:
@@ -107,7 +107,7 @@ def extract_magnetic_moments(
 
 def get_parameter_from_run(
     outcar: str, check_converg: bool = True, parameter: str = "ISIF"
-) -> Tuple[Union[int, float, str, None], Union[bool, str]]:
+) -> tuple[Union[int, float, str, None], Union[bool, str]]:
     # First check convergence
     convergence = "Convergence-not-Checked"
     if check_converg:
@@ -262,7 +262,7 @@ def find_initial_structure(calc_dir: str, pattern: str = "*.vasp") -> str:
 
 def extract_comprehensive_metadata(
     outcar_path: str, incar_path: Optional[str] = None, potcar_path: Optional[str] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Extract comprehensive metadata from VASP calculation files.
 
