@@ -68,10 +68,10 @@ ignore = [
     "E501",   # line too long (handled by formatter)
     "E702",   # multiple statements on one line (legacy style, low risk)
     "E711",   # none-comparison (legacy == None patterns)
-    "E722",   # bare except (legacy error handling, fix incrementally)
+
     "E741",   # ambiguous variable name (common in scientific code: l, I, O)
     "B006",   # mutable default in function arg (too many in legacy code)
-    "B904",   # raise-without-from (fix incrementally)
+
     "UP015",  # unnecessary open mode 'r'
     "SIM108", # ternary operator (readability preference)
     "SIM115", # open-file-with-context-handler (legacy patterns, fix incrementally)

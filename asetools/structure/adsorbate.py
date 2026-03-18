@@ -78,7 +78,7 @@ class SurfaceAnalyzer:
             )
             cluster = self.atoms[(dist_mtx < thr)]
             return cluster
-        except:
+        except Exception:
             print("Possibly no adsorbate defined. Use SurfaceAnalizer.add_adsorbate_to_mid")
 
     def adsorbate_to_cluster_neighbors(

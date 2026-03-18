@@ -86,7 +86,7 @@ def write_vib_files(vib, vasp6, lines, outcar):
     if vasp6:
         try:
             atoms = read("POSCAR", format="vasp")
-        except:
+        except Exception:
             print("Could not read structure file")
             return
     else:
