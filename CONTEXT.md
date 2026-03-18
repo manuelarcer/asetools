@@ -67,8 +67,14 @@ Added docs/index.md (package overview, structure, installation, quick start), do
 ### G — CI setup ✅ DONE (2026-03-17)
 GitHub Actions workflow for pytest + ruff on push/PR. Lint job (ruff check + format --check, Python 3.12) and test matrix (pytest, Python 3.9–3.12). Fixed remaining 105 lint issues as part of this task. Branch: feature/ci-setup, commit 2154a6e.
 
+### H — Error handling cleanup ✅ DONE (2026-03-19)
+Replaced all bare `except:` with specific exception types across 8 files. Added `raise ... from exc` chaining to all re-raises in except clauses (11 instances). Removed E722 and B904 from ruff ignore list. Branch: feature/error-handling-cleanup, commit d0f49bb.
+
+### I — Merge feature branches to main
+Pending: `feature/missing-cli-entries` (4 missing CLI entry points, version bump to 0.2.0, requires-python >=3.9, modernized type hints). Needs Juan's review.
+
 ## Priority Order
-A → B → C → D → E → F → G (one per morning dev session)
+A → B → C → D → E → F → G → H (one per morning dev session)
 
 ## Notes
 - Owner: Juan M Arce-Ramos
