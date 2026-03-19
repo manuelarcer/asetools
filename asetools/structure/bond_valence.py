@@ -54,7 +54,9 @@ class BondValenceParameters:
             with open(self.parameter_file, "r") as f:
                 lines = f.readlines()
         except FileNotFoundError as exc:
-            raise FileNotFoundError(f"Bond valence parameter file not found: {self.parameter_file}") from exc
+            raise FileNotFoundError(
+                f"Bond valence parameter file not found: {self.parameter_file}"
+            ) from exc
 
         # Parse references first
         self._parse_references(lines)
