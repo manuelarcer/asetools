@@ -26,11 +26,11 @@ def _get_spglib():
         import spglib
 
         return spglib
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "spglib is required for symmetry analysis but is not installed. "
             "Install it with: pip install spglib"
-        )
+        ) from exc
 
 
 class SymmetryAnalyzer:

@@ -78,7 +78,7 @@ class ConstraintManager:
         except json.JSONDecodeError as e:
             raise json.JSONDecodeError(
                 f"Failed to parse JSON file {json_file}: {e.msg}", e.doc, e.pos
-            )
+            ) from e
 
     def calculate_bond_distance(self, atoms: Atoms, idx1: int, idx2: int) -> float:
         """

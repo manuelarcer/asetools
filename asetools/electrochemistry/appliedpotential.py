@@ -37,7 +37,7 @@ def extract_fermi_shift(folder: str) -> Optional[float]:
             for line in file.readlines()[-40:]:
                 if "FERMI_SHIFT" in line:
                     return float(line.split("=")[-1])
-    except:
+    except (OSError, ValueError):
         print('WARNING ! Error while reading "vasp.out", no FERMI_SHIFT stored')
         return None
     return None

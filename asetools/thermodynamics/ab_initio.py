@@ -520,7 +520,7 @@ class ThermodynamicsCalculator:
                     if solution.fun <= 1e-5 and not math.isnan(solution.fun):
                         return {adsorbate: round(solution.x[0], 4)}
 
-                except:
+                except (ValueError, RuntimeError, ArithmeticError):
                     continue
 
             # Use best solution found
@@ -572,7 +572,7 @@ class ThermodynamicsCalculator:
                             for adsorbate, cov in zip(self.adsorbates, solution.x)
                         }
 
-                except:
+                except (ValueError, RuntimeError, ArithmeticError):
                     continue
 
             # Use best solution

@@ -233,11 +233,11 @@ def make_calculator(cfg: VASPConfigurationFromYAML, run_overrides: Optional[dict
     if calculator_type.lower() == "vasp_interactive":
         try:
             from vasp_interactive import VaspInteractive
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "VaspInteractive calculator requested but 'vasp_interactive' package is not installed. "
                 "Install it with: pip install vasp-interactive"
-            )
+            ) from exc
         calc = VaspInteractive(**vasp_kwargs)
         logger.info(" ** VaspInteractive calculator created")
     elif calculator_type.lower() == "vasp":
@@ -275,11 +275,11 @@ def _make_step_calculator(
     if needs_interactive:
         try:
             from vasp_interactive import VaspInteractive
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "ASE optimizer requested but 'vasp_interactive' package is not installed. "
                 "Install it with: pip install vasp-interactive"
-            )
+            ) from exc
         calc = VaspInteractive(**vasp_kwargs)
         logger.info(" ** VaspInteractive calculator created for ASE optimizer")
     else:
@@ -515,11 +515,11 @@ def _run_stage_with_vaspinteractive(
     """
     try:
         from vasp_interactive import VaspInteractive
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "ASE optimizer requested but 'vasp_interactive' package is not installed. "
             "Install it with: pip install vasp-interactive"
-        )
+        ) from exc
 
     # Build base VaspInteractive parameters (will be updated per step)
     vasp_kwargs = deep_update(
@@ -753,11 +753,11 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
 
         if not isinstance(atoms.calc, VaspInteractive):
             raise RuntimeError("Expected VaspInteractive calculator for ASE optimization")
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "ASE optimizer requested but 'vasp_interactive' package is not installed. "
             "Install it with: pip install vasp-interactive"
-        )
+        ) from exc
 
     # Create and run optimizer with existing VaspInteractive calculator
     opt = OptClass(atoms, **init_kwargs)
@@ -801,11 +801,11 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
 
         if not isinstance(atoms.calc, VaspInteractive):
             raise RuntimeError("Expected VaspInteractive calculator for dimer optimization")
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "Dimer optimizer requested but 'vasp_interactive' package is not installed. "
             "Install it with: pip install vasp-interactive"
-        )
+        ) from exc
 
     # Handle displacement vector
     displacement_vector = None

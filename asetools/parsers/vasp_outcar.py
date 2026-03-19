@@ -151,8 +151,8 @@ class VaspChunkPropertyParser(VaspPropertyParser, ABC):
         if that key doesn't exist"""
         try:
             return self.header[key]
-        except KeyError:
-            raise ParseError(f'Parser requested unavailable key "{key}" from header')
+        except KeyError as exc:
+            raise ParseError(f'Parser requested unavailable key "{key}" from header') from exc
 
 
 class VaspHeaderPropertyParser(VaspPropertyParser, ABC):
@@ -643,8 +643,8 @@ class OutcarChunkParser(ChunkParser):
         for prop in ("positions", "cell"):
             try:
                 atoms_kwargs[prop] = results.pop(prop)
-            except KeyError:
-                raise ParseError(f"Did not find required property {prop} during parse.")
+            except KeyError as exc:
+                raise ParseError(f"Did not find required property {prop} during parse.") from exc
         atoms = Atoms(**atoms_kwargs)
 
         kpts = results.pop("kpts", None)

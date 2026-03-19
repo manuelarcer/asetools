@@ -10,7 +10,7 @@ from ase.io import read
 def check_outcar_convergence(outcar: str, verbose: bool = False) -> tuple[bool, str]:
     try:
         out = open(outcar, "r")
-    except:
+    except OSError:
         if verbose:
             print("check_outcar_convergence --> OUTCAR file not found or damaged")
         return False, ""
@@ -85,7 +85,7 @@ def check_energy_and_maxforce(
             return energy, maxforce, mm
         else:
             return energy, maxforce
-    except:
+    except Exception:
         print("Missing or damaged OUTCAR file")
         return 9999.99, 9.99
 
@@ -100,7 +100,7 @@ def extract_magnetic_moments(
         # energy = atoms.get_potential_energy()
         atoms.get_magnetic_moment()
         return [round(atoms.get_magnetic_moments()[i], 2) for i in listatoms]
-    except:
+    except Exception:
         print("Missing or damaged OUTCAR file")
         return []
 
