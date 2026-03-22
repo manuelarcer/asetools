@@ -70,14 +70,34 @@ GitHub Actions workflow for pytest + ruff on push/PR. Lint job (ruff check + for
 ### H — Error handling cleanup ✅ DONE (2026-03-19)
 Replaced all bare `except:` with specific exception types across 8 files. Added `raise ... from exc` chaining to all re-raises in except clauses (11 instances). Removed E722 and B904 from ruff ignore list. Branch: feature/error-handling-cleanup, commit d0f49bb.
 
-### I — Merge feature branches to main
-Pending: `feature/missing-cli-entries` (4 missing CLI entry points, version bump to 0.2.0, requires-python >=3.9, modernized type hints). Needs Juan's review.
+### I — Merge feature branches to main ✅ DONE (2026-03-19)
+All feature branches merged to main. `feature/missing-cli-entries` changes (4 CLI entry points, version 0.2.0, requires-python >=3.9, modernized type hints) already in main.
+
+### J — Test coverage expansion ✅ DONE (2026-03-20)
+Added 48 new tests across 3 test files:
+- test_parsers_utils.py: 18 tests for OUTCAR parser utility functions
+- test_plots.py: 21 tests for PES plotting (validate_columns, add_line_to_pes, beautify_pes_plot)
+- test_analysis_convergence.py: 9 tests for check_outcar_convergence with synthetic OUTCARs
+Coverage: 29% → 32% (198 tests total). Branch: feature/test-coverage-expansion, commit ec56d76.
+
+### K — Further test coverage (CLI tools, database, workflow) ✅ DONE (2026-03-23)
+Added 65 new tests across 2 test files:
+- test_cli_tools.py: 36 tests for remove_slashes, reorder_atoms, comparevaspparam,
+  vaspbackup, gibbsFE helpers (vib extraction, corrections, atom index parsing,
+  mode character, shift), summaryfolders
+- test_workflow_utils.py: 29 tests for YAML config loading/validation, deep_update,
+  setup_initial_magmom (dict/list/numpy/None/error cases), VASPConfigurationFromYAML,
+  configure_logging, database functions (check_if_exists, db_to_pandas)
+Coverage: 32% → 35% (215 tests total). Branch: feature/test-coverage-cli-workflow, commit 76c60bc.
+
+### L — ruff format (auto-format all files)
+Pending. Deferred from E — 44 files would change. Could be a quick win now that CI is in place.
 
 ## Priority Order
-A → B → C → D → E → F → G → H (one per morning dev session)
+A → B → C → D → E → F → G → H → I → J → K (one per morning dev session)
 
 ## Notes
 - Owner: Juan M Arce-Ramos
-- No venv currently set up in repo — create one at `.venv`
+- Venv at `.venv` (Python 3.14, all dev deps installed)
 - Tests use real VASP output files in `tests/data/`
 - CLAUDE.md exists with guidance for Claude Code sessions
