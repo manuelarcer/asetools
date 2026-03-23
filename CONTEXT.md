@@ -93,8 +93,17 @@ Coverage: 32% → 35% (215 tests total). Branch: feature/test-coverage-cli-workf
 ### L — ruff format (auto-format all files) ✅ DONE (2026-03-24)
 Verified all 67 files already pass `ruff format --check` (no formatting changes needed — resolved incrementally during prior tasks). Fixed one unused import in test_workflow_utils.py. Added .coverage to .gitignore. Branch: feature/ruff-format, commit d04ef6c.
 
+### M — Core module test coverage (electronic, parsers, database)
+Pending. Target: electronic/doscar.py (57%→75%+), parsers/vasp_outcar.py (33%→50%+), database/databases.py (54%→80%+). These are the most-used modules with lowest coverage.
+
+### N — Package publishing prep (README, LICENSE, metadata)
+Pending. Add proper README.md with badges, LICENSE file, complete pyproject.toml metadata for PyPI readiness.
+
+### O — Deprecation warning cleanup
+Pending. Address scipy.odr and spglib deprecation warnings surfaced in test runs.
+
 ## Priority Order
-A → B → C → D → E → F → G → H → I → J → K (one per morning dev session)
+A → B → C → D → E → F → G → H → I → J → K → L → M (one per morning dev session)
 
 ## Notes
 - Owner: Juan M Arce-Ramos
