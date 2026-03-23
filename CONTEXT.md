@@ -90,8 +90,8 @@ Added 65 new tests across 2 test files:
   configure_logging, database functions (check_if_exists, db_to_pandas)
 Coverage: 32% → 35% (215 tests total). Branch: feature/test-coverage-cli-workflow, commit 76c60bc.
 
-### L — ruff format (auto-format all files)
-Pending. Deferred from E — 44 files would change. Could be a quick win now that CI is in place.
+### L — ruff format (auto-format all files) ✅ DONE (2026-03-24)
+Verified all 67 files already pass `ruff format --check` (no formatting changes needed — resolved incrementally during prior tasks). Fixed one unused import in test_workflow_utils.py. Added .coverage to .gitignore. Branch: feature/ruff-format, commit d04ef6c.
 
 ## Priority Order
 A → B → C → D → E → F → G → H → I → J → K (one per morning dev session)
