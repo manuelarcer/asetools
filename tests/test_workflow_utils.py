@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import yaml
 from ase import Atoms
-from ase.build import bulk, molecule
+from ase.build import molecule
 
 
 class TestLoadYamlConfig:

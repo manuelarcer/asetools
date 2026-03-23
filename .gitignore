@@ -38,3 +38,4 @@ scratch/
 *.egg-info/
 dist/
 build/
+.coverage
