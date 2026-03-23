@@ -93,8 +93,15 @@ Coverage: 32% → 35% (215 tests total). Branch: feature/test-coverage-cli-workf
 ### L — ruff format (auto-format all files) ✅ DONE (2026-03-24)
 Verified all 67 files already pass `ruff format --check` (no formatting changes needed — resolved incrementally during prior tasks). Fixed one unused import in test_workflow_utils.py. Added .coverage to .gitignore. Branch: feature/ruff-format, commit d04ef6c.
 
-### M — Core module test coverage (electronic, parsers, database)
-Pending. Target: electronic/doscar.py (57%→75%+), parsers/vasp_outcar.py (33%→50%+), database/databases.py (54%→80%+). These are the most-used modules with lowest coverage.
+### M — Core module test coverage (electronic, parsers, database) ✅ DONE (2026-03-24)
+Added 96 new tests across 3 files:
+- test_parsers_outcar.py: 33 tests for OUTCAR parser utilities, header parsers,
+  exception classes, read_constraints_from_file, integration with real OUTCAR
+- test_doscar_extended.py: 55 tests for DOS properties, PDOS extraction,
+  band center edge cases, legacy functions, plotting smoke tests
+- test_database_extended.py: 8 tests for check_if_exists_in_db and db_to_pandas
+Coverage: 35% → 38% overall (doscar 57%→85%, parser 33%→51%).
+Branch: feature/core-test-coverage, commit 9508d91.
 
 ### N — Package publishing prep (README, LICENSE, metadata)
 Pending. Add proper README.md with badges, LICENSE file, complete pyproject.toml metadata for PyPI readiness.
