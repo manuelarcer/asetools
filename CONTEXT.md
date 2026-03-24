@@ -103,8 +103,8 @@ Added 96 new tests across 3 files:
 Coverage: 35% → 38% overall (doscar 57%→85%, parser 33%→51%).
 Branch: feature/core-test-coverage, commit 9508d91.
 
-### N — Package publishing prep (README, LICENSE, metadata)
-Pending. Add proper README.md with badges, LICENSE file, complete pyproject.toml metadata for PyPI readiness.
+### N — Package publishing prep (README, LICENSE, metadata) ✅ DONE (2026-03-25)
+Added MIT LICENSE file, MANIFEST.in for sdist, complete pyproject.toml metadata (classifiers, keywords, urls, readme, license fields). Fixed README badge (3.9+), added MIT badge. All 311 tests pass. Branch: feature/package-publishing-prep, commit 5b4b0fa.
 
 ### O — Deprecation warning cleanup
 Pending. Address scipy.odr and spglib deprecation warnings surfaced in test runs.
