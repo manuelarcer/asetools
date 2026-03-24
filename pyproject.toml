@@ -5,11 +5,35 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "asetools"
 version = "0.2.0"
-description = "Python tools for computational materials science using ASE"
+description = "Python tools for computational materials science using ASE and VASP"
+readme = "README.md"
+license = {file = "LICENSE"}
 authors = [
     {name = "Juan M Arce-Ramos"},
 ]
 requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Typing :: Typed",
+]
+keywords = [
+    "ase",
+    "vasp",
+    "dft",
+    "computational-chemistry",
+    "materials-science",
+    "density-functional-theory",
+]
 dependencies = [
     "pandas",
     "matplotlib",
@@ -18,6 +42,12 @@ dependencies = [
     "ase",
     "pyyaml",
 ]
+
+[project.urls]
+Homepage = "https://github.com/manuelarcer/asetools"
+Repository = "https://github.com/manuelarcer/asetools"
+Documentation = "https://github.com/manuelarcer/asetools/tree/main/docs"
+Issues = "https://github.com/manuelarcer/asetools/issues"
 
 [project.optional-dependencies]
 symmetry = ["spglib"]

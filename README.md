@@ -3,7 +3,8 @@
 **Python toolkit for computational materials science with VASP and ASE**
 
 [![CI](https://github.com/manuelarcer/asetools/actions/workflows/ci.yml/badge.svg)](https://github.com/manuelarcer/asetools/actions/workflows/ci.yml)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Overview
 
@@ -167,4 +168,4 @@ See [Constraints Quick Start](docs/constraints_quickstart.md) for constraint det
 
 ## License
 
-Open source. See repository for license details.
+MIT License. See [LICENSE](LICENSE) for details.
