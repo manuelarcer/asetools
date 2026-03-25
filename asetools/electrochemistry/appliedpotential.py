@@ -6,10 +6,15 @@ from typing import Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from ase.io import read
-from scipy import odr
 from scipy.interpolate import UnivariateSpline
 
 from asetools.analysis import check_energy_and_maxforce, check_outcar_convergence
+from asetools.electrochemistry._odr_compat import (
+    OdrFitResult,
+    fit_odr,
+    fit_polynomial_odr,
+    is_odr_result,
+)
 from asetools.electronic.doscar import extract_fermi_e
 
 U_SHE = 4.43  # U(SHE) constant
@@ -101,11 +106,13 @@ def fitenergy_polynomial(
     energy_ref: float = 0,
     plot: bool = False,
     ploterrors: bool = False,
-) -> odr.Output:
-    poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, energy_ref))
-    data = odr.Data(results["nelect"], results["e"])
-    odr_obj = odr.ODR(data, poly_model, beta0=[1.0] * (order))
-    output = odr_obj.run()
+) -> OdrFitResult:
+    output = fit_odr(
+        lambda beta, x: custom_polynomial(beta, x, energy_ref),
+        results["nelect"],
+        results["e"],
+        [1.0] * order,
+    )
     if sum([plot, ploterrors]) == 2:
         _fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
         plot_fit(results, output, energy_ref, ax1)
@@ -131,23 +138,18 @@ def fit_data(
     ref_value: Optional[float] = None,
     plot: bool = False,
     ploterrors: bool = False,
-) -> Union[odr.Output, UnivariateSpline]:
+) -> Union[OdrFitResult, UnivariateSpline]:
 
     if fit_type == "polynomial":
-        data = odr.Data(X, Y)
-
         if ref_value is not None:
-            poly_model = odr.Model(
-                lambda beta, x: custom_polynomial(beta, x, fixed_constant=ref_value)
+            output = fit_odr(
+                lambda beta, x: custom_polynomial(beta, x, fixed_constant=ref_value),
+                X,
+                Y,
+                [1.0] * order,
             )
-            odr_obj = odr.ODR(data, poly_model, beta0=[1.0] * (order))
-            output = odr_obj.run()
-            custom_polynomial(output.beta, X, ref_value)
-        elif ref_value is None:
-            poly_model = odr.polynomial(order)
-            odr_obj = odr.ODR(data, poly_model)
-            output = odr_obj.run()
-            np.polyval(output.beta, X)
+        else:
+            output = fit_polynomial_odr(X, Y, order)
 
         fit_result = output
 
@@ -194,7 +196,7 @@ def fit_data(
 
 
 def interpolate_new_x(
-    fit_result: Union[odr.Output, UnivariateSpline],
+    fit_result: Union[OdrFitResult, UnivariateSpline],
     new_X: np.ndarray,
     fit_type: str,
     ref_value: Optional[float] = None,
@@ -247,7 +249,7 @@ def get_energy_at_givenpotential(
     potential_fit = fit_data(
         results["nelect"], results["e"], fit_type=fit_type, ref_value=e_ref, order=order
     )
-    if isinstance(potential_fit, odr.Output):
+    if is_odr_result(potential_fit):
         parameters = np.append(potential_fit.beta[::-1], e_ref)
         poly = np.poly1d(parameters)
         e_pred = poly(nelec)
@@ -263,14 +265,14 @@ def get_energy_at_givenpotential(
 def plot_errors(
     X: np.ndarray,
     Y: np.ndarray,
-    fit_result: Union[odr.Output, UnivariateSpline],
+    fit_result: Union[OdrFitResult, UnivariateSpline],
     energy_ref: Optional[float],
     ax: plt.Axes,
 ) -> plt.Axes:
     # Input, results from the 'extract_corrected_energy_fermie' and polyfit from 'fit_polynomial'
     # energy_ref is the energy of the neutral system
     # ax is the axis pyplot object
-    if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
+    if is_odr_result(fit_result):  # Check if it's an ODR output (polynomial fit)
         if energy_ref is not None:
             parameters = np.append(fit_result.beta[::-1], energy_ref)
         else:
@@ -298,12 +300,12 @@ def plot_errors(
 def plot_fit(
     X: np.ndarray,
     Y: np.ndarray,
-    fit_result: Union[odr.Output, UnivariateSpline],
+    fit_result: Union[OdrFitResult, UnivariateSpline],
     energy_ref: Optional[float],
     ax: plt.Axes,
 ) -> plt.Axes:
     x = np.linspace(min(X), max(X), 100)
-    if isinstance(fit_result, odr.Output):  # Check if it's an ODR output (polynomial fit)
+    if is_odr_result(fit_result):  # Check if it's an ODR output (polynomial fit)
         # parameters = np.append(fit_result.beta[::-1], energy_ref)
         if energy_ref is not None:
             parameters = np.append(fit_result.beta[::-1], energy_ref)

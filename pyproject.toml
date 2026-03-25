@@ -39,6 +39,7 @@ dependencies = [
     "matplotlib",
     "numpy",
     "scipy",
+    "odrpack",
     "ase",
     "pyyaml",
 ]

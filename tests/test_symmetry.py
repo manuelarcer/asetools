@@ -8,8 +8,15 @@ import pytest
 
 # Check if spglib is available for test skipping
 try:
-    import spglib  # noqa: F401
+    import spglib
 
+    # Silence DeprecationWarning about OLD_ERROR_HANDLING (spglib >= 2.7)
+    try:
+        import spglib.error
+
+        spglib.error.OLD_ERROR_HANDLING = False
+    except (ImportError, AttributeError):
+        pass
     HAS_SPGLIB = True
 except ImportError:
     HAS_SPGLIB = False

@@ -25,6 +25,16 @@ def _get_spglib():
     try:
         import spglib
 
+        # Disable legacy error handling to silence DeprecationWarning.
+        # Modern spglib (>=2.7) raises SpglibError directly instead of
+        # returning None.  The flag lives in spglib.error, not the
+        # top-level module.
+        try:
+            import spglib.error
+
+            spglib.error.OLD_ERROR_HANDLING = False
+        except (ImportError, AttributeError):
+            pass
         return spglib
     except ImportError as exc:
         raise ImportError(
@@ -113,12 +123,21 @@ class SymmetryAnalyzer:
 
         Returns a dict-like object with symmetry information. Uses attribute
         access for modern spglib versions to avoid deprecation warnings.
+
+        With ``OLD_ERROR_HANDLING = False``, spglib raises ``SpglibError``
+        instead of returning ``None`` on failure — we catch that and fall
+        back to P1 symmetry.
         """
         if self._symmetry_dataset is None:
             cell = self._get_spglib_cell()
-            dataset = self.spglib.get_symmetry_dataset(
-                cell, symprec=self.symprec, angle_tolerance=self.angle_tolerance
-            )
+            try:
+                dataset = self.spglib.get_symmetry_dataset(
+                    cell, symprec=self.symprec, angle_tolerance=self.angle_tolerance
+                )
+            except (RuntimeError, self.spglib.SpglibError):
+                # SpglibError when OLD_ERROR_HANDLING=False
+                dataset = None
+
             if dataset is None:
                 logger.warning("spglib could not determine symmetry, using P1")
                 self._symmetry_dataset = {

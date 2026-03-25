@@ -5,9 +5,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from ase.io import read
-from scipy import odr
 
 from asetools.analysis import check_outcar_convergence
+from asetools.electrochemistry._odr_compat import fit_odr, fit_polynomial_odr
 from asetools.electronic.doscar import extract_fermi_e
 
 U_SHE = 4.43  # U(SHE) constant
@@ -69,10 +69,12 @@ def custom_polynomial(beta, x, fixed_constant=0):
 
 
 def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=False):
-    poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, energy_ref))
-    data = odr.Data(results["nelect"], results["e"])
-    odr_obj = odr.ODR(data, poly_model, beta0=[1.0] * (order))
-    output = odr_obj.run()
+    output = fit_odr(
+        lambda beta, x: custom_polynomial(beta, x, energy_ref),
+        results["nelect"],
+        results["e"],
+        [1.0] * order,
+    )
     if sum([plot, ploterrors]) == 2:
         _fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
         plot_fit(results, output, energy_ref, ax1)
@@ -92,17 +94,15 @@ def fitenergy_polynomial(results, order=3, energy_ref=0, plot=False, ploterrors=
 
 def fit_to_polynomial(X, Y, ref_value=None, order=2, plot=False, ploterrors=False):
 
-    data = odr.Data(X, Y)
-
     if ref_value is not None:
-        ### POLY fit
-        poly_model = odr.Model(lambda beta, x: custom_polynomial(beta, x, ref_value))
-        odr_obj = odr.ODR(data, poly_model, beta0=[1.0] * (order))
-        output = odr_obj.run()
-    elif ref_value is None:
-        poly_model = odr.polynomial(order)
-        odr_obj = odr.ODR(data, poly_model)
-        output = odr_obj.run()
+        output = fit_odr(
+            lambda beta, x: custom_polynomial(beta, x, ref_value),
+            X,
+            Y,
+            [1.0] * order,
+        )
+    else:
+        output = fit_polynomial_odr(X, Y, order)
 
     ### Plotting section
     if sum([plot, ploterrors]) == 2:

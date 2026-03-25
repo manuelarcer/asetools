@@ -28,6 +28,13 @@ def _check_symmetry_available():
         try:
             import spglib
 
+            # Silence DeprecationWarning about OLD_ERROR_HANDLING (spglib >= 2.7)
+            try:
+                import spglib.error
+
+                spglib.error.OLD_ERROR_HANDLING = False
+            except (ImportError, AttributeError):
+                pass
             _SYMMETRY_AVAILABLE = True
         except ImportError:
             _SYMMETRY_AVAILABLE = False

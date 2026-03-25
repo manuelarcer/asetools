@@ -4,6 +4,15 @@ from pathlib import Path
 
 import pytest
 
+# Silence spglib OLD_ERROR_HANDLING deprecation warning globally for tests.
+# The flag lives in spglib.error, not the top-level module.
+try:
+    import spglib.error
+
+    spglib.error.OLD_ERROR_HANDLING = False
+except (ImportError, AttributeError):
+    pass
+
 TESTS_DIR = Path(__file__).parent
 DATA_DIR = TESTS_DIR / "data"
 
