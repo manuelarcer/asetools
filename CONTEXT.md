@@ -106,8 +106,15 @@ Branch: feature/core-test-coverage, commit 9508d91.
 ### N — Package publishing prep (README, LICENSE, metadata) ✅ DONE (2026-03-25)
 Added MIT LICENSE file, MANIFEST.in for sdist, complete pyproject.toml metadata (classifiers, keywords, urls, readme, license fields). Fixed README badge (3.9+), added MIT badge. All 311 tests pass. Branch: feature/package-publishing-prep, commit 5b4b0fa.
 
-### O — Deprecation warning cleanup
-Pending. Address scipy.odr and spglib deprecation warnings surfaced in test runs.
+### O — Deprecation warning cleanup ✅ DONE (2026-03-26)
+Addressed both deprecation warnings from test runs:
+- **scipy.odr** (deprecated 1.17, removal 1.19): Created `_odr_compat.py` compatibility
+  layer using `odrpack` package (recommended replacement). Falls back to scipy.odr
+  with warning suppressed. Updated both appliedpotential.py files.
+- **spglib OLD_ERROR_HANDLING**: Set `spglib.error.OLD_ERROR_HANDLING = False` at all
+  import points. Updated `_get_symmetry_dataset` to catch `SpglibError`.
+- Added `odrpack` to dependencies. All 311 tests pass, 0 deprecation warnings.
+Branch: feature/deprecation-warning-cleanup, commit 69d64c7.
 
 ## Priority Order
 A → B → C → D → E → F → G → H → I → J → K → L → M (one per morning dev session)
