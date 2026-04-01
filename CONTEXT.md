@@ -116,8 +116,20 @@ Addressed both deprecation warnings from test runs:
 - Added `odrpack` to dependencies. All 311 tests pass, 0 deprecation warnings.
 Branch: feature/deprecation-warning-cleanup, commit 69d64c7.
 
+### S — Push local work to origin
+Pending — 12+ commits ahead of remote. Needs owner approval.
+
+### T — CHANGELOG.md ✅ DONE (2026-04-02)
+Added CHANGELOG.md following Keep a Changelog format. Covers full 0.2.0 release
+(all changes from tasks A–R) and placeholder 0.1.0 entry for pre-modernization code.
+Branch: feature/changelog, commit 9b42181.
+
 ## Priority Order
-A → B → C → D → E → F → G → H → I → J → K → L → M (one per morning dev session)
+A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q → R → S → T (one per morning dev session)
+
+## Potential Future Tasks
+- **U** — Publish to PyPI (test first, then production)
+- **V** — Incrementally remove mypy per-module ignore_errors (tighten type checking)
 
 ## Notes
 - Owner: Juan M Arce-Ramos
