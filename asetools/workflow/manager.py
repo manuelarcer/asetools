@@ -264,6 +264,8 @@ def _make_step_calculator(
     """
     if run_overrides is None:
         run_overrides = {}
+    elif run_overrides:
+        logger.info(f" ** Overriding run parameters with: {run_overrides}")
 
     # Check if step requires VaspInteractive
     needs_interactive = step.get("optimizer") is not None
@@ -716,6 +718,9 @@ def _run_stage_with_vaspinteractive(
             "ASE optimizer requested but 'vasp_interactive' package is not installed. "
             "Install it with: pip install vasp-interactive"
         ) from exc
+
+    if run_overrides:
+        logger.info(f" ** Overriding run parameters with: {run_overrides}")
 
     # Build base VaspInteractive parameters (will be updated per step)
     vasp_kwargs = deep_update(
