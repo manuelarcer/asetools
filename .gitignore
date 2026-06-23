@@ -39,3 +39,7 @@ scratch/
 dist/
 build/
 .coverage
+
+# Claude Code local (machine-specific, not shared)
+.claude/env.json
+.claude/settings.local.json
