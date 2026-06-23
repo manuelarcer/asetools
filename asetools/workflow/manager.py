@@ -778,7 +778,11 @@ def _run_stage_with_vaspinteractive(
             step_params = _layer_step_params(cfg, run_overrides, overrides)
 
             # Apply full parameter set to calculator
-            logger.info(f"    Applying overrides: {overrides}")
+            logger.info(f"    Applying step overrides: {overrides}")
+            if run_overrides:
+                logger.info(
+                    f"    run_overrides applied last (authoritative): {run_overrides}"
+                )
             calc.set(**step_params)
             _log_calculator_params(calc, prefix="    ")
 
@@ -827,6 +831,7 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool, run_overrides: Optional[d
     # it after the step overrides so it wins any per-step value (e.g. kpar).
     if run_overrides:
         atoms.calc.set(**run_overrides)
+        logger.info(f"    run_overrides applied last (authoritative): {run_overrides}")
 
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")

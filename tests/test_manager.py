@@ -201,6 +201,28 @@ class TestRunOverridesPrecedence:
 
         assert atoms.calc.float_params["encut"] == 700
 
+    def test_run_overrides_logged_after_step_overrides(self, caplog):
+        """The log must show run_overrides applied last, so the reader sees the
+        actual precedence (run_overrides wins) rather than the misleading order."""
+        import logging as _logging
+
+        from ase import Atoms
+        from ase.calculators.vasp import Vasp
+
+        from asetools.workflow.manager import _run_step
+
+        atoms = Atoms("H", positions=[[0, 0, 0]], cell=[10, 10, 10], pbc=True)
+        atoms.calc = Vasp(encut=300)
+        step = {"name": "opt", "overrides": {"encut": 400}}
+
+        with caplog.at_level(_logging.INFO, logger="asetools.workflow.manager"):
+            _run_step(atoms, step, dry_run=True, run_overrides={"kpar": 1})
+
+        msgs = [r.getMessage() for r in caplog.records]
+        step_idx = next(i for i, m in enumerate(msgs) if "overrides=" in m and "encut" in m)
+        run_idx = next(i for i, m in enumerate(msgs) if "run_overrides" in m and "kpar" in m)
+        assert run_idx > step_idx
+
     def test_run_overrides_beats_step_overrides_layering(self):
         """VaspInteractive path layering: run_overrides wins over step overrides."""
         from asetools.workflow.manager import _layer_step_params
