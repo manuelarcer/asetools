@@ -26,7 +26,7 @@ Execution uses **two doors**: a `run_stages(atoms, cfg, stages=[...], production
 - A second way to run a workflow now exists. The named-workflow path is unchanged and fully backward-compatible; old calculation directories keep resuming. The `relax*` family is documented as superseded and will be deprecated once legacy projects finish.
 - The magmom / atom-reorder / reference-file machinery moves from `run_workflow` into `run_stages` so both paths share it. This touches the resume path and is covered by tests.
 - Per-instance overrides are **unrestricted** for now — they can touch any VASP tag, including ones (`ediffg`, constraints) that a careful user would not vary on a pre-opt stage. A declared safe-set was deferred. The production-stage warning is the only guardrail, and it only catches a missing/misplaced production stage, not a contaminated-but-present one (`run_overrides` leak, R1).
-- Precedence is fixed as `basic → system → run_overrides → template step → per-instance`. `run_overrides` keeps its existing (below-step) position for compatibility, which means it is *not* a global override hammer.
+- Precedence is fixed as `basic → system → run_overrides → template step → per-instance`. `run_overrides` keeps its existing (below-step) position for compatibility, which means it is *not* a global override hammer. **(Superseded by [ADR 0003](0003-run-overrides-is-authoritative.md): `run_overrides` is now authoritative and beats step overrides.)**
 
 ## Reversibility
 

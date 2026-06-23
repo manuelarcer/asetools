@@ -70,10 +70,12 @@ cfg.stage(template, *, name, overrides=None, optimizer_kwargs=None, constraints=
 VASP kwargs reaching the calculator, lowest → highest:
 
 ```
-basic → system → run_overrides → template step overrides → per-instance stage overrides
+basic → system → template step overrides → per-instance stage overrides → run_overrides
 ```
 
-Per-instance overrides are the most specific and always win; template step values are defaults. (`run_overrides` keeps its current position — below step-level values — for backward compatibility.)
+`run_overrides` is the most specific and always wins (see [ADR 0003](../../adr/0003-run-overrides-is-authoritative.md)); template/per-instance step values are defaults it can override run-wide.
+
+> Note: this supersedes the original design, which placed `run_overrides` *below* step-level values for backward compatibility (ADR 0001). That position made a run-wide override silently lose to a per-step value and was reversed by ADR 0003.
 
 ### D4 — Two-door execution API
 

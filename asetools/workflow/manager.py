@@ -639,7 +639,7 @@ def _run_stage(
             _log_calculator_params(calc, prefix="  *")
             atoms = setup_initial_magmom(atoms, magmom_to_apply)
             _log_magmom_summary(atoms, prefix="  *")
-            _run_step(atoms, step, dry_run)
+            _run_step(atoms, step, dry_run, run_overrides)
 
     # Check convergence before marking as done
     if not dry_run:
@@ -693,6 +693,21 @@ def _run_stage(
 
     logger.info(f" -- ✅ Stage '{name}' completed, converged, and backed up")
     _mark_done(name)
+
+
+def _layer_step_params(cfg: VASPConfigurationFromYAML, run_overrides, overrides) -> dict:
+    """Merge config layers for a VaspInteractive step.
+
+    Precedence (low to high): basic < systems < step ``overrides`` <
+    ``run_overrides``. run_overrides is run-wide and authoritative, so it is
+    applied last and beats any per-step override.
+    """
+    params = deep_update(
+        deep_update(cfg.basic_config.copy(), cfg.system_config), run_overrides or {}
+    )
+    params.update(overrides)
+    params.update(run_overrides or {})
+    return params
 
 
 def _run_stage_with_vaspinteractive(
@@ -760,10 +775,7 @@ def _run_stage_with_vaspinteractive(
             # CRITICAL: Build complete parameter set for this step from base config
             # This ensures parameters from previous steps don't persist
             # calc.set() only updates provided parameters, doesn't reset others
-            step_params = deep_update(
-                deep_update(cfg.basic_config.copy(), cfg.system_config), run_overrides or {}
-            )
-            step_params.update(overrides)
+            step_params = _layer_step_params(cfg, run_overrides, overrides)
 
             # Apply full parameter set to calculator
             logger.info(f"    Applying overrides: {overrides}")
@@ -788,7 +800,7 @@ def _run_stage_with_vaspinteractive(
     return ase_optimizer_converged
 
 
-def _run_step(atoms: Atoms, step: dict, dry_run: bool):
+def _run_step(atoms: Atoms, step: dict, dry_run: bool, run_overrides: Optional[dict] = None):
     name = step["name"]
     overrides = step.get("overrides", {})
     optimizer_name = step.get("optimizer")
@@ -810,6 +822,11 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
         logger.info(f"    VaspInteractive adjusted overrides: {overrides}")
 
     atoms.calc.set(**overrides)
+
+    # run_overrides is a run-wide override and must be the final word: re-apply
+    # it after the step overrides so it wins any per-step value (e.g. kpar).
+    if run_overrides:
+        atoms.calc.set(**run_overrides)
 
     if dry_run:
         logger.info("    (dry-run, skipping calculation)")

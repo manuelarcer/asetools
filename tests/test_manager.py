@@ -181,6 +181,39 @@ class TestLoadStructure:
         assert exc_info.value.code == 1
 
 
+class TestRunOverridesPrecedence:
+    """run_overrides passed to run_workflow/run_stages must be the final word,
+    beating per-step overrides for any VASP parameter (both engine paths)."""
+
+    def test_run_overrides_beats_step_overrides_regular_vasp(self):
+        """Regular VASP path: run_overrides wins over a step override."""
+        from ase import Atoms
+        from ase.calculators.vasp import Vasp
+
+        from asetools.workflow.manager import _run_step
+
+        atoms = Atoms("H", positions=[[0, 0, 0]], cell=[10, 10, 10], pbc=True)
+        atoms.calc = Vasp(encut=300)
+        step = {"name": "opt", "overrides": {"encut": 400}}
+
+        # dry_run stops before any real VASP call but still applies params.
+        _run_step(atoms, step, dry_run=True, run_overrides={"encut": 700})
+
+        assert atoms.calc.float_params["encut"] == 700
+
+    def test_run_overrides_beats_step_overrides_layering(self):
+        """VaspInteractive path layering: run_overrides wins over step overrides."""
+        from asetools.workflow.manager import _layer_step_params
+
+        class _Cfg:
+            basic_config = {"encut": 300}
+            system_config = {}
+
+        params = _layer_step_params(_Cfg(), {"encut": 700}, {"encut": 400})
+
+        assert params["encut"] == 700
+
+
 def test_load_structure_from_data_directory():
     """Integration test: Load structure from actual test data."""
     from asetools.workflow.manager import load_structure
