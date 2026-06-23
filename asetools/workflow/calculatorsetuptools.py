@@ -1,5 +1,6 @@
 # ASE/calculator setup utilities
 
+import copy
 import logging
 
 import numpy as np
@@ -15,6 +16,8 @@ class VASPConfigurationFromYAML:
         self.basic_config = self.config["basic"]
         self.workflows = self.config["workflows"]
         self.globals = self.config["globals"]
+        # stage_templates is optional (modular stage composition); empty if absent
+        self.stage_templates = self.config.get("stage_templates", {})
 
         self.initial_magmom_data = self.initial_magmom()
 
@@ -49,6 +52,96 @@ class VASPConfigurationFromYAML:
             return system_config["initial_magmom"]
         else:
             return {}
+
+    # MLIP stage fields copied verbatim from a template into the resolved stage.
+    _MLIP_FIELDS = (
+        "mlip",
+        "env",
+        "optimizer",
+        "fmax",
+        "max_steps",
+        "relax_cell",
+        "device",
+        "uma_task",
+        "mace_head",
+    )
+
+    def stage(
+        self,
+        template: str,
+        *,
+        name: str,
+        overrides: dict = None,
+        optimizer_kwargs: dict = None,
+        constraints: dict = None,
+    ) -> dict:
+        """Instantiate a stage template into a concrete, resolved stage dict.
+
+        The returned dict matches the shape the workflow manager consumes
+        (``{name, engine, constraints?, steps?}``) plus a private ``_template``
+        provenance key (ignored at execution, used for the production-stage
+        warning and the MLIP-ordering guard).
+
+        Per-instance ``overrides`` / ``optimizer_kwargs`` / ``constraints`` are
+        deep-merged onto the template's baked-in values (patch only what
+        differs). For VASP stages they apply to *every* step. For MLIP stages
+        (``engine: mlip``) ``overrides`` is rejected (VASP-only); tune the MLIP
+        optimization via ``optimizer_kwargs`` (e.g. ``{'fmax': 0.2}``).
+
+        Args:
+            template: Key into the ``stage_templates`` YAML section.
+            name: Required, explicit stage name (sentinel / backup / restart key).
+            overrides: VASP parameter patch, merged into each step's overrides.
+            optimizer_kwargs: Optimizer-parameter patch.
+            constraints: Patch onto the template's constraint block.
+
+        Raises:
+            KeyError: If ``template`` is not in ``stage_templates``.
+            ValueError: If ``overrides`` is passed to an MLIP stage.
+        """
+        if template not in self.stage_templates:
+            raise KeyError(
+                f"Stage template '{template}' not found in 'stage_templates' section "
+                f"(available: {sorted(self.stage_templates)})"
+            )
+
+        body = copy.deepcopy(self.stage_templates[template])
+        engine = body.get("engine", "vasp")
+        resolved = {"name": name, "_template": template, "engine": engine}
+
+        # Constraints: template default deep-merged with the per-instance patch.
+        tmpl_constraints = body.get("constraints")
+        if tmpl_constraints is not None or constraints is not None:
+            merged = copy.deepcopy(tmpl_constraints) if tmpl_constraints else {}
+            if constraints:
+                deep_update(merged, copy.deepcopy(constraints))
+            resolved["constraints"] = merged
+
+        if engine == "mlip":
+            if overrides:
+                raise ValueError(
+                    "overrides apply to VASP stages; tune an MLIP stage via "
+                    "optimizer_kwargs (e.g. optimizer_kwargs={'fmax': 0.2})"
+                )
+            for key in self._MLIP_FIELDS:
+                if key in body:
+                    resolved[key] = body[key]
+            if optimizer_kwargs:
+                deep_update(resolved, copy.deepcopy(optimizer_kwargs))
+            return resolved
+
+        # VASP engine: deep-merge the per-instance patches into every step.
+        steps = copy.deepcopy(body.get("steps", []))
+        for step in steps:
+            if overrides:
+                deep_update(step.setdefault("overrides", {}), copy.deepcopy(overrides))
+            if optimizer_kwargs:
+                deep_update(
+                    step.setdefault("optimizer_kwargs", {}),
+                    copy.deepcopy(optimizer_kwargs),
+                )
+        resolved["steps"] = steps
+        return resolved
 
 
 def load_yaml_config(config_file: str) -> dict:

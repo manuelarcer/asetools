@@ -98,4 +98,111 @@ MAGMOM = 4.5 3.5 0.0 0.0  # Different Fe oxidation states
 
 ---
 
+## Modular stage composition
+
+Two ways to run a multi-stage procedure:
+
+1. **Named workflow** (original) — the whole stage list is defined in the YAML
+   `workflows:` section and selected by name:
+   ```python
+   run_workflow(atoms, cfg, workflow_name="relax_ase_opt")
+   ```
+2. **Modular composition** (new) — reusable `stage_templates:` are instantiated
+   and ordered in the Python submission script, while the canonical final
+   ("production") parameters stay authoritative in the YAML:
+   ```python
+   from asetools.workflow.manager import run_stages
+
+   PREOPTIMIZATION = [
+       cfg.stage("encut_ramp", name="OPT_340",
+                 overrides={"encut": 340}, optimizer_kwargs={"fmax": 0.05}),
+       cfg.stage("encut_ramp", name="OPT_420",
+                 overrides={"encut": 420}, optimizer_kwargs={"fmax": 0.02}),
+   ]
+   PRODUCTION = cfg.stage("production", name="OPT_500")
+   run_stages(atoms, cfg, stages=PREOPTIMIZATION + [PRODUCTION])
+   ```
+   One template instantiated N times replaces N near-duplicate named workflows.
+
+Both paths share the same engine, restart sentinels (`STAGE_{name}_DONE`),
+backups, and constraint handling. The named-workflow path is unchanged; existing
+configs keep working.
+
+See `asetools/workflow/sample_yaml/modular_stage_composition.yaml` and
+`submit_modular_example.py` for a complete example, and the design spec at
+`docs/superpowers/specs/2026-06-23-modular-stage-composition-design.md`.
+
+### `cfg.stage()` — instantiating a template
+
+`cfg.stage(template, *, name, overrides=None, optimizer_kwargs=None, constraints=None)`
+returns a resolved stage. `name` is **required** and becomes the restart/backup
+key. `overrides`, `optimizer_kwargs`, and `constraints` are **deep-merged** onto
+the template (patch only what differs) and applied to every step. Precedence,
+lowest to highest:
+
+```
+basic -> system -> run_overrides -> template step values -> per-instance values
+```
+
+### Production-stage warning
+
+`run_stages` logs a non-blocking warning if the stage from the template named
+`production` (override via `production=`) is not the last stage run — catching a
+forgotten or misplaced final optimization. Pass `production=None` to disable it
+(e.g. a pure-DOS modular pipeline). The named-workflow path disables it
+automatically.
+
+### Stages vs. steps
+
+A **stage** is the unit of restart, backup, and constraint application (one
+`STAGE_{name}_DONE` sentinel). A **step** is a sub-phase within a stage that
+shares geometry, constraints, and (for ASE-optimizer workflows) one
+VaspInteractive context — e.g. a warm-start single point followed by an
+optimization that reads its WAVECAR. Use separate stages when completing one is
+worth preserving across resubmissions; use steps when sub-phases genuinely
+belong together.
+
+## MLIP pre-optimization stages
+
+A stage template with `engine: mlip` runs a machine-learning interatomic
+potential (via the `mlip_platform` package) as a cheap warm-start before the DFT
+stages:
+
+```yaml
+stage_templates:
+  uma_preopt:
+    engine: mlip
+    mlip: uma-s-1p2          # MLIP tag for setup_calculator
+    env: uma                 # key into globals.mlip_envs
+    optimizer: bfgs
+    fmax: 0.10
+    max_steps: 300
+    device: auto
+    constraints:             # re-applied inside the MLIP env from the same JSON
+      type: hookean
+      config_file: hookean_c_pairs.json
+      spring_constant: 20.0
+
+globals:
+  mlip_envs:
+    uma:  /path/to/uma-env/bin/python
+    mace: /path/to/mace-env/bin/python
+```
+
+Because MLIP packages pin mutually incompatible torch stacks (see `mlip_platform`
+ADR 0001), an MLIP stage **cannot** run in the VASP job env. It executes as a
+**subprocess** in the MLIP env named by `env:` (resolved through
+`globals.mlip_envs`), invoking `asetools.workflow.mlip_runner`. That runner reads
+the current structure, re-applies the stage's constraints from the same JSON the
+VASP stages use, attaches the MLIP calculator, optimizes, and writes a `CONTCAR`
+the next VASP stage picks up.
+
+**Invariant — MLIP stages are pre-optimization only:** every MLIP stage must
+precede every VASP stage. `run_stages` raises a hard error at validation time if
+an MLIP stage is composed after a VASP stage (an MLIP stage produces no OUTCAR,
+so a later MLIP relaxation would be silently discarded on the next structure
+load). A non-converged MLIP run exits non-zero and no `STAGE_*_DONE` is written.
+
+---
+
 *This section will be expanded with additional calculation types and techniques as they are encountered and mastered.*

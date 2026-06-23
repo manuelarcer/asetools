@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil
+import subprocess
 import sys
 from typing import Optional
 
@@ -289,6 +290,252 @@ def _make_step_calculator(
     return calc
 
 
+def _prepare_magmoms(atoms: Atoms, cfg: VASPConfigurationFromYAML, magmoms):
+    """Resolve the magmom source and, for list-based magmoms, the atom-order
+    reference used to remap after VASP reordering.
+
+    Runtime ``magmoms`` overrides the YAML element dict. For list-based magmoms
+    a reference atom order is loaded (workflow restart) or stored (first run).
+
+    Returns:
+        tuple: (initial_magmom, reference_symbols)
+    """
+    if magmoms is not None:
+        initial_magmom = magmoms
+        logger.info(f"Using runtime magmoms parameter (list with {len(magmoms)} values)")
+    else:
+        initial_magmom = cfg.initial_magmom_data
+        if initial_magmom:
+            logger.info(f"Using YAML-based element magmoms: {initial_magmom}")
+        else:
+            logger.info("No magnetic moments specified (YAML or runtime)")
+
+    reference_symbols = None
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)):
+        saved_ref, saved_magmoms = _load_magmom_reference()
+        if saved_ref is not None:
+            reference_symbols = saved_ref
+            if list(saved_magmoms) != list(initial_magmom):
+                logger.warning(
+                    f"  ⚠ Magmom list changed from previous run!\n"
+                    f"    Saved: {saved_magmoms[:5]}...\n"
+                    f"    Current: {list(initial_magmom)[:5]}...\n"
+                    f"    Using current magmoms but will remap based on saved atom order"
+                )
+        else:
+            reference_symbols = list(atoms.get_chemical_symbols())
+            _save_magmom_reference(reference_symbols, list(initial_magmom))
+            logger.info(
+                f"  * Stored reference atom order for magmom mapping "
+                f"({len(reference_symbols)} atoms)"
+            )
+    return initial_magmom, reference_symbols
+
+
+def _validate_stage_ordering(stages: list) -> None:
+    """Hard error if an MLIP stage is composed after a VASP stage.
+
+    MLIP stages are pre-optimization only: every MLIP stage must precede every
+    VASP stage. An MLIP stage after a VASP stage would silently load the wrong
+    structure (MLIP produces no OUTCAR, and load_structure is OUTCAR-first), so
+    this fails fast at validation time before any compute.
+    """
+    seen_vasp = False
+    for stage in stages:
+        engine = stage.get("engine", "vasp")
+        if engine == "vasp":
+            seen_vasp = True
+        elif engine == "mlip" and seen_vasp:
+            raise ValueError(
+                f"MLIP stage '{stage['name']}' is composed after a VASP stage. "
+                "MLIP stages are pre-optimization only and must precede all VASP "
+                "stages (they produce no OUTCAR, so a later MLIP relaxation would "
+                "be silently discarded when the next stage loads its structure)."
+            )
+
+
+def _warn_if_production_not_last(stages: list, production: Optional[str]) -> None:
+    """Non-blocking warning if the production-template stage is not run last.
+
+    Covers both "production absent" and "production present but not final".
+    ``production=None`` disables the check (named-workflow path).
+    """
+    if production is None or not stages:
+        return
+    templates = [s.get("_template") for s in stages]
+    if production not in templates:
+        logger.warning(
+            f"⚠ Production stage (template '{production}') was not composed — "
+            "the workflow may not end on the canonical YAML optimization."
+        )
+    elif stages[-1].get("_template") != production:
+        logger.warning(
+            f"⚠ Production stage (template '{production}') was not the final stage — "
+            f"workflow ends on '{stages[-1]['name']}'. The last optimization may not "
+            "use canonical YAML parameters."
+        )
+
+
+def _current_structure_file(cfg: VASPConfigurationFromYAML) -> str:
+    """Path of the structure file to feed an MLIP stage.
+
+    MLIP stages are pre-optimization only, so no OUTCAR exists yet. Prefer a
+    CONTCAR left by a previous MLIP stage, otherwise the initial structure.
+    """
+    if os.path.exists("CONTCAR"):
+        return "CONTCAR"
+    pattern = cfg.globals.get("initial_conf_pattern", "POSCAR")
+    matches = glob.glob(pattern)
+    if matches:
+        return matches[0]
+    raise FileNotFoundError(
+        f"No CONTCAR and no match for initial structure pattern '{pattern}' "
+        "to feed the MLIP stage."
+    )
+
+
+def _build_mlip_command(interpreter: str, structure_file: str, stage: dict) -> list:
+    """Build the argv list that invokes the MLIP runner in its env."""
+    cmd = [
+        interpreter,
+        "-m",
+        "asetools.workflow.mlip_runner",
+        "--structure",
+        structure_file,
+        "--name",
+        stage["name"],
+        "--mlip",
+        stage["mlip"],
+        "--optimizer",
+        str(stage.get("optimizer", "bfgs")),
+        "--fmax",
+        str(stage.get("fmax", 0.05)),
+        "--max-steps",
+        str(stage.get("max_steps", 200)),
+        "--device",
+        str(stage.get("device", "auto")),
+    ]
+    if stage.get("relax_cell"):
+        cmd.append("--relax-cell")
+    if "uma_task" in stage:
+        cmd += ["--uma-task", str(stage["uma_task"])]
+    if "mace_head" in stage:
+        cmd += ["--mace-head", str(stage["mace_head"])]
+
+    constraints = stage.get("constraints")
+    if constraints:
+        cmd += ["--constraints-json", str(constraints["config_file"])]
+        if "spring_constant" in constraints:
+            cmd += ["--spring-constant", str(constraints["spring_constant"])]
+        if "distance_factor" in constraints:
+            cmd += ["--distance-factor", str(constraints["distance_factor"])]
+    return cmd
+
+
+def _run_mlip_stage(cfg: VASPConfigurationFromYAML, stage: dict, dry_run: bool) -> None:
+    """Run an ``engine: mlip`` stage as a subprocess in its MLIP env.
+
+    The subprocess writes a CONTCAR (handoff to the next VASP stage). On a
+    non-zero exit (non-convergence) this raises and no STAGE_*_DONE is written.
+    """
+    name = stage["name"]
+    env_key = stage.get("env")
+    envs = cfg.globals.get("mlip_envs", {})
+    if env_key not in envs:
+        raise KeyError(
+            f"MLIP env '{env_key}' for stage '{name}' not found in "
+            f"globals.mlip_envs (available: {sorted(envs)})"
+        )
+    interpreter = envs[env_key]
+    structure_file = _current_structure_file(cfg)
+    cmd = _build_mlip_command(interpreter, structure_file, stage)
+
+    logger.info(f"Running MLIP STAGE: {name}")
+    logger.info(f"  * {' '.join(cmd)}")
+
+    if dry_run:
+        logger.info("    (dry-run, skipping MLIP subprocess)")
+        _mark_done(name)
+        return
+
+    result = subprocess.run(cmd)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"MLIP stage '{name}' did not converge (runner exit {result.returncode}). "
+            "STAGE_*_DONE not created."
+        )
+    logger.info(f" -- ✅ MLIP stage '{name}' completed and converged")
+    _mark_done(name)
+
+
+def run_stages(
+    atoms: Atoms,
+    cfg: VASPConfigurationFromYAML,
+    *,
+    stages: list,
+    run_overrides: Optional[dict] = None,
+    dry_run: bool = False,
+    magmoms=None,
+    production: Optional[str] = "production",
+):
+    """Run an explicit, ordered list of resolved stage dicts.
+
+    The engine behind both the modular composition path (a submission script
+    builds ``stages`` via :meth:`cfg.stage`) and :func:`run_workflow` (named
+    workflows from the YAML ``workflows`` section).
+
+    Args:
+        atoms: ASE Atoms object to optimize.
+        cfg: Configuration from YAML.
+        stages: Ordered list of resolved stage dicts (see ``cfg.stage``).
+        run_overrides: Global VASP overrides applied to every stage.
+        dry_run: If True, skip actual calculations.
+        magmoms: Optional per-atom magnetic moments (see ``_prepare_magmoms``).
+        production: Template name treated as the canonical final stage for the
+            production-stage warning; ``None`` disables it (named workflows).
+    """
+    _validate_stage_ordering(stages)
+    _warn_if_production_not_last(stages, production)
+
+    initial_magmom, reference_symbols = _prepare_magmoms(atoms, cfg, magmoms)
+
+    to_run = _stages_to_run(stages)
+    if not to_run:
+        logger.info("-->  All stages already completed, nothing to do  <--")
+        return
+
+    for stage in stages:
+        if stage["name"] not in to_run:
+            logger.info(f"Skipping STAGE: {stage['name']}, already done")
+            continue
+
+        if stage.get("engine", "vasp") == "mlip":
+            _run_mlip_stage(cfg, stage, dry_run)
+        else:
+            _run_stage(
+                atoms,
+                cfg,
+                stage,
+                run_overrides or {},
+                dry_run,
+                initial_magmom=initial_magmom,
+                reference_symbols=reference_symbols,
+            )
+
+        # Reload the converged structure from disk so the next stage starts from
+        # it rather than a stale in-memory atoms object.
+        if not dry_run:
+            atoms = load_structure(cfg.globals.get("initial_conf_pattern", "POSCAR"))
+            logger.info("  * Reloaded structure from disk for next stage")
+
+    logger.info("-->  All stages completed successfully  <--")
+
+    if isinstance(initial_magmom, (list, tuple, np.ndarray)) and os.path.exists(
+        MAGMOM_REFERENCE_FILE
+    ):
+        logger.info(f"  * Atom order reference preserved in {MAGMOM_REFERENCE_FILE}")
+
+
 def run_workflow(
     atoms: Atoms,
     cfg: VASPConfigurationFromYAML,
@@ -298,7 +545,11 @@ def run_workflow(
     magmoms=None,
 ):
     """
-    Run a multi-stage VASP workflow.
+    Run a named multi-stage workflow from the YAML ``workflows`` section.
+
+    Thin wrapper over :func:`run_stages`: looks up the named workflow's stage
+    list and delegates. The production-stage warning is disabled for named
+    workflows (they define their own final stage).
 
     Args:
         atoms: ASE Atoms object to optimize
@@ -312,78 +563,17 @@ def run_workflow(
             - If longer, raises ValueError
             - Example: magmoms = 32*[0] + 64*[2.0] + 16*[0]
     """
-
-    # Determine magnetic moment source: runtime parameter overrides YAML config
-    if magmoms is not None:
-        initial_magmom = magmoms  # Use runtime list
-        logger.info(f"Using runtime magmoms parameter (list with {len(magmoms)} values)")
-    else:
-        initial_magmom = cfg.initial_magmom_data  # Use YAML dict
-        if initial_magmom:
-            logger.info(f"Using YAML-based element magmoms: {initial_magmom}")
-        else:
-            logger.info("No magnetic moments specified (YAML or runtime)")
-
-    # Handle reference atom order for reordering detection (only needed for list-based magmoms)
-    reference_symbols = None
-    if isinstance(initial_magmom, (list, tuple, np.ndarray)):
-        # Check if reference file exists (workflow restart)
-        saved_ref, saved_magmoms = _load_magmom_reference()
-
-        if saved_ref is not None:
-            # Workflow restart: use saved reference
-            reference_symbols = saved_ref
-            # Verify saved magmoms match what user provided
-            if list(saved_magmoms) != list(initial_magmom):
-                logger.warning(
-                    f"  ⚠ Magmom list changed from previous run!\n"
-                    f"    Saved: {saved_magmoms[:5]}...\n"
-                    f"    Current: {list(initial_magmom)[:5]}...\n"
-                    f"    Using current magmoms but will remap based on saved atom order"
-                )
-        else:
-            # First run: store current atom order as reference
-            reference_symbols = list(atoms.get_chemical_symbols())
-            _save_magmom_reference(reference_symbols, list(initial_magmom))
-            logger.info(
-                f"  * Stored reference atom order for magmom mapping ({len(reference_symbols)} atoms)"
-            )
-
-    to_run = stages_to_run(cfg, workflow_name)
     stages = cfg.workflows[workflow_name]["stages"]
-
-    if not to_run:
-        logger.info(f"-->  Workflow '{workflow_name}' is already completed, nothing to do  <--")
-        return
-
-    for stage in stages:
-        if stage["name"] not in to_run:
-            logger.info(f"Skipping STAGE: {stage['name']}, already done")
-            continue
-        _run_stage(
-            atoms,
-            cfg,
-            stage,
-            run_overrides,
-            dry_run,
-            initial_magmom=initial_magmom,
-            reference_symbols=reference_symbols,
-        )
-
-        # Critical: Reload structure from OUTCAR after each stage completes
-        # This ensures the next stage starts with the converged structure,
-        # not the in-memory atoms object which may have stale calculator state
-        if not dry_run:
-            atoms = load_structure(cfg.globals.get("initial_conf_pattern", "POSCAR"))
-            logger.info("  * Reloaded structure from disk for next stage")
-
-    logger.info(f"-->  Workflow '{workflow_name}' completed successfully  <--")
-
-    # Keep reference file as record of atom order and magmom handling
-    if isinstance(initial_magmom, (list, tuple, np.ndarray)) and os.path.exists(
-        MAGMOM_REFERENCE_FILE
-    ):
-        logger.info(f"  * Atom order reference preserved in {MAGMOM_REFERENCE_FILE}")
+    logger.info(f"Running workflow '{workflow_name}'")
+    run_stages(
+        atoms,
+        cfg,
+        stages=stages,
+        run_overrides=run_overrides,
+        dry_run=dry_run,
+        magmoms=magmoms,
+        production=None,
+    )
 
 
 def _run_stage(
@@ -925,19 +1115,22 @@ def load_structure(pattern_initial_default: str = "POSCAR") -> Atoms:
     return atoms
 
 
-def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = "default") -> list:
+def _stages_to_run(stages: list) -> list:
+    """Names of stages without a ``STAGE_{name}_DONE`` sentinel, in order."""
     to_run = []
-    for stage in cfg.workflows[workflow_name]["stages"]:
+    for stage in stages:
         stage_name = stage["name"]
-        # Each stage is considered DONE when a file named 'STAGE_{name}_DONE' exists
         done_file = f"STAGE_{stage_name}_DONE"
         if os.path.exists(done_file):
             logger.info(f"Stage {stage_name} is DONE, skipping.")
-            continue
         else:
             logger.info(f"Stage {stage_name} is NOT DONE, adding to run list.")
             to_run.append(stage_name)
     return to_run
+
+
+def stages_to_run(cfg: VASPConfigurationFromYAML, workflow_name: str = "default") -> list:
+    return _stages_to_run(cfg.workflows[workflow_name]["stages"])
 
 
 def backup_output_files(name="backup"):

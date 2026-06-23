@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Modular stage composition** — new `stage_templates:` YAML section plus a
+  `cfg.stage(template, name=..., overrides=..., optimizer_kwargs=..., constraints=...)`
+  factory that instantiates reusable, parameterized stages (deep-merge overrides,
+  applied to every step). A submission script composes an ordered list and runs it
+  with the new `run_stages()` engine; `run_workflow()` is now a thin wrapper over it.
+  Non-blocking warning when the `production` stage is not run last.
+- **MLIP pre-optimization stages** (`engine: mlip`) — run an `mlip_platform`
+  optimization as a subprocess in a per-MLIP env (resolved via a
+  `globals.mlip_envs` registry), re-applying Hookean constraints from JSON inside
+  the env. New `asetools.workflow.mlip_runner` entry point. Enforced invariant:
+  MLIP stages must precede all VASP stages (hard error otherwise).
+- Sample `modular_stage_composition.yaml` + `submit_modular_example.py`; design
+  spec and ADRs under `docs/`.
+
+The named-workflow path and existing YAML configs are unchanged.
+
 ## [0.2.0] — 2026-03-31
 
 Major modernization release: package restructured for proper installation, fully
