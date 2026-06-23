@@ -450,7 +450,13 @@ def _run_mlip_stage(cfg: VASPConfigurationFromYAML, stage: dict, dry_run: bool) 
     structure_file = _current_structure_file(cfg)
     cmd = _build_mlip_command(interpreter, structure_file, stage)
 
-    logger.info(f"Running MLIP STAGE: {name}")
+    model_label = stage["mlip"]
+    if "uma_task" in stage:
+        model_label += f" (task={stage['uma_task']})"
+    elif "mace_head" in stage:
+        model_label += f" (head={stage['mace_head']})"
+
+    logger.info(f"Running MLIP STAGE: {name} [MLIP optimization with {model_label}]")
     logger.info(f"  * {' '.join(cmd)}")
 
     if dry_run:
@@ -464,7 +470,7 @@ def _run_mlip_stage(cfg: VASPConfigurationFromYAML, stage: dict, dry_run: bool) 
             f"MLIP stage '{name}' did not converge (runner exit {result.returncode}). "
             "STAGE_*_DONE not created."
         )
-    logger.info(f" -- ✅ MLIP stage '{name}' completed and converged")
+    logger.info(f" -- ✅ MLIP stage '{name}' completed and converged [MLIP: {model_label}]")
     _mark_done(name)
 
 
@@ -822,6 +828,11 @@ def _run_step(atoms: Atoms, step: dict, dry_run: bool):
             energy = atoms.get_potential_energy()
             logger.info(f"    Calculation completed, energy: {energy:.6f} eV")
 
+            # Report number of ionic (optimization) steps performed
+            n_ionic = _count_ionic_steps()
+            if n_ionic is not None and n_ionic > 1:
+                logger.info(f"    Optimization steps performed: {n_ionic}")
+
             # Report final magnetic moments from VASP calculation
             try:
                 final_magmoms = atoms.get_magnetic_moments()
@@ -954,6 +965,7 @@ def _run_with_ase_optimizer(atoms: Atoms, optimizer_name: str, optimizer_kwargs:
     converged = opt.run(**run_kwargs)
 
     logger.info(f"    ASE {optimizer_name} optimization completed")
+    logger.info(f"    Optimization steps performed: {opt.get_number_of_steps()}")
 
     # Check convergence status
     # ASE optimizers return True if converged, False if hit step limit
@@ -1061,6 +1073,25 @@ def _run_with_dimer_optimizer(atoms: Atoms, optimizer_kwargs: dict):
     if converged is not None:
         return converged
     return dimer_converged
+
+
+def _count_ionic_steps(directory: str = ".") -> Optional[int]:
+    """Count the number of ionic (optimization) steps from OSZICAR.
+
+    Each ionic step in OSZICAR is summarized by a line containing 'F=',
+    so counting those lines gives the number of ionic steps performed.
+
+    Returns:
+        int: Number of ionic steps, or None if OSZICAR is missing/unreadable.
+    """
+    oszicar = os.path.join(directory, "OSZICAR")
+    if not os.path.exists(oszicar):
+        return None
+    try:
+        with open(oszicar) as f:
+            return sum(1 for line in f if "F=" in line)
+    except OSError:
+        return None
 
 
 def _mark_done(step_name: str):

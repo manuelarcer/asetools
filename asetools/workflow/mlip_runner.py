@@ -25,9 +25,11 @@ env.
 
 import argparse
 import logging
+import os
 import shutil
 import sys
 
+import numpy as np
 from ase.io import read, write
 
 from asetools.workflow.constraints import ConstraintManager
@@ -60,6 +62,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--distance-factor", type=float, default=None, help="Override the covalent-radii factor."
     )
     return p
+
+
+def _count_optimization_steps(trajectory: str):
+    """Number of optimizer steps from an ASE trajectory.
+
+    ``run_optimization`` writes one frame for the initial structure plus one per
+    optimizer step, so the step count is ``len(frames) - 1``. Returns ``None`` if
+    the trajectory is missing or unreadable (the step count is best-effort log
+    output, never a hard failure).
+    """
+    if not os.path.exists(trajectory):
+        return None
+    try:
+        frames = read(trajectory, index=":")
+        return max(len(frames) - 1, 0)
+    except Exception:
+        return None
 
 
 def apply_constraints_from_args(atoms, args) -> None:
@@ -112,6 +131,39 @@ def main(argv=None) -> int:
         output_dir=".",
         model_name=args.mlip,
     )
+
+    # Report the number of optimization steps performed, consistent with the
+    # VASP/ASE-optimizer stages logged by the manager. The optimizer writes one
+    # trajectory frame for the initial config plus one per step, so the step
+    # count is the frame count minus one.
+    model_label = args.mlip
+    if args.uma_task:
+        model_label += f" (task={args.uma_task})"
+    elif args.mace_head:
+        model_label += f" (head={args.mace_head})"
+
+    n_steps = _count_optimization_steps("opt.traj")
+    if n_steps is not None:
+        logger.info(
+            f"MLIP stage '{args.name}': optimization steps performed: {n_steps} "
+            f"[MLIP: {model_label}]"
+        )
+
+    # Most MLIPs (UMA, MACE) carry no spin, so magnetic moments are unavailable;
+    # magnetic models such as CHGNet do expose them. Attempt extraction and let
+    # the calculator decide, rather than hard-coding which models are magnetic.
+    try:
+        final_magmoms = atoms.get_magnetic_moments()
+        total_mag = float(final_magmoms.sum())
+        max_mag = float(np.abs(final_magmoms).max())
+        logger.info(
+            f"MLIP stage '{args.name}': final magnetic moments: "
+            f"total={total_mag:.3f} μB, max={max_mag:.3f} μB"
+        )
+    except Exception:
+        logger.debug(
+            f"MLIP stage '{args.name}': no magnetic moments available from {model_label}"
+        )
 
     # Write the handoff structure as CONTCAR (so the next VASP stage's
     # load_structure picks it up) plus a stage-suffixed backup.
